@@ -1,10 +1,7 @@
 # Game Jam Project – Vývojárska dokumentácia & Sprievodca projektom
-
-Vitaj v tíme! Tento dokument slúži ako rýchly sprievodca pre každého, kto sa práve pripojil k vývoju tohto projektu. Dozvieš sa tu, ako je projekt zorganizovaný, ako ho bezpečne spustiť a aké pravidlá dodržiavame pri tímovej práci a Gite.
-
 ---
 
-## 🚀 1. Rýchly štart (Ako spustiť hru)
+## 1. Rýchly štart (Ako spustiť hru)
 
 * **Render Pipeline:** Universal Render Pipeline (URP).
 * **Vstupný systém:** Unity New Input System.
@@ -27,7 +24,7 @@ Vitaj v tíme! Tento dokument slúži ako rýchly sprievodca pre každého, kto 
 
 ---
 
-## 📁 2. Organizácia projektu a štruktúra priečinkov
+## 2. Organizácia projektu a štruktúra priečinkov
 
 Celý priečinok `Assets/` je rozdelený na dve hlavné časti: **náš vlastný kód a assety (`_Game/`)** a **stiahnuté asset balíčky (`ThirdParty/`)**.
 
@@ -78,7 +75,7 @@ Assets/
 
 ---
 
-## ⚠️ 3. Dôležité tímové pravidlá (Git & Unity Workflow)
+## 3. Dôležité tímové pravidlá (Git & Unity Workflow)
 
 Aby sme predišli strate dát, ružovým materiálom (*Missing Material*) alebo nefunkčným skriptom (*Missing Script*), dodržiavaj tieto pravidlá:
 
