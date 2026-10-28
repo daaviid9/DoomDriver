@@ -6,8 +6,6 @@ public class ObstacleSpawner : MonoBehaviour
 {
     [Header("Obstacles - Categories")]
     public GameObject[] carPrefabs;
-    public GameObject[] edgeObstacles;    // napr. smetiaky, stĺpy
-    public GameObject[] barricadePrefabs; // napr. ploty, barely
     public GameObject[] edgeObstacles;    // e.g., trash cans, poles
     public GameObject[] barricadePrefabs; // e.g., fences, barriers
 
@@ -100,7 +98,7 @@ public class ObstacleSpawner : MonoBehaviour
         }
 
         // Calculate position
-        Vector3 spawnPos = new Vector3((lane - 1) * laneDistance, spawnYOffset, spawnDistanceForward    );
+        Vector3 spawnPos = new Vector3((lane - 1) * laneDistance, spawnYOffset, spawnDistanceForward);
         
         GameObject obstacle = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
         
