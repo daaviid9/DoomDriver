@@ -8,7 +8,7 @@ public class PhoneSystem : MonoBehaviour
 {
     [Header("UI References")]
     public Slider fomoSlider;       
-    public ReelsManager reelsManager;  // Prepojenie na tvoj ReelsManager skript
+    public ReelsManager reelsManager;  // Link to your ReelsManager script
 
     [Header("Hand Reference")]
     public HandController handController;

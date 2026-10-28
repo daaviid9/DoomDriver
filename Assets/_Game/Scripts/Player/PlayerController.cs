@@ -22,7 +22,7 @@ public class PlayerController : MonoBehaviour
     [Header("Damage (Poškodenie)")]
     public int carDamage = 100;
     public int barricadeDamage = 50;
-    public int edgeDamage = 30; // Používateľ chcel 30 pre kužele/okraje
+    public int edgeDamage = 30; 
 
     [Header("Efekty Zničenia (Dýmenie a Výbuch)")]
     [Tooltip("Vylezie jemný dym pri zdraví 50 a menej")]
@@ -49,8 +49,8 @@ public class PlayerController : MonoBehaviour
 
     [Header("Audio (Zvuky)")]
     public AudioSource engineSource;
-    public AudioSource hissingSource; // Pre zvuk dymu/syčania
-    public AudioSource screechSource; // Pre pískanie gum pri zmene pruhu
+    public AudioSource hissingSource;
+    public AudioSource screechSource; 
     public AudioClip crashLightClip;
     public AudioClip crashHeavyClip;
 
@@ -58,7 +58,7 @@ public class PlayerController : MonoBehaviour
     public float minPitch = 0.8f;
     public float maxPitch = 2.2f;
 
-    // Tento event hovorí nášmu UI Slideeru (ak vôbec v hre je), nech sa zmenší
+    // This event notifies our UI slider (if present) to shrink
     public event System.Action<int> OnHealthChanged;
 
     void Start()
@@ -74,7 +74,7 @@ public class PlayerController : MonoBehaviour
         // Register for lane switching events
         controls.Player.Move.performed += ctx => OnMove(ctx.ReadValue<Vector2>());
 
-        // BRUTÁLNY RESET: Vypneme dymy tak, že ich ani kamošova scéna neprebudí
+        // Brutal reset: stop all smoke effects so they never appear in the scene
         ForceStopAndHide(smokeLightEffect);
         ForceStopAndHide(smokeHeavyEffect);
         ForceStopAndHide(explosionEffect);
@@ -84,14 +84,14 @@ public class PlayerController : MonoBehaviour
     {
         if (obj == null) return;
         
-        // Nájdeme úplne všetky dymové systémy v objekte aj v jeho deťoch
+        // Find all particle systems in the object and its children
         ParticleSystem[] allParticles = obj.GetComponentsInChildren<ParticleSystem>(true);
         foreach (var ps in allParticles)
         {
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             ps.Clear(); // Okamžité vymazanie už existujúcich guličiek
             var main = ps.main;
-            main.playOnAwake = false; // Poistka priamo v kóde
+            main.playOnAwake = false; // Safety check directly in code
         }
 
         obj.SetActive(false);
@@ -130,13 +130,13 @@ public class PlayerController : MonoBehaviour
         float targetX = (targetLane - 1) * laneDistance;
         float newX = Mathf.Lerp(transform.position.x, targetX, Time.deltaTime * laneChangeSpeed);
         
-        // --- VÝPOČET NAKLÁŇANIA (TILT) ---
-        // Zistíme smer a rýchlosť pohybu do boku
+        // --- TILT CALCULATION ---
+        // Determine side movement speed
         float movementDelta = newX - lastX;
-        // Ak ideme doprava (delta > 0), auto sa nakloní doľava a naopak (preto to mínus)
+        // When moving right (delta > 0), the car tilts left and vice versa
         float targetTilt = 0f;
         
-        // POISTKA: Ak by bol deltaTime po odpauzovaní hneď prvý frame náhodou 0, vyhneme sa deleniu nulou (NaN)
+        // SAFETY: avoid division by zero if deltaTime is unexpectedly zero after unpausing
         if (Time.deltaTime > 0.0001f)
         {
             targetTilt = -(movementDelta / Time.deltaTime) * (maxTiltAngle / 2f);
@@ -144,10 +144,10 @@ public class PlayerController : MonoBehaviour
 
         targetTilt = Mathf.Clamp(targetTilt, -maxTiltAngle, maxTiltAngle);
 
-        // Plynulé vyhladenie náklonu
+        // Smoothly interpolate tilt
         currentTilt = Mathf.Lerp(currentTilt, targetTilt, Time.deltaTime * tiltSmoothing);
         
-        // Aplikujeme pohyb aj rotáciu
+        // Apply movement and rotation
         transform.position = new Vector3(newX, transform.position.y, transform.position.z);
 
         // Steering Wheel Rotation
@@ -156,30 +156,30 @@ public class PlayerController : MonoBehaviour
             float distanceToTarget = targetX - transform.position.x;
             float targetAngle = 0f;
 
-            // Ak sa ešte hýbeme (sme ďalej ako 0.1 od cieľa), držíme plný vytočený volant
+            // If we are still moving (more than 0.1 from target), keep wheel fully turned
             if (Mathf.Abs(distanceToTarget) > 0.2f)
             {
-                // Ak je distanceToTarget kladná, ideme doprava -> volant točíme doprava (záporný Z uhol)
+                // Positive distance means moving right -> wheel turns right (negative Z angle)
                 targetAngle = (distanceToTarget < 0) ? -maxSteeringAngle : maxSteeringAngle;
             }
 
-            // Plynule interpolujeme do zvoleného uhla (0 alebo max)
+            // Smoothly interpolate to the chosen angle (0 or max)
             Quaternion targetRot = Quaternion.Euler(0, 0, targetAngle);
             steeringWheel.localRotation = Quaternion.Lerp(steeringWheel.localRotation, targetRot, Time.deltaTime * steeringRotationSpeed);
         }
 
-        // --- RESTORED TILT & LAST_X ---
-        // Aplikujeme náklon celého auta
+        // --- APPLY TILT & STORE LAST_X ---
+        // Apply overall car tilt
         transform.localRotation = Quaternion.Euler(0, 0, currentTilt);
-        // Uložíme si pozíciu pre výpočet rýchlosti v ďalšom frame
+        // Store position for next frame's speed calculation
         lastX = newX;
 
-        // --- DYNAMICKÝ PITCH MOTORA ---
-        // Pitch sa mení podľa toho, ako rýchlo auto ide (vzhľadom k základu 10)
+        // --- DYNAMIC ENGINE PITCH ---
+        // Pitch changes based on how fast the car is moving (relative to a base speed of 10)
         float speedRatio = WorldMover.moveSpeed / 25f; // Napr. pri 25 speed bude vysoký pitch
         if (engineSource != null) engineSource.pitch = Mathf.Lerp(minPitch, maxPitch, speedRatio);
 
-        // --- PÍSKANIE GÚM PRI MANÉVRI ---
+        // --- TIRE SCREECH DURING MANEUVER ---
         if (screechSource != null)
         {
             bool isMovingLane = Mathf.Abs(targetX - transform.position.x) > 0.05f;
@@ -199,13 +199,13 @@ public class PlayerController : MonoBehaviour
     {
         if (other.CompareTag("Obstacle"))
         {
-            // Zistíme si z neho typ a damage
+            // Get obstacle type and damage from its data component
             ObstacleData data = other.GetComponent<ObstacleData>();
             int damage = 30; // Default
 
             if (data != null)
             {
-                // Priradíme damage podľa kategórie, ktorú máš v Inspectore
+                // Assign damage based on the category set in the inspector
                 switch (data.obstacleType)
                 {
                     case ObstacleType.Car: damage = carDamage; break;
@@ -215,40 +215,40 @@ public class PlayerController : MonoBehaviour
                 }
             }
 
-            // --- REAKCIA PODĽA TYPU NÁRAZU (Iba okamžité efekty podľa tvojho zoznamu) ---
+            // --- REACTION BASED ON COLLISION TYPE (only immediate effects from your list) ---
             if (damage >= 100)
             {
-                // Car prefarbs = Puff effect + Heavy Crash sound
+                // Car collision = puff effect + heavy crash sound
                 PlayParticle(explosionEffect);
                 if (engineSource != null) engineSource.PlayOneShot(crashHeavyClip);
             }
             else if (damage >= 50)
             {
-                // Barricade prefabs = Puff effect + Heavy Crash sound + Speed Penalty
+                // Barricade collision = puff effect + heavy crash sound + speed penalty
                 PlayParticle(explosionEffect);
                 if (engineSource != null) engineSource.PlayOneShot(crashHeavyClip);
                 
-                // VÝRAZNEJŠIE SPOMALENIE (Barikáda nás spomalí o 7)
+                // SIGNIFICANT SLOWDOWN (Barricade slows us by 7)
                 WorldMover.moveSpeed -= 7f;
                 if (WorldMover.moveSpeed < 5f) WorldMover.moveSpeed = 5f;
                 Debug.Log($"<color=orange>[SPOMALENIE]</color> Narazil si do barikády. Rýchlosť klesla na: {WorldMover.moveSpeed}");
             }
             else
             {
-                // Edge obstacles = Nadskocenie + Light Crash sound + Small Speed Penalty
+                // Edge obstacles = hop + light crash sound + small speed penalty
                 if (!isJumping) StartCoroutine(JumpRoutine());
                 if (engineSource != null) engineSource.PlayOneShot(crashLightClip);
                 
-                // SPOMALENIE (Kužeľ nás spomalí o 4)
+                // SLOWDOWN (Cone slows us by 4)
                 WorldMover.moveSpeed -= 4f;
                 if (WorldMover.moveSpeed < 5f) WorldMover.moveSpeed = 5f;
                 Debug.Log($"<color=orange>[SPOMALENIE]</color> Narazil si do prekážky. Rýchlosť klesla na: {WorldMover.moveSpeed}");
             }
 
-            // Aplikovanie rany
+            // Apply damage to the player
             TakeDamage(damage);
 
-            // Zničenie prekážky
+            // Destroy the obstacle
             Destroy(other.gameObject); 
         }
     }
@@ -282,7 +282,7 @@ public class PlayerController : MonoBehaviour
 
     private void RefreshLowHealthSmoke()
     {
-        // 1. NAJPRV KRITICKÝ STAV (Hustý dym + syčanie)
+        // 1. CRITICAL STATE (Heavy smoke + hissing)
         if (currentHealth <= 30)
         {
             if (smokeLightEffect != null) smokeLightEffect.SetActive(false);
@@ -297,7 +297,7 @@ public class PlayerController : MonoBehaviour
             return; 
         }
         
-        // 2. POTOM ZLÝ STAV (Ľahký dym + syčanie)
+        // 2. BAD STATE (Light smoke + hissing)
         if (currentHealth <= 50)
         {
             if (smokeHeavyEffect != null) smokeHeavyEffect.SetActive(false);
@@ -312,13 +312,13 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // 3. ZDRAVÉ AUTO (Vypneme dym aj zvuk)
+        // 3. HEALTHY CAR (Turn off smoke and sound)
         if (smokeLightEffect != null) smokeLightEffect.SetActive(false);
         if (smokeHeavyEffect != null) smokeHeavyEffect.SetActive(false);
         if (hissingSource != null && hissingSource.isPlaying) hissingSource.Stop();
     }
 
-    // Pomocná funkcia, ktorá nielen zapne objekt, ale natvrdo prikáže dymu začať dymiť
+    // Helper function that not only activates the object but forces the smoke to start emitting
     private void PlayParticle(GameObject obj)
     {
         if (obj == null) return;
@@ -339,7 +339,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Coroutina pre "skok" cez prekážku
+    // Coroutine for "jump" over an obstacle
     private System.Collections.IEnumerator JumpRoutine()
     {
         isJumping = true;

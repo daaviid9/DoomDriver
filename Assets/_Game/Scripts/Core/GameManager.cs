@@ -13,24 +13,24 @@ public class GameManager : MonoBehaviour
     [Header("Score System")]
     public float currentScore = 0f;
     private float highscore = 0f;
-    [Tooltip("UI Text pre aktuálne skóre")]
+    [Tooltip("UI Text for current score")]
     public TMP_Text scoreText;
-    [Tooltip("UI Text pre najvyššie skóre (highscore)")]
+    [Tooltip("UI Text for highscore")]
     public TMP_Text highscoreText;
-    [Tooltip("UI Text pre finálne skóre po prehre")]
+    [Tooltip("UI Text for final score after game over")]
     public TMP_Text finalDistanceText;
 
     [Header("Difficulty Over Time")]
-    [Tooltip("O koľko sa rýchlosť hry zvýši každú sekundu")]
+    [Tooltip("How much the game speed increases each second")]
     public float speedIncreaseRate = 0.1f;
-    [Tooltip("Maximálna povolená rýchlosť sveta (limit)")]
+    [Tooltip("Maximum allowed world speed (limit)")]
     public float maxSpeed = 30f;
 
     [Header("UI Panels")]
     public GameObject gameOverPanel;
     public GameObject pausePanel;
     [Header("Scene Settings")]
-    [Tooltip("Názov scény, do ktorej sa má hráč vrátiť (napríklad LoadingScreenMenu)")]
+    [Tooltip("Name of the scene to return to (e.g., LoadingScreenMenu)")]
     public string mainMenuSceneName = "LoadingScreenMenu";
 
     private void Awake()
@@ -45,9 +45,9 @@ public class GameManager : MonoBehaviour
             Destroy(gameObject);
         }
 
-        // Load Highscore on start
+        // Load highscore on start
         highscore = PlayerPrefs.GetFloat("Highscore", 0f);
-        // Highscore UI je dočasne skryté
+        // Highscore UI is temporarily hidden
         // if (highscoreText != null)
         // {
         //     highscoreText.text = "Highscore: " + Mathf.FloorToInt(highscore).ToString();
@@ -56,8 +56,7 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        // Poistka: Zakaždým, keď sa načíta scéna, uisti sa, že je rýchlosť posunu sveta spustená.
-        // Zabraňuje problému, ak sa hráč vrátil do editora po Game Overi a rýchlosť by ostala na 0.
+        // Ensure world movement speed is set when the scene loads. Prevents the issue where returning from Game Over leaves speed at 0.
         WorldMover.moveSpeed = 12f;
     }
 
@@ -65,18 +64,18 @@ public class GameManager : MonoBehaviour
     {
         if (isGameOver) return;
 
-        // Kontrola pre zapnutie/vypnutie pauzy (využíva New Input System, keďže projekt ho plne používa)
+        // Check for pause toggle (uses New Input System, as the project fully uses it)
         if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             TogglePause();
         }
 
-        // Ak hra je pozastavená, skóre ani prekážky nebudú rásť tu
+        // If the game is paused, score and obstacles will not increase here
         if (isPaused) return;
 
-        // 1. Zvyšovanie skóre na základe prejdenej vzdialenosti za čas
+        // 1. Increase score based on distance travelled over time
         currentScore += WorldMover.moveSpeed * Time.deltaTime;
-        
+
         if (scoreText != null)
         {
             scoreText.text = Mathf.FloorToInt(currentScore).ToString() + " m";
@@ -87,11 +86,11 @@ public class GameManager : MonoBehaviour
             finalDistanceText.text = "You managed to scroll for " + Mathf.FloorToInt(currentScore).ToString() + " meters";
         }
 
-        // 2. Postupné zrýchľovanie hry
+        // 2. Gradual game acceleration
         if (WorldMover.moveSpeed < maxSpeed)
         {
             WorldMover.moveSpeed += speedIncreaseRate * Time.deltaTime;
-            // Ohraničenie maximálnej rýchlosti
+            // Clamp maximum speed
             if (WorldMover.moveSpeed > maxSpeed)
             {
                 WorldMover.moveSpeed = maxSpeed;
@@ -102,18 +101,17 @@ public class GameManager : MonoBehaviour
     public void GameOver()
     {
         if (isGameOver) return; // Prevent double trigger
-        
+
         isGameOver = true;
         Debug.Log("Game Over!");
 
-        // Uloženie Highscore, ak hráč prekonal svoj rekord
+        // Save highscore if the player beat their record
         if (currentScore > highscore)
         {
             highscore = currentScore;
-            // Highscore ukladanie do PlayerPrefs a updatovanie UI je momentálne vypnuté
+            // Highscore saving to PlayerPrefs and UI update is currently disabled
             // PlayerPrefs.SetFloat("Highscore", highscore);
             // PlayerPrefs.Save();
-            
             // if (highscoreText != null)
             // {
             //     highscoreText.text = "Highscore: " + Mathf.FloorToInt(highscore).ToString();
@@ -132,27 +130,27 @@ public class GameManager : MonoBehaviour
 
     public void TogglePause()
     {
-        if (isGameOver) return; // Nemôžeš pauzovať po Game Over
-        
+        if (isGameOver) return; // Cannot pause after Game Over
+
         isPaused = !isPaused;
 
-        // Aktivuj/deaktivuj Pause UI panel
+        // Activate/deactivate Pause UI panel
         if (pausePanel != null)
         {
             pausePanel.SetActive(isPaused);
         }
 
-        // Zmraziť / odmraziť čas v Unity
+        // Freeze / unfreeze time in Unity
         Time.timeScale = isPaused ? 0f : 1f;
 
-        // Zapnúť / Vypnúť všetky zvuky celoplošne (AudioListener.pause)
+        // Turn on/off all sounds globally (AudioListener.pause)
         AudioListener.pause = isPaused;
     }
 
     public void RestartGame()
     {
-        Time.timeScale = 1f; // Vrátenie času do normálu, ak by bol hráč v pauze
-        AudioListener.pause = false; // Vrátenie audia, aby zvuky opäť išli
+        Time.timeScale = 1f; // Return time to normal if the player was paused
+        AudioListener.pause = false; // Re-enable audio so sounds play again
         // Reset speed and reload
         WorldMover.moveSpeed = 12f; 
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
@@ -160,9 +158,9 @@ public class GameManager : MonoBehaviour
 
     public void ExitGame()
     {
-        Time.timeScale = 1f; // Vrátenie času do normálu, ak by bol hráč v pauze
-        AudioListener.pause = false; // Vrátenie audia, aby zvuky opäť išli
-        // Obnovenie rýchlosti pre novú hru a načítanie menu scény
+        Time.timeScale = 1f; // Return time to normal if the player was paused
+        AudioListener.pause = false; // Re-enable audio so sounds play again
+        // Restore speed for a new game and load the menu scene
         WorldMover.moveSpeed = 12f; 
         SceneManager.LoadScene(mainMenuSceneName);
     }

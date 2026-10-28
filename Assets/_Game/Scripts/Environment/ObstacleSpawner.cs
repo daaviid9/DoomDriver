@@ -4,28 +4,30 @@ using UnityEngine.Serialization;
 
 public class ObstacleSpawner : MonoBehaviour
 {
-    [Header("Prekážky - Kategórie")]
+    [Header("Obstacles - Categories")]
     public GameObject[] carPrefabs;
     public GameObject[] edgeObstacles;    // napr. smetiaky, stĺpy
     public GameObject[] barricadePrefabs; // napr. ploty, barely
+    public GameObject[] edgeObstacles;    // e.g., trash cans, poles
+    public GameObject[] barricadePrefabs; // e.g., fences, barriers
 
-    [Header("Šance spawnu (Súčet ideálne 100%)")]
+    [Header("Spawn Chances (Sum ideally 100%)")]
     [Range(0, 100)] public float carChance = 60f;
     [Range(0, 100)] public float edgeChance = 20f;
     [Range(0, 100)] public float barricadeChance = 20f;
 
-    [Header("Spawn Nastavenia")]
-    [Tooltip("Vzdialenosť v metroch medzi vygenerovanými prekážkami (frekvencia). Čím menšie číslo, tým hustejšia premávka.")]
+    [Header("Spawn Settings")]
+    [Tooltip("Distance in meters between generated obstacles (frequency). Smaller number means denser traffic.")]
     [FormerlySerializedAs("spawnDistance")]
-    public float spawnInterval = 14.5f;
+    public float spawnInterval = 14.5f; // Interval between spawns
 
-    [Tooltip("Vzdialenosť v metroch vpredu, kde sa prekážky objavia. Zvýš, ak vidíš ako 'vyskakujú'.")]
+    [Tooltip("Distance in meters ahead where obstacles appear. Increase if they seem to pop up suddenly.")]
     [FormerlySerializedAs("spawnZ")]
-    public float spawnDistanceForward = 160f; 
+    public float spawnDistanceForward = 160f; // Forward spawn distance
 
     public float laneDistance = 3f;
     
-    [Tooltip("Výška (Y), v ktorej sa prekážky objavia. Zmeň do mínusu, ak lietajú nad zemou.")]
+    [Tooltip("Height (Y) at which obstacles appear. Change to negative if they float above the ground.")]
     public float spawnYOffset = 0f;
 
     private float distanceTraveled;
@@ -34,14 +36,14 @@ public class ObstacleSpawner : MonoBehaviour
     {
         if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
 
-        // Pripočítavame vzdialenosť podľa aktuálnej rýchlosti sveta
+        // Accumulate distance based on current world speed
         distanceTraveled += WorldMover.moveSpeed * Time.deltaTime;
         
-        // Ak sme prešli požadovanú vzdialenosť, vygeneruje sa prekážka
+        // If we have traveled the required distance, spawn an obstacle
         if (distanceTraveled >= spawnInterval)
         {
             SpawnSophisticatedObstacle();
-            distanceTraveled = 0; // Reset vzdialenosti do ďalšej prekážky
+            distanceTraveled = 0; // Reset distance to the next obstacle
         }
     }
 
@@ -93,11 +95,11 @@ public class ObstacleSpawner : MonoBehaviour
 
         if (prefabToSpawn == null)
         {
-            Debug.LogWarning("[ObstacleSpawner] Pozor! V poli prekážok ti chýba model (je tam 'None'). Preskakujem spawn.");
+            Debug.LogWarning("[ObstacleSpawner] Warning! Missing model in obstacle array (found 'None'). Skipping spawn.");
             return;
         }
 
-        // Vypočítať pozíciu
+        // Calculate position
         Vector3 spawnPos = new Vector3((lane - 1) * laneDistance, spawnYOffset, spawnDistanceForward    );
         
         GameObject obstacle = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
@@ -107,28 +109,28 @@ public class ObstacleSpawner : MonoBehaviour
             obstacle.AddComponent<WorldMover>();
         }
         
-        // Dynamicky mu vlepíme typ a damage
+        // Dynamically assign type and damage
         ObstacleData data = obstacle.GetComponent<ObstacleData>();
         if (data == null) data = obstacle.AddComponent<ObstacleData>();
         
         data.obstacleType = type;
         
-        // --- AUDIO SETUP PRE NPC ---
+        // --- AUDIO SETUP FOR NPC ---
         if (data.engineLoop != null)
         {
             AudioSource source = obstacle.AddComponent<AudioSource>();
             source.clip = data.engineLoop;
             source.loop = true;
             source.playOnAwake = true;
-            source.spatialBlend = 1f; // Plné 3D
+            source.spatialBlend = 1f; // Full 3D
             source.rolloffMode = AudioRolloffMode.Logarithmic;
             source.minDistance = 2f;
             source.maxDistance = 20f;
-            source.volume = data.engineVolume; // Použijeme hlasitosť nastavenú v ObstacleData
+            source.volume = data.engineVolume; // Use volume set in ObstacleData
             source.Play();
         }
 
-        // Default damage nastavíme tiež pre istotu (použije sa ako fallback)
+        // Set default damage as a fallback
         switch (type)
         {
             case ObstacleType.Car: data.damageAmount = 100; break;
@@ -136,7 +138,7 @@ public class ObstacleSpawner : MonoBehaviour
             case ObstacleType.Edge: data.damageAmount = 30; break;
         }
 
-        // Nastavíme tag, aby fungovali kolízie s hráčom
+        // Set tag so collisions with player work
         obstacle.tag = "Obstacle";
     }
 }

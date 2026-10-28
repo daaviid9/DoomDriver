@@ -2,9 +2,9 @@ using UnityEngine;
 
 public class FloatingUI : MonoBehaviour
 {
-    [Header("Nastavenia Dýchania")]
-    public float amplitude = 10f; // O koľko pixelov to vyletí hore a dole
-    public float speed = 2f;      // Ako rýchlo to pláva
+    [Header("Breathing Settings")]
+    public float amplitude = 10f; // How many pixels it moves up and down
+    public float speed = 2f;      // How fast it floats
 
     private RectTransform rectTransform;
     private Vector2 startPos;
@@ -14,7 +14,7 @@ public class FloatingUI : MonoBehaviour
         rectTransform = GetComponent<RectTransform>();
         if (rectTransform != null)
         {
-            // Zapamätáme si pôvodnú pozíciu
+            // Store the original position
             startPos = rectTransform.anchoredPosition;
         }
     }
@@ -23,10 +23,10 @@ public class FloatingUI : MonoBehaviour
     {
         if (rectTransform != null)
         {
-            // Pomocou Sine vlny počítame jemný ladný pohyb
+            // Use a sine wave for smooth gentle motion
             float newY = startPos.y + Mathf.Sin(Time.time * speed) * amplitude;
             
-            // Nastavíme novú pozíciu
+            // Set the new position
             rectTransform.anchoredPosition = new Vector2(startPos.x, newY);
         }
     }

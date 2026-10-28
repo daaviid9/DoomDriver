@@ -3,7 +3,7 @@ using System.Collections;
 
 public class CameraShake : MonoBehaviour
 {
-    // Singleton - robíme to takto, aby si v iných skriptoch nemusel prácne hľadať kameru
+    // Singleton - ensures other scripts can easily access the camera without searching
     public static CameraShake Instance;
 
     private Vector3 originalPos;
@@ -20,7 +20,7 @@ public class CameraShake : MonoBehaviour
 
     public void Shake(float duration, float magnitude)
     {
-        // Zakaždým, keď dostaneme novú ranu, prestaneme prípadný starý tras a začneme nový
+        // Each time we receive a new hit, stop any previous shake and start a new one
         StopAllCoroutines();
         StartCoroutine(ShakeRoutine(duration, magnitude));
     }
@@ -42,7 +42,7 @@ public class CameraShake : MonoBehaviour
             yield return null;
         }
 
-        // Keď trasenie skončí, kameru upraceme na miesto
+        // When shaking ends, reset the camera to its original position
         transform.localPosition = originalPos;
     }
 }

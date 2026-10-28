@@ -3,29 +3,29 @@ using System.Collections.Generic;
 
 public class EnvironmentSpawner : MonoBehaviour
 {
-    [Header("Priradenie Prefabov")]
-    [Tooltip("Zoznam prefabov pre úseky cesty. Ak ich bude viac, budú sa vyberať náhodne.")]
+    [Header("Prefab Assignment")]
+    [Tooltip("List of prefabs for road segments. If there are multiple, they will be chosen randomly.")]
     public GameObject[] chunkPrefabs;
 
-    [Header("Nastavenia Generovania")]
-    [Tooltip("Dĺžka jedného úseku pozdĺž osi Z. Uisti sa, že toto číslo presne sedí s tvojím 3D modelom, inak vzniknú medzery.")]
+    [Header("Generation Settings")]
+    [Tooltip("Length of a single segment along the Z axis. Ensure this matches your 3D model exactly, otherwise gaps will appear.")]
     public float chunkLength = 20f;
 
-    [Tooltip("Koľko úsekov má byť viditeľných naraz v jednej chvíli.")]
+    [Tooltip("How many segments should be visible on screen at once.")]
     public int numberOfChunksOnScreen = 6;
 
-    [Tooltip("Na akej Z pozícii má začať generovanie cesty (napr. trošku za hráčom, aby nevidel koniec cesty za sebou)")]
+    [Tooltip("Z position where road generation starts (e.g., slightly behind the player so they don't see the end of the road).")]
     public float startZPosition = -20f;
 
-    [Tooltip("Pozícia Z za hráčom, pri ktorej už objekt nevidíme a môžeme ho bezpečne zmazať.")]
+    [Tooltip("Z position behind the player where objects are no longer visible and can be safely destroyed.")]
     public float destroyZPosition = -30f;
 
-    // Uchovávanie momentálne aktívnych úsekov
+    // Store currently active segments
     private List<GameObject> activeChunks = new List<GameObject>();
 
     void Start()
     {
-        // Úvodné vygenerovanie série úsekov cesty
+        // Initial generation of a series of road segments
         for (int i = 0; i < numberOfChunksOnScreen; i++)
         {
             SpawnChunk(startZPosition + (i * chunkLength));
@@ -34,19 +34,19 @@ public class EnvironmentSpawner : MonoBehaviour
 
     void Update()
     {
-        // Ak hra skončila, nebudeme riešiť nové úseky
+        // If the game is over, we won't generate new segments
         if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
 
-        // Skontrolujeme najstarší (prvý) úsek cesty, či sa neposunul za hranicu destroyZPosition
+        // Check if the oldest (first) road segment has moved beyond the destroyZPosition
         if (activeChunks.Count > 0 && activeChunks[0].transform.position.z < destroyZPosition)
         {
-            // Vymažeme ten starý, lebo tam už hráč nevidí
+            // Delete the old segment as it's no longer visible to the player
             DeleteOldestChunk();
             
-            // Zistíme presnú pozíciu Z úplne najnovšieho úseku, ktorý je najďalej vpredu
+            // Determine the exact Z position of the newest segment that is farthest forward
             float lastChunkZ = activeChunks[activeChunks.Count - 1].transform.position.z;
             
-            // A tesne za neho vygenerujeme ďalší
+            // Generate the next segment right after it
             SpawnChunk(lastChunkZ + chunkLength);
         }
     }
@@ -55,7 +55,7 @@ public class EnvironmentSpawner : MonoBehaviour
     {
         if (chunkPrefabs == null || chunkPrefabs.Length == 0) return;
 
-        // Vyberie náhodný úsek zo zoznamu (ideálne, ak máš napr. rôzne rozmiestnené stromy)
+        // Choose a random segment from the list (ideal if you have varied trees, etc.)
         int prefabIndex = Random.Range(0, chunkPrefabs.Length);
         
         // Vytvorenie inštancie s nulovým posunom X, Y a s určeným Z posunom
@@ -70,13 +70,13 @@ public class EnvironmentSpawner : MonoBehaviour
 
         GameObject newChunk = Instantiate(prefabToSpawn, spawnPosition, Quaternion.identity);
         
-        // Zabezpečme pre úsek aj automatický pohyb, ak sme ho zabudli dať na prefab
+        // Ensure the segment has automatic movement if it wasn't added to the prefab
         if (newChunk.GetComponent<WorldMover>() == null)
         {
             newChunk.AddComponent<WorldMover>();
         }
 
-        // Tagneme mu iný tag namiesto "Obstacle", aby si ho WorldMover neposlúchol a nezničil ho priskoro na Z=-15
+        // Tag it with something other than "Obstacle" so WorldMover doesn't move and destroy it prematurely at Z=-15
         newChunk.tag = "Untagged"; // Alebo si pre to sprav tag "Environment"
         
         // Uloženie do pamäti (listu)
