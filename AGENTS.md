@@ -1,29 +1,29 @@
-# AGENTS.md – DoomDriver: Projektový & Architektonický Manuál
+# AGENTS.md – DoomDriver: Project & Architectural Manual
 
-> **Účel tohto dokumentu:** Tento súbor slúži ako trvalý kontext, architektonická príručka a záväzný referenčný bod pre všetkých AI agentov a ľudských vývojárov pracujúcich na projekte **DoomDriver**. Pri každom ďalšom prompte a vývojovom kroku sa riaďte princípmi a štruktúrou popísanou v tomto dokumente.
+> **Purpose of this document:** This file serves as permanent context, an architectural guide, and a binding reference point for all AI agents and human developers working on the **DoomDriver** project. Follow the principles and structure described here for every subsequent prompt and development step.
 
 ---
 
 ## 1. Project Overview & High Concept
 
-* **Názov projektu:** DoomDriver
-* **Žáner:** First-Person Courier Simulation / Psychological Driving Hazard
-* **Pôvodný stav:** Endless runner v troch pruhoch so zbieraním skóre a scrollovaním mobilu.
-* **Nový smer (Pivot):** Misijný herný loop donáškového kuriéra (štýl *Bolt Food / Wolt*), ktorý v kokpite auta bojuje so silnou digitálnou závislosťou na mobile (scrollovanie TikTok / Instagram Reels, FOMO syndróm) počas dynamickej jazdy mestom.
+* **Project name:** DoomDriver
+* **Genre:** First‑Person Courier Simulation / Psychological Driving Hazard
+* **Original state:** Endless runner with three lanes, score collection, and mobile scrolling.
+* **New direction (Pivot):** Mission‑based courier loop (style *Bolt Food / Wolt*), where the driver battles a strong digital addiction to the phone (scrolling TikTok / Instagram Reels, FOMO syndrome) while driving through a city.
 
-### Hlavný gameplay loop:
-1. **Lobby (Parkovisko / Interiér auta):** Hráč sedí v zaparkovanom aute. Na displeji telefónu v kuriérskej aplikácii si vyberá zo zoznamu dostupných zákaziek (líšia sa dĺžkou trasy, odmenou, náročnosťou a časovým limitom).
-2. **Aktívna donáška (DeliveryActive):**
-   * Auto vyráža na cestu. Posun sveta beží (`WorldMover`).
-   * Hráč riadi auto plynulým horizontálnym pohybom (bez diskrétnych pruhov).
-   * Na palubnom GPS displeji sleduje navigačné pokyny (vzdialenosť k odbočke, smer vľavo / vpravo / rovno).
-   * **FOMO Distrakcia:** Hráčovi neustále klesá FOMO meter. Aby nestratil pozornosť (vinetácia, rozostrenie, strata zmyslov), musí podržaním klávesu zdvihnúť mobil k tvári a scrollovať krátke videá (reels). Tým však stráca výhľad na cestu a GPS!
-   * **Navigačné rozhodnutia:** Ak hráč prešvihne odbočku alebo zle zatočí kvôli pozeraniu do mobilu, GPS hlási *Recalculating*, trasa sa dynamicky predĺži o extra segmenty a hrozí meškanie.
-   * **Premávka a prekážky:** Vyhýbanie sa autám, zátarasám a krajniciam. Poškodenie auta znižuje finálnu odmenu za opravy.
-3. **Vyhodnotenie (DeliveryCompleted / DeliveryFailed):**
-   * Po prejdení cieľového úseku sa donáška vyhodnotí: základná sadzba + prepitné za rýchlosť - zrážky za opravu poškodenia - penalizácie za zablúdenie.
-   * Zarobené peniaze sa pripíšu do peňaženky hráča (`Wallet`).
-   * Hráč sa vracia do zaparkovaného auta v Lobby a vyberá si ďalšiu objednávku.
+### Main gameplay loop:
+1. **Lobby (Parking lot / Car interior):** The player sits in a parked car. On the phone screen they select from a list of available orders (varying in route length, reward, difficulty, and time limit).
+2. **Active Delivery (DeliveryActive):**
+   * The car accelerates onto the road. The world moves (`WorldMover`).
+   * The player steers the car with smooth horizontal movement (no discrete lanes).
+   * On the dashboard GPS display they follow navigation cues (distance to turn, left/right/straight).
+   * **FOMO Distraction:** The FOMO meter constantly drops. To keep focus, the player must hold a key to raise the phone to their face and scroll short videos (reels). This reduces road visibility and GPS!
+   * **Navigation decisions:** Missing a turn or steering incorrectly due to phone scrolling triggers *Recalculating*, extending the route and causing delays.
+   * **Traffic & obstacles:** Avoid other cars, jams, and curbs. Car damage reduces the final reward.
+3. **Evaluation (DeliveryCompleted / DeliveryFailed):**
+   * After reaching the destination, the delivery is evaluated: base fee + speed tip – damage repair cost – penalties for missed turns.
+   * Earned money is added to the player’s wallet (`Wallet`).
+   * The player returns to the parked car lobby and selects the next order.
 
 ---
 
@@ -31,32 +31,32 @@
 
 * **Engine & Render Pipeline:** Unity 2022.3+ / Unity 6, **Universal Render Pipeline (URP)**.
 * **Input System:** Unity **New Input System** (`InputSystem_Actions`).
-* **Text & UI:** **TextMeshPro (TMP)**, URP Post-Processing Volumes (Vignette, Color Adjustments).
-* **Video & Audio:** Unity VideoPlayer s RenderTextures pre mobilnú obrazovku, AudioSource pre motor, kolízie, GPS zvuky a ozvučenie reels videí.
+* **Text & UI:** **TextMeshPro (TMP)**, URP Post‑Processing Volumes (Vignette, Color Adjustments).
+* **Video & Audio:** Unity VideoPlayer with RenderTextures for the phone screen, AudioSource for engine, collisions, GPS sounds, and reels audio.
 
-### Adresárová štruktúra (`Assets/_Game/`):
-```text
+### Directory structure (`Assets/_Game/`):
+```
 Assets/_Game/
-├── Audio/                 # SFX zvuky motora, nárazov, GPS pípania, UI zvuky
+├── Audio/                 # SFX for engine, collisions, GPS beeps, UI
 ├── Data/
-│   ├── Input/             # InputSystem_Actions (.inputactions a vygenerovaná C# trieda)
-│   └── Orders/            # ScriptableObjecty alebo definície objednávok
-├── Materials/             # Materiály interiéru, displejov, ciest, prekážok
-├── Models/                # 3D modely (kokpit auta, volant, palubovka, mesto)
+│   ├── Input/             # InputSystem_Actions (.inputactions and generated C# class)
+│   └── Orders/            # ScriptableObjects or order definitions
+├── Materials/             # Interior, screen, road, obstacle materials
+├── Models/                # 3D models (car cockpit, steering wheel, dashboard, city)
 ├── Prefabs/
-│   ├── Cars/              # Modely premávky (Ambulance, Police, Taxi, Car_1...)
+│   ├── Cars/              # Traffic models (Ambulance, Police, Taxi, Car_1...)
 │   ├── Core/              # GameManager, AudioManager
-│   ├── Environment/       # Úseky cesty (rovné úseky, križovatky, T-kusy)
-│   ├── Navigation/        # GPS displej na palubovke, smerové navigačné prvky
-│   ├── Obstacles/         # Prekážky (kužele, barikády, smetiaky)
-│   ├── Phone/             # Ruka s telefónom, UI prefab kuriérskej appky
-│   └── Player/            # carInterior (kokpit hráča, volant, kamera)
-├── Reels/                 # .mp4 videá a zodpovedajúce .mp3 stopy
-├── RenderTextures/        # RenderTextúry pre obrazovku mobilu a palubovky
+│   ├── Environment/       # Road segments (straight, intersection, T‑piece)
+│   ├── Navigation/        # GPS display, navigation cues
+│   ├── Obstacles/         # Cones, barriers, trash
+│   ├── Phone/             # Hand with phone, courier app UI prefab
+│   └── Player/            # Car interior, steering wheel, camera
+├── Reels/                 # .mp4 videos and matching .mp3 tracks
+├── RenderTextures/        # RenderTextures for phone and dashboard screens
 ├── Scenes/
-│   ├── LoadingScreenMenu  # Hlavné menu / načítavacia scéna
-│   ├── EnviromentScene    # Hlavná herná scéna (Lobby + Jazda)
-│   └── _Tests/            # Izolované testovacie scény
+│   ├── LoadingScreenMenu  # Main menu / loading scene
+│   ├── EnviromentScene    # Main game scene (Lobby + Driving)
+│   └── _Tests/            # Isolated test scenes
 ├── Scripts/
 │   ├── Audio/             # AudioManager
 │   ├── Core/              # GameManager, GameStateMachine, WorldMover, CameraShake
@@ -64,141 +64,121 @@ Assets/_Game/
 │   ├── Environment/       # EnvironmentSpawner, ChunkController, ObstacleSpawner, ObstacleData
 │   ├── Navigation/        # NavigationManager, RouteController, TurnTrigger
 │   ├── Phone/             # PhoneSystem, ReelsManager, HandController, CourierAppUI
-│   ├── Player/            # PlayerController (analógové riadenie, volant, poškodenie)
+│   ├── Player/            # PlayerController (analog steering, wheel, damage)
 │   └── UI/                # DashboardNavigationUI, DeliverySummaryUI, UIHealthBar, LoadingScreen
-└── Settings/              # URP Assety, PostProcess profily
+└── Settings/              # URP assets, post‑process profiles
 ```
 
 ---
 
 ## 3. Game State Machine
 
-Herný loop je riadený stavovým automatom v `GameManager` (alebo dedikovanom `GameStateController`):
-
+The game loop is driven by a state machine in `GameManager` (or a dedicated `GameStateController`):
 ```mermaid
 stateDiagram-v2
     [*] --> OrderSelection
-    OrderSelection --> DeliveryActive : Hráč potvrdí objednávku na mobile
-    DeliveryActive --> DeliveryCompleted : Dosiahnutý cieľ trasy v limite
-    DeliveryActive --> DeliveryFailed : Zničenie vozidla (0 HP) / Vypršanie kritického času
-    DeliveryCompleted --> OrderSelection : Zobrazenie výsledku -> Návrat do Lobby
-    DeliveryFailed --> OrderSelection : Game Over / Oprava auta -> Reštart do Lobby
+    OrderSelection --> DeliveryActive : Player confirms order on phone
+    DeliveryActive --> DeliveryCompleted : Route reached within limit
+    DeliveryActive --> DeliveryFailed : Car destroyed (0 HP) / Time expires
+    DeliveryCompleted --> OrderSelection : Show result → Return to Lobby
+    DeliveryFailed --> OrderSelection : Game Over / Car repair → Restart to Lobby
 ```
 
-### Podrobný popis stavov:
-1. **`OrderSelection` (Lobby v aute):**
-   * Auto stojí na parkovisku (`WorldMover.moveSpeed = 0f`).
-   * Zvuk motora ide na voľnobeh (idle pitch).
-   * Mobil je vytiahnutý v ruke, na displeji je otvorená aplikácia *FoodCourier*.
-   * Generujú sa 2 až 3 náhodné ponuky zákaziek s detailmi (Vzdialenosť, Odmena, Počet odbočiek, Časový limit).
-   * Po kliknutí na objednávku prebieha prechod do `DeliveryActive`.
-2. **`DeliveryActive` (Samotná donáška):**
-   * Svet sa začína pohybovať (`WorldMover.moveSpeed` akceleruje na cestovnú rýchlosť).
-   * Ruka s mobilom sa spustí dole, na displeji mobilu sa prepína režim na sociálne siete (Reels/FOMO).
-   * Spúšťa sa navigačný systém: trasa generuje požadovaný počet rovných úsekov a križovatiek podľa zvolenej zákazky.
-   * Palubný displej (Dashboard GPS) naviguje hráča k cieľu.
-   * FOMO meter klesá; hráč musí vyvažovať sledovanie cesty a scrollovanie mobilu.
-   * Detegujú sa križovatky, úspešné odbočenia, zlé odbočenia a nárazy.
-3. **`DeliveryCompleted` (Úspešné doručenie):**
-   * Auto plynule zastaví v cieľovej zóne (`WorldMover.moveSpeed = 0f`).
-   * Otvára sa panel vyhodnotenia objednávky:
-     * Základná odmena (Base Fee).
-     * Prepitné za ušetrený čas (On-time Tip).
-     * Zrážky za zablúdenie / zlé odbočenia (Reroute Penalty).
-     * Zrážky za poškodenie vozidla (Car Repair Cost).
-     * Čistý zisk (Net Earnings).
-   * Pripísanie sumy do peňaženky hráča (`WalletManager`).
-   * Tlačidlo "Pokračovať" vráti hru do stavu `OrderSelection`.
-4. **`DeliveryFailed` (Neúspešná donáška):**
-   * Vyvolaná totálnym zničením vozidla (Health = 0) alebo fatálnym vypršaním času.
-   * UI zlyhania: zrušená objednávka, poplatok za odťahovku/opravu.
-   * Možnosť reštartu do `OrderSelection`.
+### Detailed state descriptions:
+1. **`OrderSelection` (Lobby):**
+   * Car is stationary (`WorldMover.moveSpeed = 0f`).
+   * Engine idle sound plays.
+   * Phone is held, showing the courier app.
+   * 2‑3 random orders are generated with distance, reward, turn count, and time limit.
+   * Clicking an order transitions to `DeliveryActive`.
+2. **`DeliveryActive` (Driving):**
+   * World starts moving (`WorldMover.moveSpeed` accelerates).
+   * Phone hand lowers, phone switches to reels mode.
+   * Navigation system generates the required number of straight sections and intersections based on the selected order.
+   * Dashboard GPS guides the player.
+   * FOMO meter drops; the player must balance road watching and phone scrolling.
+   * Turns are detected, successful or missed.
+3. **`DeliveryCompleted` (Success):**
+   * Car smoothly stops in the target zone (`WorldMover.moveSpeed = 0f`).
+   * Evaluation panel shows:
+     * Base fee
+     * Time tip
+     * Damage repair penalties
+     * Missed‑turn penalties
+     * Net earnings
+   * Money is added to the wallet.
+   * Press “Continue” to return to `OrderSelection`.
+4. **`DeliveryFailed` (Failure):**
+   * Triggered by total car destruction (Health = 0) or critical time expiry.
+   * Failure UI shows cancelled order and towing/repair fee.
+   * Option to restart to `OrderSelection`.
 
 ---
 
 ## 4. Core Systems & Rules
 
-### A. Plynulý horizontálny pohyb auta (Smooth Vehicle Handling)
-* **Pôvodný stav:** Diskrétne prepínanie 3 pruhov (`targetLane = 0, 1, 2`).
-* **Nový systém:**
-  * Kontinuálny horizontálny pohyb na osi X riadený analógovým vstupom (`controls.Player.Move.ReadValue<Vector2>().x`).
-  * Pozícia X je plynule limitovaná medzi mantinelmi cesty (`minRoadX`, `maxRoadX`).
-  * Rýchlosť zatáčania (`steerSpeed`) reaguje na dĺžku stlačenia klávesu / analógovej páčky.
-  * **Rotácia volantu:** Uhol volantu (`steeringWheel.localRotation`) presne kopíruje aktuálny smer a intenzitu zatáčania.
-  * **Body Roll & Tilt:** Karoséria auta sa pri dynamickom prechádzaní zákrut a zmene smeru mierne nakláňa proti smeru manévru.
-  * **Interakcia s krajnicou:** Namiesto zničenia pri vybočení z pruhu hráč narazí na obrubník/mantinel – dôjde k jemnému odrazeniu (soft bounce back), spomaleniu a drobnému poškodeniu / vibrovaniu kamery.
+### A. Smooth Horizontal Car Handling
+* **Original:** Discrete lane switching (`targetLane = 0, 1, 2`).
+* **New system:**
+  * Continuous X‑axis movement driven by analog input (`controls.Player.Move.ReadValue<Vector2>().x`).
+  * X position clamped between road margins (`minRoadX`, `maxRoadX`).
+  * Steering speed (`steerSpeed`) reacts to key press duration or analog stick.
+  * **Steering wheel rotation:** Wheel angle (`steeringWheel.localRotation`) mirrors current steering direction and intensity.
+  * **Body roll & tilt:** Car body tilts opposite to the turn direction.
+  * **Edge interaction:** Instead of destroying the car when leaving the lane, the car bounces off the curb – a soft bounce back, slight slowdown, and minor vibration.
 
-### B. Mobil & Reels systém (FOMO Distrakcia)
-* Mobil má dva primárne režimy podľa stavu hry:
-  1. *V stave `OrderSelection`:* UI obrazovka s kuriérskou aplikáciou pre výber zákazky.
-  2. *V stave `DeliveryActive`:* Video prehrávač streamujúci krátke videá (Reels / TikTok brainrot) cez `VideoPlayer` a `RenderTexture`.
-* **FOMO mechanika:**
-  * `fomoValue` (0 – 100). Pri nesledovaní mobilu klesá rýchlosťou `drainRate`.
-  * Ak FOMO klesne pod kritickú hranicu (napr. < 30%), aktivuje sa agresívny post-processing (Vignette tunelové videnie, Color Adjustments desaturácia a úbytok expozície).
-  * Držaním klávesu (Space / Jump) hráč zdvihne ruku s mobilom pred oči (`HandController.SetRaised(true)`), kamera zoomuje na mobil (`FOV` prechod z 60° na 40°).
-  * Kým hráč pozerá do mobilu, `fomoValue` sa rýchlo dopĺňa (`refillRate`), video hrá aj so zvukom – **hráč však nevidí na cestu pred seba ani na navigačný displej palubovky!**
+### B. Phone & Reels System (FOMO Distraction)
+* Phone has two primary modes:
+  1. **OrderSelection:** UI showing the courier app for order picking.
+  2. **DeliveryActive:** Video player streaming short reels via `VideoPlayer` and `RenderTexture`.
+* **FOMO mechanic:**
+  * `fomoValue` (0‑100). When not looking at the phone it drains at `drainRate`.
+  * If FOMO drops below a critical threshold (e.g., <30%), aggressive post‑processing activates (vignette tunnel vision, desaturation, exposure loss).
+  * Holding a key (Space / Jump) raises the hand with the phone (`HandController.SetRaised(true)`), camera FOV zooms from 60° to 40°.
+  * While looking at the phone, `fomoValue` refills quickly (`refillRate`), video plays with sound – **the player cannot see the road or GPS**.
 
-### C. Navigačný a Odbočovací systém (GPS & Križovatky)
-* **Cestná sieť & Križovatky:**
-  * Cesta nie je len nekonečná rovinka. Generátor (`EnvironmentSpawner`) do trasy zaradí križovatky (T-križovatky, 4-ramenné križovatky, zákruty) podľa profilu aktívnej objednávky.
-  * Každá križovatka obsahuje `TurnTrigger`, ktorý vyhodnocuje pozíciu vozidla v momente prechodu.
-* **Palubná navigácia (Dashboard GPS UI):**
-  * Umiestnená priamo na 3D modeli palubovky pred volantom (World Space Canvas alebo RenderTexture).
-  * Zobrazuje:
-    * Smerovú šípku najbližšieho manévru (Vľavo, Vpravo, Priamo).
-    * Zostávajúcu vzdialenosť k odbočke v metroch (napr. *120 m*).
-    * Zvukový signál (pípnutie) pri blížiacom sa manévri (*50 m* pred križovatkou).
-* **Mechanika odbočenia & Zablúdenia:**
-  * Hráč musí v priestore križovatky natočiť vozidlo do správneho smeru (napr. držať auto na ľavej strane a točiť doľava).
-  * **Správne odbočenie:** Manéver splnený, svet pokračuje novým priamym úsekom, navigácia preskočí na ďalší bod trasy.
-  * **Zlé odbočenie alebo prešvihnutie (Missed Turn):** Nastáva, ak hráč ignoruje pokyn alebo kvôli pozeraniu do mobilu nestihne zareagovať.
-    * Hlasový/zvukový efekt *„Prepočítavam trasu...“ (Recalculating)*.
-    * Dynamické predĺženie trasy: systém pridá dodatočné úseky cesty (napr. +150 m zachádzka).
-    * Strata času a finančná penalizácia za meškanie.
+### C. Navigation & Turn System (GPS & Intersections)
+* **Road network & intersections:** The `EnvironmentSpawner` inserts intersections (T‑junctions, 4‑way, curves) according to the active order profile.
+* **Dashboard GPS UI:** Placed on the 3D dashboard (World Space Canvas or RenderTexture). Shows:
+  * Arrow for the next maneuver (Left, Right, Straight).
+  * Remaining distance to the turn in meters.
+  * Audio cue (beep) ~50 m before the turn.
+* **Turn handling & missed turns:**
+  * Correct turn triggers route progression.
+  * Missed turn triggers *Recalculating*, dynamically extending the route (+150 m) and applying time/financial penalties.
 
-### D. Ekonomika a Objednávkový systém (Economy & Orders)
-* **Dátový model zákazky (`DeliveryOrder`):**
-  * `orderID`: Unikátny identifikátor.
-  * `restaurantName` & `customerName`: Tematické názvy (napr. *Burger Palace -> Študentský internát*).
-  * `totalDistance`: Celková vzdialenosť v metroch.
-  * `junctionCount`: Počet križovatiek a sekvencia odbočiek.
-  * `timeLimit`: Časový limit pre dosiahnutie maximálneho prepitného.
-  * `basePayout`: Pevná odmena za doručenie (napr. 15.00 €).
-  * `maxTip`: Variabilné prepitné klesajúce s ubiehajúcim časom.
-* **Peňaženka (`WalletManager`):**
-  * Ukladá celkový stav financií kuriéra.
-  * Trvalé ukladanie do `PlayerPrefs` alebo šifrovaného JSON.
-  * Poskytuje eventy `OnBalanceChanged(float newBalance)`.
+### D. Economy & Order System
+* **Order data model (`DeliveryOrder`):**
+  * `orderID` – unique identifier.
+  * `restaurantName` & `customerName` – thematic names.
+  * `totalDistance` – distance in meters.
+  * `junctionCount` – number of turns and their sequence.
+  * `timeLimit` – time limit for maximum tip.
+  * `basePayout` – fixed delivery fee.
+  * `maxTip` – variable tip decreasing over time.
+* **Wallet (`WalletManager`):**
+  * Stores total player funds.
+  * Persistent storage via `PlayerPrefs` or encrypted JSON.
+  * Emits `OnBalanceChanged(float newBalance)` events.
 
 ---
 
 ## 5. Coding Conventions & Best Practices
 
-AI agenti aj členovia tímu **musia** rešpektovať nasledujúce konvencie pri písaní kódu:
-
-1. **Unity New Input System:** Vždy používať triedu `InputSystem_Actions`. Žiadny starý `Input.GetKey()` alebo `Input.GetAxis()`.
-2. **Zapuzdrenie & Inšpektor:**
-   * Preferujte `[SerializeField] private` pred verejnými `public` premennými, pokiaľ premenná nemá byť menená z iných tried.
-   * Verejné dáta vystavujte pomocou C# Properties (napr. `public float MoveSpeed => moveSpeed;`).
-3. **Výkon & Update Cyklus:**
-   * **Nikdy** nevolať `GetComponent<T>()`, `FindObjectOfType<T>()` ani `GameObject.Find()` v metódach `Update()`, `FixedUpdate()` alebo `LateUpdate()`. Všetky referencie inicializujte v `Awake()` alebo `Start()`.
-   * Pri práci s reťazcami a textom v UI nealokujte zbytočne stringy každý frame – aktualizujte text len vtedy, keď sa hodnota reálne zmení.
-4. **Voľná väzba (Decoupled Architecture cez Eventy):**
-   * Komponenty medzi sebou komunikujú primárne cez C# eventy a akcie (`System.Action`, `UnityEvent`).
-   * Príklad: `PlayerController` nezapisuje priamo do UI skriptu, ale vyvolá `OnHealthChanged?.Invoke(currentHealth)`.
-5. **Pravidlá pre `.meta` súbory a prefab-first prístup:**
-   * Každý nový skript, textúra, model alebo prefab musí byť commitnutý **spolu so svojím `.meta` súborom**.
-   * Nikdy neupravujte layout hlavnej scény priamo, ak môžete vytvoriť a použiť Prefab v `Assets/_Game/Prefabs/`. Tým predchádzame neriešiteľným merge konfliktom v Git.
-6. **Ošetrovanie stavov (Null Safety & Defensive Programming):**
-   * Vždy kontrolujte `if (GameManager.Instance == null)` pred volaním globálneho stavu.
-   * Pri práci s časticovými efektmi, zvukmi a textúrami overte existenciu referencie pred spustením.
+1. **Unity New Input System:** Always use the generated `InputSystem_Actions` class. No legacy `Input.GetKey()` or `Input.GetAxis()`.
+2. **Encapsulation & Inspector:** Prefer `[SerializeField] private` over public fields unless external access is required. Expose data via C# properties.
+3. **Performance & Update Cycle:**
+   * **Never** call `GetComponent<T>()`, `FindObjectOfType<T>()`, or `GameObject.Find()` inside `Update()`, `FixedUpdate()`, or `LateUpdate()`. Cache references in `Awake()` or `Start()`.
+   * Avoid allocating new strings each frame for UI text – update only when the value changes.
+4. **Decoupled Architecture (Events):** Components communicate primarily through C# events (`System.Action`, `UnityEvent`). Example: `PlayerController` raises `OnHealthChanged?.Invoke(currentHealth)` instead of directly updating UI.
+5. **`.meta` files & prefab‑first workflow:** Every new asset must be committed together with its `.meta` file. Never edit the main scene layout directly; create prefabs in `Assets/_Game/Prefabs/` and place those in scenes.
+6. **Null safety & defensive programming:** Always check `if (GameManager.Instance == null)` before accessing globals. Verify references before using particle systems, audio, or textures.
 
 ---
 
-## 6. Sprinty & Projektový manažment
+## 6. Sprints & Project Management
 
-Konkrétne úlohy pre jednotlivé šprinty, rozdelenie práce medzi členov tímu, Trello kartičky a akceptačné kritériá (Definition of Done) sú archivované a spravované v dedikovanom priečinku:
-📁 **[`Docs/Sprints/`](file:///c:/Users/jakub/OneDrive/Počítač/2627/TP/DoomDriver/Docs/Sprints/)**
+Specific tasks for each sprint, team assignments, Trello cards, and acceptance criteria (Definition of Done) are archived and managed in the dedicated folder:
+📁 **[`Docs/Sprints/`](../../Docs/Sprints/)**
 
-Tento súbor `AGENTS.md` ostáva trvalým architektonickým manuálom platným naprieč celým vývojom. Úlohy v šprintoch naň priamo nadväzujú.
-
+The `AGENTS.md` file remains the permanent architectural manual valid across the entire development. Sprint tasks directly reference it.

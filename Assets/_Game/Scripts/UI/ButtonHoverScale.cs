@@ -3,10 +3,10 @@ using UnityEngine.EventSystems;
 
 public class ButtonHoverScale : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
-    [Header("Hover efekt (Vyskočenie)")]
-    [Tooltip("1.1 znamená o 10% väčšie pri nabehnutí myšou")]
+    [Header("Hover Effect (Pop-up)")]
+    [Tooltip("1.1 means 10% larger when the mouse hovers over the button")]
     public float hoverScaleSize = 1.1f;
-    [Tooltip("Ako rýchlo tlačidlo zmení veľkosť")]
+    [Tooltip("Speed at which the button changes size")]
     public float scaleSpeed = 15f;
     
     private Vector3 originalScale;
@@ -14,28 +14,28 @@ public class ButtonHoverScale : MonoBehaviour, IPointerEnterHandler, IPointerExi
 
     void Start()
     {
-        // Uložíme pôvodnú veľkosť tlačidla (väčšinou to je 1x1x1)
+        // Store the original button size (usually 1x1x1)
         originalScale = transform.localScale;
         targetScale = originalScale;
     }
 
     void Update()
     {
-        // Plynulo pendlujeme medzi základnou veľkosťou a zväčšenou
+        // Smoothly lerp between the base size and the enlarged size
         transform.localScale = Vector3.Lerp(transform.localScale, targetScale, Time.deltaTime * scaleSpeed);
     }
 
-    // Táto funkcia sa spustí SAMA hneď ako kurzor vojde nad tlačidlo
+    // This function is called automatically as soon as the cursor enters the button
     public void OnPointerEnter(PointerEventData eventData)
     {
-        // Cieľom bude zväčšenie
+        // Target is to enlarge
         targetScale = originalScale * hoverScaleSize;
     }
 
-    // Keď myš vyjde von
+    // When the mouse exits
     public void OnPointerExit(PointerEventData eventData)
     {
-        // Cieľom bude pôvodný stav
+        // Target is the original state
         targetScale = originalScale;
     }
 }

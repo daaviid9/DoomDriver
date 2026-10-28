@@ -6,7 +6,7 @@ public class ObstacleData : MonoBehaviour
 {
     public ObstacleType obstacleType;
     
-    [Tooltip("Základné poškodenie (ak ho skript hráča neprepíše zatiaľ)")]
+    // Basic damage (if not overridden by player script)
     public int damageAmount = 100;
 
     [Header("Audio")]
