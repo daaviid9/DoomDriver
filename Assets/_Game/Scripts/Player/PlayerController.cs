@@ -109,7 +109,9 @@ public class PlayerController : MonoBehaviour
 
     private void OnMove(Vector2 direction)
     {
-        if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
+        // Only allow changing lanes during active delivery mission
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive) return;
+        if (GameManager.Instance != null && GameManager.Instance.isPaused) return;
 
         // Detect discrete lane switch based on X input
         if (direction.x < -0.5f)
@@ -188,7 +190,10 @@ public class PlayerController : MonoBehaviour
         {
             bool isMovingLane = Mathf.Abs(targetX - transform.position.x) > 0.05f;
 
-            if (isMovingLane)
+            // Only screech if actively driving
+            bool isDriving = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive;
+
+            if (isMovingLane && isDriving)
             {
                 if (!screechSource.isPlaying) screechSource.Play();
             }
