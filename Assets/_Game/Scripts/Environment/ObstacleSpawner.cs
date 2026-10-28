@@ -4,10 +4,10 @@ using UnityEngine.Serialization;
 
 public class ObstacleSpawner : MonoBehaviour
 {
+    public static ObstacleSpawner Instance { get; private set; }
+
     [Header("Obstacles - Categories")]
     public GameObject[] carPrefabs;
-    public GameObject[] edgeObstacles;    // napr. smetiaky, stĺpy
-    public GameObject[] barricadePrefabs; // napr. ploty, barely
     public GameObject[] edgeObstacles;    // e.g., trash cans, poles
     public GameObject[] barricadePrefabs; // e.g., fences, barriers
 
@@ -32,9 +32,22 @@ public class ObstacleSpawner : MonoBehaviour
 
     private float distanceTraveled;
 
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
     void Update()
     {
-        if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
+        // Only spawn obstacles during active delivery
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive) return;
 
         // Accumulate distance based on current world speed
         distanceTraveled += WorldMover.moveSpeed * Time.deltaTime;
@@ -44,6 +57,26 @@ public class ObstacleSpawner : MonoBehaviour
         {
             SpawnSophisticatedObstacle();
             distanceTraveled = 0; // Reset distance to the next obstacle
+        }
+    }
+
+    /// <summary>
+    /// Removes all active obstacles in the scene and resets the spawn distance counter.
+    /// </summary>
+    public static void ClearAllObstacles()
+    {
+        GameObject[] obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
+        foreach (var obs in obstacles)
+        {
+            if (obs != null)
+            {
+                Destroy(obs);
+            }
+        }
+
+        if (Instance != null)
+        {
+            Instance.distanceTraveled = 0f;
         }
     }
 
@@ -100,7 +133,7 @@ public class ObstacleSpawner : MonoBehaviour
         }
 
         // Calculate position
-        Vector3 spawnPos = new Vector3((lane - 1) * laneDistance, spawnYOffset, spawnDistanceForward    );
+        Vector3 spawnPos = new Vector3((lane - 1) * laneDistance, spawnYOffset, spawnDistanceForward);
         
         GameObject obstacle = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
         

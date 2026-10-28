@@ -906,6 +906,15 @@ MonoBehaviour:
   normalFOV: 60
   phoneFOV: 60
   fovTransitionSpeed: 3
+  orderSelectionFOV: 40.8
+  orderSelectionPitchTilt: 17.6
+  enableLobbyBlur: 1
+  lobbyBlurStart: 0.8
+  lobbyBlurEnd: 2.2
+  lobbyBlurRadius: 1.5
+  enableLobbyDarkening: 1
+  lobbyVignetteIntensity: 0.45
+  lobbyVignetteSmoothness: 0.6
 --- !u!114 &330585549
 MonoBehaviour:
   m_ObjectHideFlags: 0

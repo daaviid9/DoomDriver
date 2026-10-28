@@ -109,7 +109,9 @@ public class PlayerController : MonoBehaviour
 
     private void OnMove(Vector2 direction)
     {
-        if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
+        // Only allow changing lanes during active delivery mission
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive) return;
+        if (GameManager.Instance != null && GameManager.Instance.isPaused) return;
 
         // Detect discrete lane switch based on X input
         if (direction.x < -0.5f)
@@ -174,17 +176,24 @@ public class PlayerController : MonoBehaviour
         // Store position for next frame's speed calculation
         lastX = newX;
 
-        // --- DYNAMIC ENGINE PITCH ---
-        // Pitch changes based on how fast the car is moving (relative to a base speed of 10)
-        float speedRatio = WorldMover.moveSpeed / 25f; // Napr. pri 25 speed bude vysoký pitch
-        if (engineSource != null) engineSource.pitch = Mathf.Lerp(minPitch, maxPitch, speedRatio);
+        // --- DYNAMIC ENGINE PITCH & IDLE VOLUME ---
+        // Pitch changes based on how fast the car is moving
+        float speedRatio = Mathf.Clamp01(WorldMover.moveSpeed / 25f);
+        if (engineSource != null)
+        {
+            engineSource.pitch = Mathf.Lerp(minPitch, maxPitch, speedRatio);
+            engineSource.volume = Mathf.Lerp(0.6f, 1.0f, speedRatio);
+        }
 
         // --- TIRE SCREECH DURING MANEUVER ---
         if (screechSource != null)
         {
             bool isMovingLane = Mathf.Abs(targetX - transform.position.x) > 0.05f;
 
-            if (isMovingLane)
+            // Only screech if actively driving
+            bool isDriving = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive;
+
+            if (isMovingLane && isDriving)
             {
                 if (!screechSource.isPlaying) screechSource.Play();
             }
@@ -300,10 +309,9 @@ public class PlayerController : MonoBehaviour
         // 2. BAD STATE (Light smoke + hissing)
         if (currentHealth <= 50)
         {
-            if (smokeHeavyEffect != null) smokeHeavyEffect.SetActive(false);
             if (smokeLightEffect != null && !smokeLightEffect.activeSelf) PlayParticle(smokeLightEffect);
             
-            // Pri ľahkom dyme tiež syčíme, ale možno tichšie (voliteľné)
+            // Spustíme syčanie dymu
             if (hissingSource != null && !hissingSource.isPlaying) 
             {
                 hissingSource.loop = true;
@@ -312,10 +320,45 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // 3. HEALTHY CAR (Turn off smoke and sound)
+        // 3. GOOD HEALTH (No smoke)
         if (smokeLightEffect != null) smokeLightEffect.SetActive(false);
         if (smokeHeavyEffect != null) smokeHeavyEffect.SetActive(false);
         if (hissingSource != null && hissingSource.isPlaying) hissingSource.Stop();
+    }
+
+    /// <summary>
+    /// Resets vehicle health, position, tilt, effects, and audio for a new delivery order.
+    /// </summary>
+    public void ResetVehicleState()
+    {
+        currentHealth = maxHealth;
+        OnHealthChanged?.Invoke(currentHealth);
+
+        targetLane = 1; // Center lane
+        currentTilt = 0f;
+        lastX = 0f;
+
+        transform.position = new Vector3(0f, transform.position.y, transform.position.z);
+        transform.localRotation = Quaternion.identity;
+
+        if (steeringWheel != null)
+        {
+            steeringWheel.localRotation = Quaternion.identity;
+        }
+
+        // Reset damage smoke and explosion effects
+        ForceStopAndHide(smokeLightEffect);
+        ForceStopAndHide(smokeHeavyEffect);
+        ForceStopAndHide(explosionEffect);
+
+        if (hissingSource != null && hissingSource.isPlaying) hissingSource.Stop();
+        if (screechSource != null && screechSource.isPlaying) screechSource.Stop();
+
+        // Ensure engine is running
+        if (engineSource != null && !engineSource.isPlaying)
+        {
+            engineSource.Play();
+        }
     }
 
     // Helper function that not only activates the object but forces the smoke to start emitting
