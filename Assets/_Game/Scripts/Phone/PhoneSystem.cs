@@ -69,7 +69,40 @@ public class PhoneSystem : MonoBehaviour
 
     void Update()
     {
-        // 1. Post-Processing
+        // FOMO drain, vignette darkening, and reels only apply during active driving (DeliveryActive)!
+        bool isDeliveryActive = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive;
+
+        if (!isDeliveryActive)
+        {
+            // Reset FOMO to full focus when in Lobby (OrderSelection) or Completed
+            fomoValue = 100f;
+            if (fomoSlider != null) fomoSlider.value = fomoValue;
+
+            // Clear vignette and screen darkening completely
+            if (vignette != null)
+            {
+                vignette.intensity.Override(0f);
+            }
+            if (colorAdjustments != null)
+            {
+                colorAdjustments.postExposure.Override(0f);
+            }
+
+            if (reelsManager != null) reelsManager.SetActive(false);
+
+            // Lower hand and restore normal camera FOV when not actively driving
+            if (handController != null) handController.SetRaised(false);
+            if (mainCamera != null)
+            {
+                mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, normalFOV, Time.deltaTime * fovTransitionSpeed);
+            }
+
+            return;
+        }
+
+        // --- ACTIVE DELIVERY LOGIC (Driving) ---
+
+        // 1. Post-Processing based on FOMO meter
         if (vignette != null)
         {
             float fomoNormalized = fomoValue / 100f;
@@ -85,13 +118,7 @@ public class PhoneSystem : MonoBehaviour
             }
         }
 
-        // 2. Logic
-        if (GameManager.Instance != null && GameManager.Instance.isGameOver) 
-        {
-            if (reelsManager != null) reelsManager.SetActive(false);
-            return;
-        }
-
+        // 2. Scrolling Reels vs Road Watching
         if (isScrolling)
         {
             if (reelsManager != null) reelsManager.SetActive(true);
