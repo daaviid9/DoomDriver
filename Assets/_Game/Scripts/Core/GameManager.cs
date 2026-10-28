@@ -22,6 +22,9 @@ public class GameManager : MonoBehaviour
     public event System.Action OnDeliveryCompleted;
     public event System.Action OnDeliveryFailed;
 
+    [Header("Player & Vehicle")]
+    [SerializeField] private PlayerController playerController;
+
     [Header("Movement & World Speed")]
     [Tooltip("Starting cruise speed when a delivery begins")]
     public float defaultCruiseSpeed = 12f;
@@ -30,15 +33,22 @@ public class GameManager : MonoBehaviour
     [Tooltip("Maximum allowed world speed (limit)")]
     public float maxSpeed = 30f;
 
-    [Header("Score & Distance System")]
+    [Header("Mission & Delivery Progress")]
+    [Tooltip("Elapsed time in seconds for the active delivery mission")]
+    public float deliveryTimeElapsed = 0f;
     public float currentScore = 0f;
     private float highscore = 0f;
-    [Tooltip("UI Text for current score")]
+    [Tooltip("UI Text for current score/distance")]
     public TMP_Text scoreText;
     [Tooltip("UI Text for highscore")]
     public TMP_Text highscoreText;
     [Tooltip("UI Text for final score after failure")]
     public TMP_Text finalDistanceText;
+
+    [Header("Economy & Wallet")]
+    [SerializeField] private float playerBalance = 0f;
+    public float PlayerBalance => playerBalance;
+    public static event System.Action<float> OnBalanceChanged;
 
     [Header("UI Panels")]
     public GameObject gameOverPanel;
@@ -64,10 +74,25 @@ public class GameManager : MonoBehaviour
 
         // Load highscore on start
         highscore = PlayerPrefs.GetFloat("Highscore", 0f);
+
+        // Load wallet balance from PlayerPrefs (persists across restarts and scenes)
+        playerBalance = PlayerPrefs.GetFloat("PlayerBalance", 50f);
     }
 
     private void Start()
     {
+        if (playerController == null)
+        {
+            playerController = FindObjectOfType<PlayerController>();
+        }
+
+        // Clean initial state for parked lobby
+        if (playerController != null)
+        {
+            playerController.ResetVehicleState();
+        }
+        ObstacleSpawner.ClearAllObstacles();
+
         // Start in the parked car lobby by default (car stationary)
         SetState(GameState.OrderSelection);
     }
@@ -80,12 +105,16 @@ public class GameManager : MonoBehaviour
             TogglePause();
         }
 
+        // When paused, timescale is frozen and no timers or world movement advance
         if (isPaused) return;
 
         // Active delivery progression
         if (currentState == GameState.DeliveryActive)
         {
-            // 1. Distance accumulation
+            // 1. Mission timer
+            deliveryTimeElapsed += Time.deltaTime;
+
+            // 2. Distance accumulation
             currentScore += WorldMover.moveSpeed * Time.deltaTime;
 
             if (scoreText != null)
@@ -98,7 +127,7 @@ public class GameManager : MonoBehaviour
                 finalDistanceText.text = "You managed to scroll for " + Mathf.FloorToInt(currentScore).ToString() + " meters";
             }
 
-            // 2. Gradual acceleration over time
+            // 3. Gradual acceleration over time
             if (WorldMover.moveSpeed < maxSpeed)
             {
                 WorldMover.moveSpeed += speedIncreaseRate * Time.deltaTime;
@@ -182,12 +211,25 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Transitions from OrderSelection to DeliveryActive and sets cruise speed.
+    /// Transitions from OrderSelection to DeliveryActive, resets mission parameters, and cleans obstacles.
     /// </summary>
     public void StartDelivery()
     {
         if (currentState == GameState.DeliveryActive) return;
+
+        // Reset run stats
         currentScore = 0f;
+        deliveryTimeElapsed = 0f;
+
+        // Clear previous obstacles
+        ObstacleSpawner.ClearAllObstacles();
+
+        // Reset player vehicle to pristine state
+        if (playerController != null)
+        {
+            playerController.ResetVehicleState();
+        }
+
         SetState(GameState.DeliveryActive);
     }
 
@@ -197,6 +239,10 @@ public class GameManager : MonoBehaviour
     public void CompleteDelivery()
     {
         if (currentState != GameState.DeliveryActive) return;
+
+        // Sample earnings addition to verify wallet persistence
+        AddFunds(15f);
+
         SetState(GameState.DeliveryCompleted);
     }
 
@@ -228,6 +274,14 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void ReturnToOrderSelection()
     {
+        // Clean scene and vehicle for the lobby
+        ObstacleSpawner.ClearAllObstacles();
+
+        if (playerController != null)
+        {
+            playerController.ResetVehicleState();
+        }
+
         SetState(GameState.OrderSelection);
     }
 
@@ -242,6 +296,7 @@ public class GameManager : MonoBehaviour
             pausePanel.SetActive(isPaused);
         }
 
+        // Freeze Unity timescale and mute global audio when paused
         Time.timeScale = isPaused ? 0f : 1f;
         AudioListener.pause = isPaused;
     }
@@ -260,5 +315,27 @@ public class GameManager : MonoBehaviour
         AudioListener.pause = false;
         WorldMover.moveSpeed = defaultCruiseSpeed;
         SceneManager.LoadScene(mainMenuSceneName);
+    }
+
+    // --- ECONOMY & WALLET PERSISTENCE ---
+
+    public void AddFunds(float amount)
+    {
+        playerBalance += amount;
+        PlayerPrefs.SetFloat("PlayerBalance", playerBalance);
+        PlayerPrefs.Save();
+        OnBalanceChanged?.Invoke(playerBalance);
+        Debug.Log($"<color=green>[WALLET]</color> Added {amount}€. Total balance: {playerBalance}€");
+    }
+
+    public bool DeductFunds(float amount)
+    {
+        if (playerBalance < amount) return false;
+        playerBalance -= amount;
+        PlayerPrefs.SetFloat("PlayerBalance", playerBalance);
+        PlayerPrefs.Save();
+        OnBalanceChanged?.Invoke(playerBalance);
+        Debug.Log($"<color=orange>[WALLET]</color> Deducted {amount}€. Total balance: {playerBalance}€");
+        return true;
     }
 }
