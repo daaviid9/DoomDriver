@@ -129,7 +129,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1376905856516238, guid: 3b89a0b81c18f8548ae1e630445434b9, type: 3}
       propertyPath: m_Name
-      value: Smoke01
+      value: SmokeLight
       objectReference: {fileID: 0}
     - target: {fileID: 1376905856516238, guid: 3b89a0b81c18f8548ae1e630445434b9, type: 3}
       propertyPath: m_IsActive
@@ -455,6 +455,11 @@ GameObject:
   - component: {fileID: 194867909}
   - component: {fileID: 194867908}
   - component: {fileID: 194867907}
+  - component: {fileID: 194867914}
+  - component: {fileID: 194867913}
+  - component: {fileID: 194867912}
+  - component: {fileID: 194867911}
+  - component: {fileID: 194867910}
   m_Layer: 0
   m_Name: GameManagers
   m_TagString: Untagged
@@ -511,16 +516,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9cf214c4b34cc8541a239220589b0e23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  isGameOver: 0
-  isPaused: 0
-  currentScore: 0
-  scoreText: {fileID: 1513522324}
-  highscoreText: {fileID: 1883192624}
-  finalDistanceText: {fileID: 622406654}
-  speedIncreaseRate: 0.5
-  maxSpeed: 100
-  gameOverPanel: {fileID: 1025901632}
-  pausePanel: {fileID: 542524426}
+  currentState: 0
   mainMenuSceneName: LoadingScreenMenu
 --- !u!4 &194867909
 Transform:
@@ -537,6 +533,81 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &194867910
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194867906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b29f76a1c1d4de8ba69910245a8df2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameUIController
+  gameOverPanel: {fileID: 1025901632}
+  deliveryCompletedPanel: {fileID: 0}
+  pausePanel: {fileID: 542524426}
+  scoreText: {fileID: 1513522324}
+  highscoreText: {fileID: 1883192624}
+  finalDistanceText: {fileID: 622406654}
+--- !u!114 &194867911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194867906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81cb3df6014e41a99f13612458b091f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WalletManager
+  initialBalance: 50
+--- !u!114 &194867912
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194867906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a14c997e3bf947ea875c7562810ef1ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PauseController
+--- !u!114 &194867913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194867906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f81e3a197b4478f99e4b172a1239c01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DeliveryProgressTracker
+  currentDistance: 0
+  deliveryTimeElapsed: 0
+  highscore: 0
+--- !u!114 &194867914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194867906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c491176b6b7a489182319ec8ba1925b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldSpeedController
+  defaultCruiseSpeed: 12
+  speedIncreaseRate: 0.5
+  maxSpeed: 100
+  minSpeed: 5
+  brakeDeceleration: 20
 --- !u!1 &252023598
 GameObject:
   m_ObjectHideFlags: 0
@@ -905,9 +976,9 @@ MonoBehaviour:
   mainCamera: {fileID: 330585545}
   normalFOV: 60
   phoneFOV: 60
-  fovTransitionSpeed: 3
   orderSelectionFOV: 40.8
   orderSelectionPitchTilt: 17.6
+  fovTransitionSpeed: 3
   enableLobbyBlur: 1
   lobbyBlurStart: 0.8
   lobbyBlurEnd: 2.2
@@ -1206,8 +1277,12 @@ GameObject:
   - component: {fileID: 432921395}
   - component: {fileID: 432921394}
   - component: {fileID: 432921393}
-  - component: {fileID: 432921392}
   - component: {fileID: 432921397}
+  - component: {fileID: 432921405}
+  - component: {fileID: 432921404}
+  - component: {fileID: 432921403}
+  - component: {fileID: 432921402}
+  - component: {fileID: 432921401}
   - component: {fileID: 432921400}
   - component: {fileID: 432921399}
   - component: {fileID: 432921398}
@@ -1218,41 +1293,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &432921392
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 432921390}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5a30aca777a8da64ca858b61e137d85f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  laneDistance: 3
-  laneChangeSpeed: 10
-  steeringWheel: {fileID: 1149177461}
-  maxSteeringAngle: 90
-  steeringRotationSpeed: 10
-  maxHealth: 100
-  carDamage: 100
-  barricadeDamage: 50
-  edgeDamage: 30
-  smokeLightEffect: {fileID: 481236292}
-  smokeHeavyEffect: {fileID: 1376047088}
-  explosionEffect: {fileID: 1528800937}
-  jumpHeight: 0.5
-  jumpDuration: 0.3
-  maxTiltAngle: 2
-  tiltSmoothing: 10
-  engineSource: {fileID: 432921400}
-  hissingSource: {fileID: 432921399}
-  screechSource: {fileID: 432921398}
-  crashLightClip: {fileID: 8300000, guid: 828c0b06540f4c84abe0838e7e166262, type: 3}
-  crashHeavyClip: {fileID: 8300000, guid: f54ffa7b3faf28c4685a33314bfac844, type: 3}
-  minPitch: 0.8
-  maxPitch: 2.2
 --- !u!65 &432921393
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1666,6 +1706,91 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &432921401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 432921390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 781d4a96e1294ca7b96b4121da98a12e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VehicleAudio
+  engineSource: {fileID: 432921400}
+  hissingSource: {fileID: 432921399}
+  screechSource: {fileID: 432921398}
+  crashLightClip: {fileID: 8300000, guid: 828c0b06540f4c84abe0838e7e166262, type: 3}
+  crashHeavyClip: {fileID: 8300000, guid: f54ffa7b3faf28c4685a33314bfac844, type: 3}
+  minPitch: 0.8
+  maxPitch: 2.2
+--- !u!114 &432921402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 432921390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 91ab2d58a74e4fe498c19eb821037ca0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VehicleCollisionHandler
+  carDamage: 100
+  barricadeDamage: 50
+  edgeDamage: 30
+--- !u!114 &432921403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 432921390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 893417de281f42d4a51e6871be824901, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VehicleVFX
+  smokeLightEffect: {fileID: 481236292}
+  smokeHeavyEffect: {fileID: 1376047088}
+  explosionEffect: {fileID: 1528800937}
+  jumpHeight: 0.5
+  jumpDuration: 0.3
+--- !u!114 &432921404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 432921390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e612847a94142eb9a349bcde7103a89, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VehicleHealth
+  maxHealth: 100
+  currentHealth: 0
+--- !u!114 &432921405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 432921390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d5089c8a92f4ea7a61d67a1496a75f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VehicleMovement
+  laneDistance: 3
+  laneChangeSpeed: 10
+  startingLane: 1
+  steeringWheel: {fileID: 1149177461}
+  maxSteeringAngle: 90
+  steeringRotationSpeed: 10
+  maxTiltAngle: 2
+  tiltSmoothing: 10
 --- !u!1 &481236292 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1376905856516238, guid: 3b89a0b81c18f8548ae1e630445434b9, type: 3}
@@ -3312,7 +3437,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1599718021928974, guid: 21461e6c060baf044ac3e717ed4170cb, type: 3}
       propertyPath: m_Name
-      value: Puff
+      value: Explosion
       objectReference: {fileID: 0}
     - target: {fileID: 1599718021928974, guid: 21461e6c060baf044ac3e717ed4170cb, type: 3}
       propertyPath: m_IsActive
@@ -4715,7 +4840,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1293336391459690, guid: fd64a30dd68aeee438e405bbfa47eb61, type: 3}
       propertyPath: m_Name
-      value: Smoke03
+      value: SmokeHeavy
       objectReference: {fileID: 0}
     - target: {fileID: 1293336391459690, guid: fd64a30dd68aeee438e405bbfa47eb61, type: 3}
       propertyPath: m_IsActive
@@ -4930,7 +5055,16 @@ MonoBehaviour:
   mainCamera: {fileID: 330585545}
   normalFOV: 60
   phoneFOV: 60
+  orderSelectionFOV: 40.8
+  orderSelectionPitchTilt: 17.6
   fovTransitionSpeed: 0
+  enableLobbyBlur: 1
+  lobbyBlurStart: 0.8
+  lobbyBlurEnd: 2.2
+  lobbyBlurRadius: 1.5
+  enableLobbyDarkening: 1
+  lobbyVignetteIntensity: 0.45
+  lobbyVignetteSmoothness: 0.6
 --- !u!82 &2114611484
 AudioSource:
   m_ObjectHideFlags: 0

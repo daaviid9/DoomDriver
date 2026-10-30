@@ -19,8 +19,11 @@ public class NotificationManager : MonoBehaviour
 
     void Update()
     {
+        bool isPaused = PauseController.Instance != null && PauseController.Instance.IsPaused;
+        bool isDeliveryActive = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive;
+
         // Stop any lingering notification sound if we leave active delivery or pause
-        if (GameManager.Instance != null && (GameManager.Instance.CurrentState != GameState.DeliveryActive || GameManager.Instance.isPaused))
+        if (!isDeliveryActive || isPaused)
         {
             if (audioSource != null && audioSource.isPlaying)
             {
@@ -36,8 +39,11 @@ public class NotificationManager : MonoBehaviour
             float waitTime = Random.Range(minInterval, maxInterval);
             yield return new WaitForSeconds(waitTime);
 
+            bool isPaused = PauseController.Instance != null && PauseController.Instance.IsPaused;
+            bool isDeliveryActive = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive;
+
             // Only play message/distraction notifications during active delivery driving
-            if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.DeliveryActive || GameManager.Instance.isPaused)
+            if (!isDeliveryActive || isPaused)
             {
                 continue;
             }
@@ -45,10 +51,7 @@ public class NotificationManager : MonoBehaviour
             if (notificationClips != null && notificationClips.Length > 0 && audioSource != null)
             {
                 AudioClip clip = notificationClips[Random.Range(0, notificationClips.Length)];
-                if (clip != null)
-                {
-                    audioSource.PlayOneShot(clip);
-                }
+                audioSource.PlayOneShot(clip);
             }
         }
     }

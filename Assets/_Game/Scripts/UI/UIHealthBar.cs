@@ -1,43 +1,44 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+/// <summary>
+/// Updates the HUD health slider. Listens directly to VehicleHealth events.
+/// Follows Separation of Concerns: does not depend on steering, audio, or collision logic.
+/// </summary>
 [RequireComponent(typeof(Slider))]
 public class UIHealthBar : MonoBehaviour
 {
     private Slider healthSlider;
-    private PlayerController player;
+    private VehicleHealth vehicleHealth;
 
-    void Start()
+    private void Start()
     {
         healthSlider = GetComponent<Slider>();
-        
-        // Automaticky si to nájde hráča v scéne
-        player = Object.FindFirstObjectByType<PlayerController>();
 
-        if (player != null)
+        vehicleHealth = Object.FindFirstObjectByType<VehicleHealth>();
+        if (vehicleHealth != null)
         {
-            healthSlider.maxValue = player.maxHealth;
-            healthSlider.value = player.maxHealth; // Hráč začína s plným zdravím
-            
-            // "Prilepíme" túto funkciu na Health Event hráča
-            player.OnHealthChanged += UpdateHealthBar;
+            healthSlider.maxValue = vehicleHealth.MaxHealth;
+            healthSlider.value = vehicleHealth.CurrentHealth;
+            vehicleHealth.OnHealthChanged += UpdateHealthBar;
         }
         else
         {
-            Debug.LogWarning("[HealthBar] Hráč na scéne chýba! Posuvník zdravia sa nenapojil.");
+            Debug.LogWarning("[HealthBar] VehicleHealth not found in scene!");
         }
     }
 
-    // Táto funkcia sa zavolá ÚPLNE SAMA kedykoľvek hráč dostane Damage v PlayerController.cs
-    void UpdateHealthBar(int newHealth)
+    private void UpdateHealthBar(int newHealth, int maxHealth)
     {
+        healthSlider.maxValue = maxHealth;
         healthSlider.value = newHealth;
     }
-    
-    void OnDestroy()
+
+    private void OnDestroy()
     {
-        // Dobrá prax pre pamäť, odlepíme Event po zničení scény
-        if (player != null)
-            player.OnHealthChanged -= UpdateHealthBar;
+        if (vehicleHealth != null)
+        {
+            vehicleHealth.OnHealthChanged -= UpdateHealthBar;
+        }
     }
 }

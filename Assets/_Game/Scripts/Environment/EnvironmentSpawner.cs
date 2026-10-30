@@ -35,7 +35,7 @@ public class EnvironmentSpawner : MonoBehaviour
     void Update()
     {
         // If the game is over, we won't generate new segments
-        if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryFailed) return;
 
         // Check if the oldest (first) road segment has moved beyond the destroyZPosition
         if (activeChunks.Count > 0 && activeChunks[0].transform.position.z < destroyZPosition)

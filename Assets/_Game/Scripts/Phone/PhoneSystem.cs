@@ -69,7 +69,7 @@ public class PhoneSystem : MonoBehaviour
     void Awake()
     {
         // Safety: If there is another PhoneSystem component in the scene, keep the one on Main Camera to avoid conflicts
-        PhoneSystem[] allSystems = FindObjectsOfType<PhoneSystem>();
+        PhoneSystem[] allSystems = Object.FindObjectsByType<PhoneSystem>(FindObjectsSortMode.None);
         if (allSystems.Length > 1 && gameObject.name != "Main Camera")
         {
             Debug.LogWarning($"[PhoneSystem] Disabling duplicate PhoneSystem on '{gameObject.name}' to prevent camera conflicts.");
