@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class ScrollTexture : MonoBehaviour
 {
-    [Tooltip("Rýchlosť, akou sa textúra hýbe dozadu (čím vyššie číslo, tým rýchlejšie auto vizuálne ide).")]
+    [Tooltip("Speed of texture scroll (Higher number - cars go visually faster)")]
     public float scrollSpeed = 0.5f;
     
     private Renderer rend;
@@ -20,7 +20,7 @@ public class ScrollTexture : MonoBehaviour
     void Update()
     {
         // Nehybeme textúrou, ak hráč prehral
-        if (GameManager.Instance != null && GameManager.Instance.isGameOver) return;
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryFailed) return;
 
         if (mat != null)
         {
