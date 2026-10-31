@@ -1013,7 +1013,6 @@ GameObject:
   - component: {fileID: 372252489}
   - component: {fileID: 372252488}
   - component: {fileID: 372252487}
-  - component: {fileID: 372252486}
   - component: {fileID: 372252491}
   m_Layer: 0
   m_Name: Road
@@ -1022,18 +1021,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &372252486
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 372252485}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fda4c87948b4b0745a498e6c0937e739, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WorldMover
 --- !u!64 &372252487
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -1135,7 +1122,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 372252485}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5fa202e6e95c04c4595a03365dacf82c, type: 3}
   m_Name: 
