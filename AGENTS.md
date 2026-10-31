@@ -59,13 +59,13 @@ Assets/_Game/
 │   └── _Tests/            # Isolated test scenes
 ├── Scripts/
 │   ├── Audio/             # AudioManager
-│   ├── Core/              # GameManager, GameStateMachine, WorldMover, CameraShake
+│   ├── Core/              # GameManager, DeliveryProgressTracker, WorldSpeedController, PauseController, WorldMover, CameraShake
 │   ├── Economy/           # DeliveryOrder, OrderManager, WalletManager
 │   ├── Environment/       # EnvironmentSpawner, ChunkController, ObstacleSpawner, ObstacleData
 │   ├── Navigation/        # NavigationManager, RouteController, TurnTrigger
 │   ├── Phone/             # PhoneSystem, ReelsManager, HandController, CourierAppUI
-│   ├── Player/            # PlayerController (analog steering, wheel, damage)
-│   └── UI/                # DashboardNavigationUI, DeliverySummaryUI, UIHealthBar, LoadingScreen
+│   ├── Player/            # VehicleMovement, VehicleHealth, VehicleAudio, VehicleVFX, VehicleCollisionHandler
+│   └── UI/                # DashboardNavigationUI, DeliverySummaryUI, GameUIController, UIHealthBar, LoadingScreen
 └── Settings/              # URP assets, post‑process profiles
 ```
 
@@ -170,7 +170,7 @@ stateDiagram-v2
 3. **Performance & Update Cycle:**
    * **Never** call `GetComponent<T>()`, `FindObjectOfType<T>()`, or `GameObject.Find()` inside `Update()`, `FixedUpdate()`, or `LateUpdate()`. Cache references in `Awake()` or `Start()`.
    * Avoid allocating new strings each frame for UI text – update only when the value changes.
-4. **Decoupled Architecture (Events):** Components communicate primarily through C# events (`System.Action`, `UnityEvent`). Example: `PlayerController` raises `OnHealthChanged?.Invoke(currentHealth)` instead of directly updating UI.
+4. **Decoupled Architecture (Events):** Components communicate primarily through C# events (`System.Action`, `UnityEvent`). Example: `VehicleHealth` raises `OnHealthChanged?.Invoke(currentHealth, maxHealth)` instead of directly updating UI.
 5. **`.meta` files & prefab‑first workflow:** Every new asset must be committed together with its `.meta` file. Never edit the main scene layout directly; create prefabs in `Assets/_Game/Prefabs/` and place those in scenes.
 6. **Null safety & defensive programming:** Always check `if (GameManager.Instance == null)` before accessing globals. Verify references before using particle systems, audio, or textures.
 
