@@ -12,6 +12,10 @@ public class VehicleCollisionHandler : MonoBehaviour
     [SerializeField] private int barricadeDamage = 50;
     [SerializeField] private int edgeDamage = 30;
 
+    [Header("Speed penalty")]
+    [SerializeField] private int smallPenalty = 4;
+    [SerializeField] private int highPenalty = 7;
+
     private VehicleHealth health;
 
     /// <summary>
@@ -58,16 +62,12 @@ public class VehicleCollisionHandler : MonoBehaviour
             }
         }
 
-        // Apply speed penalties based on collision type
+        // Apply speed penalties via WorldSpeedController
         if (damage >= 50)
         {
             if (WorldSpeedController.Instance != null)
             {
-                WorldSpeedController.Instance.ApplySpeedPenalty(7f);
-            }
-            else
-            {
-                WorldMover.moveSpeed = Mathf.Max(5f, WorldMover.moveSpeed - 7f);
+                WorldSpeedController.Instance.ApplySpeedPenalty(smallPenalty);
             }
         }
         else
@@ -76,19 +76,8 @@ public class VehicleCollisionHandler : MonoBehaviour
 
             if (WorldSpeedController.Instance != null)
             {
-                WorldSpeedController.Instance.ApplySpeedPenalty(4f);
+                WorldSpeedController.Instance.ApplySpeedPenalty(highPenalty);
             }
-            else
-            {
-                WorldMover.moveSpeed = Mathf.Max(5f, WorldMover.moveSpeed - 4f);
-            }
-        }
-
-        // Camera Shake
-        if (CameraShake.Instance != null && damage > 0)
-        {
-            float shakePower = damage >= 50 ? 0.6f : 0.25f;
-            CameraShake.Instance.Shake(0.3f, shakePower);
         }
 
         // Fire collision event

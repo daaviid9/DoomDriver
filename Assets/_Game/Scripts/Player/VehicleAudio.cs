@@ -36,6 +36,7 @@ public class VehicleAudio : MonoBehaviour
         if (movement != null)
         {
             movement.OnManeuveringStateChanged += HandleManeuveringStateChanged;
+            movement.OnCurbContact += HandleCurbContact;
         }
 
         if (health != null)
@@ -55,6 +56,7 @@ public class VehicleAudio : MonoBehaviour
         if (movement != null)
         {
             movement.OnManeuveringStateChanged -= HandleManeuveringStateChanged;
+            movement.OnCurbContact -= HandleCurbContact;
         }
 
         if (health != null)
@@ -78,7 +80,8 @@ public class VehicleAudio : MonoBehaviour
     {
         if (engineSource == null) return;
 
-        float speedRatio = Mathf.Clamp01(WorldMover.moveSpeed / 25f);
+        float speed = WorldSpeedController.Instance != null ? WorldSpeedController.Instance.CurrentSpeed : 0f;
+        float speedRatio = Mathf.Clamp01(speed / 25f);
         engineSource.pitch = Mathf.Lerp(minPitch, maxPitch, speedRatio);
         engineSource.volume = Mathf.Lerp(0.6f, 1.0f, speedRatio);
     }
@@ -95,6 +98,21 @@ public class VehicleAudio : MonoBehaviour
         else
         {
             if (screechSource.isPlaying) screechSource.Stop();
+        }
+    }
+
+    private void HandleCurbContact()
+    {
+        /*
+        if (screechSource != null && !screechSource.isPlaying)
+        {
+            screechSource.Play();
+        }
+        */
+        if (engineSource != null & crashLightClip != null) 
+        {
+        
+            engineSource.PlayOneShot(crashLightClip);
         }
     }
 

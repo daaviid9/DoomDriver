@@ -2,8 +2,11 @@ using UnityEngine;
 using System.Collections;
 
 /// <summary>
-/// Manages smoke particles, explosion effects, and bump animations for the vehicle.
-/// Decoupled from damage logic and audio playback. Listens to events from VehicleHealth and VehicleCollisionHandler.
+/// Manages all visual and camera feedback for the player vehicle:
+/// - Smoke and explosion particle systems
+/// - Obstacle hop/bump jump animation
+/// - Impact camera shakes (curb contact and obstacle collisions)
+/// Strictly decoupled from movement physics and damage calculation.
 /// </summary>
 public class VehicleVFX : MonoBehaviour
 {
@@ -16,9 +19,20 @@ public class VehicleVFX : MonoBehaviour
     [SerializeField] private float jumpHeight = 0.5f;
     [SerializeField] private float jumpDuration = 0.3f;
 
+    [Header("Camera Shake Settings")]
+    [Tooltip("Camera shake intensity for minor obstacle collisions (< 50 damage)")]
+    [SerializeField] private float minorCollisionShake = 0.25f;
+
+    [Tooltip("Camera shake intensity for heavy obstacle collisions (>= 50 damage)")]
+    [SerializeField] private float majorCollisionShake = 0.6f;
+
+    [Tooltip("Camera shake intensity when bouncing off the road curb")]
+    [SerializeField] private float curbBounceShake = 0.2f;
+
     private VehicleHealth health;
     private VehicleAudio vehicleAudio;
     private VehicleCollisionHandler collisionHandler;
+    private VehicleMovement movement;
 
     private bool isJumping = false;
 
@@ -27,6 +41,7 @@ public class VehicleVFX : MonoBehaviour
         if (health == null) health = GetComponent<VehicleHealth>();
         if (vehicleAudio == null) vehicleAudio = GetComponent<VehicleAudio>();
         if (collisionHandler == null) collisionHandler = GetComponent<VehicleCollisionHandler>();
+        if (movement == null) movement = GetComponent<VehicleMovement>();
 
         ForceStopAndHide(smokeLightEffect);
         ForceStopAndHide(smokeHeavyEffect);
@@ -46,6 +61,11 @@ public class VehicleVFX : MonoBehaviour
         if (collisionHandler != null)
         {
             collisionHandler.OnObstacleBump += HandleObstacleBump;
+        }
+
+        if (movement != null)
+        {
+            movement.OnCurbContact += HandleCurbContact;
         }
 
         if (GameManager.Instance != null)
@@ -68,6 +88,11 @@ public class VehicleVFX : MonoBehaviour
             collisionHandler.OnObstacleBump -= HandleObstacleBump;
         }
 
+        if (movement != null)
+        {
+            movement.OnCurbContact -= HandleCurbContact;
+        }
+
         if (GameManager.Instance != null)
         {
             GameManager.Instance.OnDeliveryStarted -= ResetVFX;
@@ -77,16 +102,31 @@ public class VehicleVFX : MonoBehaviour
 
     private void HandleDamageTaken(int dmg)
     {
-        // Major collision explosion effect
+        // Major collision explosion particle effect
         if (dmg >= 50)
         {
             PlayParticle(explosionEffect);
+        }
+
+        // Proportional impact camera shake
+        if (CameraShake.Instance != null && dmg > 0)
+        {
+            float shakePower = dmg >= 50 ? majorCollisionShake : minorCollisionShake;
+            CameraShake.Instance.Shake(0.3f, shakePower);
         }
     }
 
     private void HandleObstacleBump()
     {
         TriggerBumpJump();
+    }
+
+    private void HandleCurbContact()
+    {
+        if (CameraShake.Instance != null && curbBounceShake > 0f)
+        {
+            CameraShake.Instance.Shake(0.12f, curbBounceShake);
+        }
     }
 
     private void HandleHealthChanged(int currentHP, int maxHP)
