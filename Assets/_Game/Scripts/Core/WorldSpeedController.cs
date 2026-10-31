@@ -2,34 +2,46 @@ using UnityEngine;
 
 /// <summary>
 /// Controls the speed and acceleration of the moving world during driving.
+/// Serves as the Single Source of Truth for forward speed metrics in the project.
 /// Decouples vehicle movement dynamics and road scrolling from the high-level game state machine.
 /// </summary>
 public class WorldSpeedController : MonoBehaviour
 {
     public static WorldSpeedController Instance { get; private set; }
 
+    [Header("Speed State")]
+    [Tooltip("Current speed of the moving world in meters per second")]
+    [SerializeField] private float currentSpeed = 0f;
+
     [Header("Speed Settings")]
-    [Tooltip("Starting cruise speed when a delivery begins")]
+    [Tooltip("Starting cruise speed when a delivery begins (auto-driving minimum)")]
     [SerializeField] private float defaultCruiseSpeed = 12f;
 
-    [Tooltip("How much world speed increases each second during active delivery")]
-    [SerializeField] private float speedIncreaseRate = 0.5f;
+    [Tooltip("Maximum top speed achievable when player accelerates")]
+    [SerializeField] private float topSpeed = 28f;
 
-    [Tooltip("Maximum allowed world speed (limit)")]
-    [SerializeField] private float maxSpeed = 100f;
+    [Tooltip("Acceleration rate when player holds gas (W / Up / Stick Up)")]
+    [SerializeField] private float playerAccelerationRate = 10f;
+
+    [Tooltip("Deceleration rate when player releases gas, returning to base cruise speed")]
+    [SerializeField] private float naturalDecelerationRate = 6f;
+
+    [Tooltip("Player active braking deceleration rate (S / Down / Stick Down)")]
+    [SerializeField] private float playerBrakeDeceleration = 14f;
 
     [Tooltip("Minimum speed allowed when braking or after collision slowdown")]
     [SerializeField] private float minSpeed = 5f;
 
     [Header("Braking / Traffic Stop")]
-    [Tooltip("Deceleration rate applied when braking (e.g., at red lights)")]
+    [Tooltip("Deceleration rate applied when hard braking (e.g., at red lights)")]
     [SerializeField] private float brakeDeceleration = 20f;
     private bool isBraking = false;
 
-    public float CurrentSpeed => WorldMover.moveSpeed;
+    private InputSystem_Actions controls;
+
+    public float CurrentSpeed => currentSpeed;
     public float DefaultCruiseSpeed => defaultCruiseSpeed;
-    public float SpeedIncreaseRate => speedIncreaseRate;
-    public float MaxSpeed => maxSpeed;
+    public float TopSpeed => topSpeed;
     public float MinSpeed => minSpeed;
 
     public event System.Action<float> OnSpeedChanged;
@@ -46,8 +58,18 @@ public class WorldSpeedController : MonoBehaviour
             return;
         }
 
-        // Guarantee that world speed starts at 0 while parked in the lobby
-        WorldMover.moveSpeed = 0f;
+        controls = new InputSystem_Actions();
+        currentSpeed = 0f;
+    }
+
+    private void OnEnable()
+    {
+        controls?.Enable();
+    }
+
+    private void OnDisable()
+    {
+        controls?.Disable();
     }
 
     private void Start()
@@ -55,7 +77,6 @@ public class WorldSpeedController : MonoBehaviour
         if (GameManager.Instance != null)
         {
             GameManager.Instance.OnGameStateChanged += HandleGameStateChanged;
-            // Align speed immediately with current state
             HandleGameStateChanged(GameManager.Instance.CurrentState);
         }
         else
@@ -79,25 +100,51 @@ public class WorldSpeedController : MonoBehaviour
 
         if (isBraking)
         {
-            // Decelerate down to full stop
-            if (WorldMover.moveSpeed > 0f)
+            // Decelerate down to full stop (traffic red light or emergency)
+            if (currentSpeed > 0f)
             {
-                WorldMover.moveSpeed = Mathf.Max(0f, WorldMover.moveSpeed - brakeDeceleration * Time.deltaTime);
-                OnSpeedChanged?.Invoke(WorldMover.moveSpeed);
+                currentSpeed = Mathf.Max(0f, currentSpeed - brakeDeceleration * Time.deltaTime);
+                OnSpeedChanged?.Invoke(currentSpeed);
+            }
+            return;
+        }
+
+        float forwardInput = 0f;
+        if (controls != null)
+        {
+            forwardInput = controls.Player.Move.ReadValue<Vector2>().y;
+        }
+
+        float previousSpeed = currentSpeed;
+
+        if (forwardInput > 0.05f)
+        {
+            // Player is accelerating up towards topSpeed
+            if (currentSpeed < topSpeed)
+            {
+                currentSpeed = Mathf.MoveTowards(currentSpeed, topSpeed, playerAccelerationRate * forwardInput * Time.deltaTime);
+            }
+        }
+        else if (forwardInput < -0.05f)
+        {
+            // Player is braking down towards minSpeed
+            if (currentSpeed > minSpeed)
+            {
+                currentSpeed = Mathf.MoveTowards(currentSpeed, minSpeed, playerBrakeDeceleration * (-forwardInput) * Time.deltaTime);
             }
         }
         else
         {
-            // Gradually accelerate over time up to maximum cruise speed
-            if (WorldMover.moveSpeed < maxSpeed)
+            // No forward/backward input: auto-cruise behavior converging to defaultCruiseSpeed
+            if (!Mathf.Approximately(currentSpeed, defaultCruiseSpeed))
             {
-                WorldMover.moveSpeed += speedIncreaseRate * Time.deltaTime;
-                if (WorldMover.moveSpeed > maxSpeed)
-                {
-                    WorldMover.moveSpeed = maxSpeed;
-                }
-                OnSpeedChanged?.Invoke(WorldMover.moveSpeed);
+                currentSpeed = Mathf.MoveTowards(currentSpeed, defaultCruiseSpeed, naturalDecelerationRate * Time.deltaTime);
             }
+        }
+
+        if (!Mathf.Approximately(previousSpeed, currentSpeed))
+        {
+            OnSpeedChanged?.Invoke(currentSpeed);
         }
     }
 
@@ -110,13 +157,13 @@ public class WorldSpeedController : MonoBehaviour
     }
 
     /// <summary>
-    /// Applies a sudden speed penalty caused by an obstacle collision.
+    /// Applies a sudden speed penalty caused by an obstacle or curb collision.
     /// </summary>
     public void ApplySpeedPenalty(float amount)
     {
-        WorldMover.moveSpeed = Mathf.Max(minSpeed, WorldMover.moveSpeed - amount);
-        OnSpeedChanged?.Invoke(WorldMover.moveSpeed);
-        Debug.Log($"<color=orange>[SPEED PENALTY]</color> Slowed by {amount}. Current speed: {WorldMover.moveSpeed:F1}");
+        currentSpeed = Mathf.Max(minSpeed, currentSpeed - amount);
+        OnSpeedChanged?.Invoke(currentSpeed);
+        Debug.Log($"<color=orange>[SPEED PENALTY]</color> Slowed by {amount}. Current speed: {currentSpeed:F1}");
     }
 
     /// <summary>
@@ -124,7 +171,7 @@ public class WorldSpeedController : MonoBehaviour
     /// </summary>
     private void StopWorld()
     {
-        WorldMover.moveSpeed = 0f;
+        currentSpeed = 0f;
         OnSpeedChanged?.Invoke(0f);
     }
 
@@ -133,7 +180,7 @@ public class WorldSpeedController : MonoBehaviour
     /// </summary>
     private void ResetToCruiseSpeed()
     {
-        WorldMover.moveSpeed = defaultCruiseSpeed;
+        currentSpeed = defaultCruiseSpeed;
         OnSpeedChanged?.Invoke(defaultCruiseSpeed);
     }
 

@@ -50,7 +50,8 @@ public class ObstacleSpawner : MonoBehaviour
         if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive) return;
 
         // Accumulate distance based on current world speed
-        distanceTraveled += WorldMover.moveSpeed * Time.deltaTime;
+        float currentSpeed = WorldSpeedController.Instance != null ? WorldSpeedController.Instance.CurrentSpeed : 0f;
+        distanceTraveled += currentSpeed * Time.deltaTime;
         
         // If we have traveled the required distance, spawn an obstacle
         if (distanceTraveled >= spawnInterval)

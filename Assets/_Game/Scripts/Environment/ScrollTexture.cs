@@ -24,6 +24,7 @@ public class ScrollTexture : MonoBehaviour
 
         if (mat != null)
         {
+            Debug.Log("this is doing somehitng");
             // Vypočítame offset, ktorý neustále narastá s časom
             float yOffset = Time.time * scrollSpeed;
             

@@ -603,9 +603,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c491176b6b7a489182319ec8ba1925b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldSpeedController
+  currentSpeed: 0
   defaultCruiseSpeed: 12
-  speedIncreaseRate: 0.5
-  maxSpeed: 100
+  topSpeed: 28
+  playerAccelerationRate: 10
+  naturalDecelerationRate: 6
+  playerBrakeDeceleration: 14
   minSpeed: 5
   brakeDeceleration: 20
 --- !u!1 &252023598
@@ -1740,6 +1743,8 @@ MonoBehaviour:
   carDamage: 100
   barricadeDamage: 50
   edgeDamage: 30
+  smallPenalty: 4
+  highPenalty: 7
 --- !u!114 &432921403
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1757,6 +1762,9 @@ MonoBehaviour:
   explosionEffect: {fileID: 1528800937}
   jumpHeight: 0.5
   jumpDuration: 0.3
+  minorCollisionShake: 0.25
+  majorCollisionShake: 0.6
+  curbBounceShake: 0.2
 --- !u!114 &432921404
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1783,9 +1791,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3d5089c8a92f4ea7a61d67a1496a75f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VehicleMovement
+  steeringMode: 1
   laneDistance: 3
   laneChangeSpeed: 10
   startingLane: 1
+  maxSteerSpeed: 8
+  steerAcceleration: 24
+  steerDeceleration: 28
+  minRoadX: -4.5
+  maxRoadX: 4.5
+  referenceForwardSpeed: 12.1
+  minSpeedFactor: 0.35
+  maxSpeedFactor: 1.6
+  curbBounceForce: 3.5
+  curbSpeedPenalty: 2.5
   steeringWheel: {fileID: 1149177461}
   maxSteeringAngle: 90
   steeringRotationSpeed: 10

@@ -70,7 +70,8 @@ public class DeliveryProgressTracker : MonoBehaviour
         if (PauseController.Instance != null && PauseController.Instance.IsPaused) return;
 
         deliveryTimeElapsed += Time.deltaTime;
-        currentDistance += WorldMover.moveSpeed * Time.deltaTime;
+        float forwardSpeed = WorldSpeedController.Instance != null ? WorldSpeedController.Instance.CurrentSpeed : 0f;
+        currentDistance += forwardSpeed * Time.deltaTime;
 
         OnTimeUpdated?.Invoke(deliveryTimeElapsed);
         OnDistanceUpdated?.Invoke(currentDistance);
