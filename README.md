@@ -47,11 +47,12 @@ Assets/
 │   │   └── _Tests/             <-- Sandbox for test scenes
 │   ├── Scripts/                <-- C# scripts organised into subfolders:
 │   │   ├── Audio/              <-- Audio management and music
-│   │   ├── Core/               <-- GameManager, world movement, camera
+│   │   ├── Core/               <-- GameManager, world movement, speed/pause controllers, progress tracker
+│   │   ├── Economy/            <-- Order data models, procedural orders, wallet management
 │   │   ├── Environment/        <-- Road and obstacle spawning
 │   │   ├── Phone/              <-- Phone logic, reels system, hand animation
-│   │   ├── Player/             <-- Car movement, collisions, health
-│   │   └── UI/                 <-- Menus, health bar, VHS filter and UI effects
+│   │   ├── Player/             <-- Modular vehicle subsystems (movement, collisions, health, audio, VFX)
+│   │   └── UI/                 <-- Game UI controller, menus, health bar, VHS filter and effects
 │   ├── Settings/               <-- URP assets and post‑processing profiles
 │   ├── Textures/               <-- Tachometer and clock textures
 │   └── UI/

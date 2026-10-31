@@ -44,14 +44,14 @@ flowchart TD
     - `DeliveryCompleted`: Destination reached within time limit, world stops, evaluation panel shows.
     - `DeliveryFailed`: Car destroyed (0 HP) or time expires, game over.
   - Add C# events (`OnGameStateChanged`, `OnDeliveryStarted`, `OnDeliveryFinished`) for UI, audio, and spawner integration.
-  - **Key Files:** `Assets/_Game/Scripts/Core/GameManager.cs`, `Assets/_Game/Scripts/Core/GameState.cs` (or enum), `Assets/_Game/Scripts/Core/WorldMover.cs`.
+  - **Key Files:** `Assets/_Game/Scripts/Core/GameManager.cs`, `Assets/_Game/Scripts/Core/DeliveryProgressTracker.cs`, `Assets/_Game/Scripts/Core/WorldSpeedController.cs`, `Assets/_Game/Scripts/Core/PauseController.cs`, `Assets/_Game/Scripts/UI/GameUIController.cs`, `Assets/_Game/Scripts/Core/WorldMover.cs`.
   - **Definition of Done:** Game starts in `OrderSelection` in `EnviromentScene`; calling `GameManager.Instance.StartDelivery(selectedOrder)` smoothly accelerates the world and starts the timer; `CompleteDelivery()` or `FailDelivery()` stops the world and notifies subsystems; returning to `OrderSelection` does not require reloading the scene.
 
 - **Card 1.2 – Delivery Lifecycle & Scene Orchestration**
   - Ensure a clean restart between deliveries (reset distance travelled, temporary car damage, remove old obstacles, keep wallet balance).
   - Adjust the pause system (`TogglePause`) to work correctly during delivery (pause timer, freeze `Time.timeScale`, mute audio).
   - Connect engine audio states (idle in lobby, acceleration sound when delivery starts).
-  - **Key Files:** `Assets/_Game/Scripts/Core/GameManager.cs`, `Assets/_Game/Scripts/Player/PlayerController.cs` (add `ResetVehicleState()`), `Assets/_Game/Scripts/Audio/AudioManager.cs`.
+  - **Key Files:** `Assets/_Game/Scripts/Core/GameManager.cs`, `Assets/_Game/Scripts/Player/` (autonomous resets in `VehicleMovement.cs`, `VehicleHealth.cs`, `VehicleAudio.cs`, `VehicleVFX.cs`), `Assets/_Game/Scripts/Audio/AudioManager.cs`.
   - **Definition of Done:** No memory leaks between deliveries; car health resets to max; wallet balance persists; pause works reliably during gameplay.
 
 ---
@@ -84,14 +84,14 @@ flowchart TD
   - Clamp X position between road margins (`minRoadX`, `maxRoadX`).
   - Add smooth acceleration/deceleration and steering speed.
   - Synchronise steering wheel rotation (`steeringWheel.localRotation`) with input.
-  - **Key Files:** `Assets/_Game/Scripts/Player/PlayerController.cs`, input bindings in `Assets/_Game/Data/Input/InputSystem_Actions.inputactions`, `carInterior.prefab`.
+  - **Key Files:** `Assets/_Game/Scripts/Player/VehicleMovement.cs`, input bindings in `Assets/_Game/Data/Input/InputSystem_Actions.inputactions`, `carInterior.prefab`.
   - **Definition of Done:** Car moves fluidly across the full road width; steering works with keyboard (A/D, arrows) and gamepad; wheel rotates proportionally and returns to neutral when input released.
 
 - **Card 3.2 – Body Roll, Tire Screech, and Curb Bounce**
   - Compute dynamic body tilt based on lateral acceleration for realistic tilt.
   - Replace hard curb collisions with a soft bounce back: slight camera shake, minor speed reduction, tire screech sound.
   - Trigger tire screech only on sharp steering at high speed.
-  - **Key Files:** `Assets/_Game/Scripts/Player/PlayerController.cs`, `Assets/_Game/Scripts/Core/CameraShake.cs`, audio sources on `carInterior.prefab`.
+  - **Key Files:** `Assets/_Game/Scripts/Player/VehicleMovement.cs`, `Assets/_Game/Scripts/Player/VehicleAudio.cs`, `Assets/_Game/Scripts/Player/VehicleCollisionHandler.cs`, `Assets/_Game/Scripts/Core/CameraShake.cs`, audio sources on `carInterior.prefab`.
   - **Definition of Done:** Car tilts naturally in turns; curb contact produces a gentle bounce and appropriate audio/visual feedback; driving feels smooth and arcade‑like.
 
 ---
