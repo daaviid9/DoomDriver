@@ -75,5 +75,23 @@ public sealed class DashboardNavigationDemo : MonoBehaviour
     [ContextMenu("GPS/6 End delivery")]
     public void EndDelivery() { active = false; display.SetPreviewState(false, paused); }
 
+    [ContextMenu("GPS/7 Miss turn (report wrong exit)")]
+    public void MissTurn()
+    {
+        if (!active || source == null) return;
+        var wrongExit = direction == DashboardNavigationSource.Maneuver.Left
+            ? DashboardNavigationSource.Maneuver.Straight : DashboardNavigationSource.Maneuver.Left;
+        if (source.ReportTurnTaken(maneuverId, wrongExit)) recalculating = true;
+    }
+
+    [ContextMenu("GPS/8 Blink test (49 m)")]
+    public void BlinkTest()
+    {
+        NewDelivery();
+        autoCountdown = false;
+        remainingMeters = 49f;
+        Publish();
+    }
+
     private void OnDisable() { AudioListener.pause = false; }
 }

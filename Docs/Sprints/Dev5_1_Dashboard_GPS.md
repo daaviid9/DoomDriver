@@ -88,3 +88,12 @@ Recalculating interrupts the old direction and is announced once per recalculati
 
 DoomDriver > GPS > Capture current cockpit saves the actual current camera view and a geometry report under Temp. Preview active navigation renders an isolated copy with a left arrow and 125 m; it does not modify or save the open scene. These tools run only when selected from the menu.
 The latest height increase is 260 to 300 (+15.4%). The lower edge is preserved exactly by moving the centre along the panel's local up axis by half the added height. Only the top edge extends upward.
+
+## Additional checklist: blinking and missed exit reports
+
+- Below 50 m (strictly 0 < distance < 50), the direction arrow blinks slowly at 1.25 Hz. At 50 m and above it stays visible. Pause freezes the blink phase; a new maneuver resets it. Recalculating hides it.
+- In DashboardGpsTest use the demo component menu **GPS > 8 Blink test (49 m)**. Try **Toggle pause**, then set 50 m and **Apply Inspector distance and direction** to restore a steady arrow.
+- Use **GPS > 7 Miss turn (report wrong exit)**: this reports the wrong exit to the source; the source automatically enters Recalculating, and UI becomes amber with voice guidance. Next maneuver restores navigation.
+- The junction backend must call `source.ReportTurnTaken(maneuverId, actualDirection)` once it detects the exit actually taken. Stale IDs, duplicate outcomes and invalid directions are ignored. A correct exit clears the completed instruction; a wrong exit enters Recalculating. The backend then publishes the next/replacement maneuver and owns route extensions and penalties.
+- There are still no production intersections/TurnTrigger/RouteController in this checkout. This is a working result-reporting boundary, not a claim that physical missed-turn detection now exists.
+- Validate GPS assets now includes blink phase/pause checks, stale and duplicate reports, correct exits and automatic amber recalculation on wrong exits.

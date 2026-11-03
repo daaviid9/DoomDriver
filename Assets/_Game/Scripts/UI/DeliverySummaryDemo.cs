@@ -183,6 +183,30 @@ public sealed class DeliverySummaryDemo : MonoBehaviour
         if (!CanRun()) return;
         StartCoroutine(Checks());
     }
+    [ContextMenu("Summary/10 Timed delivery (3 seconds)")]
+    public void TimedDelivery()
+    {
+        if (!CanRun()) return;
+        StartCoroutine(TimedDeliveryRoutine());
+    }
+    private IEnumerator TimedDeliveryRoutine()
+    {
+        runningChecks = true;
+        var tracker = GetComponent<DeliveryProgressTracker>();
+        // WorldSpeedController stays disabled: distance remains zero, so no highscore is written.
+        tracker.enabled = true;
+        yield return null;
+        Begin();
+        if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
+        Note("Driving for 3 seconds...");
+        yield return new WaitForSeconds(3f);
+        manager.SetDeliveryReward(new DeliveryResult(15m, 3.5m, 2m, 1m));
+        manager.CompleteDelivery();
+        tracker.enabled = false;
+        runningChecks = false;
+        Note("Expected time: about 00:03");
+    }
+
     private void Require(bool passed, string name)
     {
         if (!passed) throw new InvalidOperationException(name);
@@ -255,6 +279,15 @@ public sealed class DeliverySummaryDemo : MonoBehaviour
         manager.FailDelivery();
         manager.CompleteDelivery();
         Require(wallet.Balance == before && panel.alpha == 0 && manager.CurrentState == GameState.DeliveryFailed, "failure never shows/pays success");
-        Complete(new DeliveryResult(15m, 3.5m, 2m, 1m));
+        var tracker = GetComponent<DeliveryProgressTracker>();
+        tracker.enabled = true;
+        yield return null;
+        Begin();
+        yield return new WaitForSeconds(1.1f);
+        manager.SetDeliveryReward(new DeliveryResult(15m, 3.5m, 2m, 1m));
+        manager.CompleteDelivery();
+        tracker.enabled = false;
+        var elapsedLabel = display.transform.Find("Receipt/Delivery time").GetComponent<TMP_Text>();
+        Require(manager.CompletedDelivery.ElapsedSeconds >= 1f && elapsedLabel.text == DeliverySummaryUI.FormatElapsedTime(manager.CompletedDelivery.ElapsedSeconds), "real elapsed time appears in summary");
     }
 }

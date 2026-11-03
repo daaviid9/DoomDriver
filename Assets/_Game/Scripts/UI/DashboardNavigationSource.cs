@@ -29,6 +29,22 @@ public sealed class DashboardNavigationSource : MonoBehaviour
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Called by junction detection with the actual exit taken, not by the UI.
+    /// Returns false for stale/duplicate reports. Incorrect exits automatically enter Recalculating.
+    /// The backend remains responsible for generating a replacement route and recording penalties.
+    /// </summary>
+    public bool ReportTurnTaken(string maneuverId, Maneuver actualDirection)
+    {
+        if (State != NavigationState.Navigating || string.IsNullOrEmpty(maneuverId) || maneuverId != ManeuverId)
+            return false;
+        if (actualDirection != Maneuver.Left && actualDirection != Maneuver.Right && actualDirection != Maneuver.Straight)
+            return false;
+        if (actualDirection == Direction) ClearRoute();
+        else SetRecalculating();
+        return true;
+    }
+
     public void SetRecalculating()
     {
         State = NavigationState.Recalculating;

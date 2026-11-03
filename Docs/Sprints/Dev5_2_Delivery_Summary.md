@@ -85,3 +85,9 @@ Runtime/editor compilation passed after this visual revision. Refresh and Play D
 Final palette: charcoal background, neutral light text, white net amount and white Continue with black text, matching LoadingScreenMenu's monochrome controls. No layout or behavior changes.
 
 Palette superseded at user request: colors now follow the cockpit render — dark blue-grey dashboard background, steel-blue Continue, pale blue-grey text and a soft blue net amount. Layout and behavior unchanged.
+
+## Additional checklist: elapsed delivery time
+
+The compact panel now displays **Time mm:ss** below its heading using the immutable real elapsed-time snapshot captured by GameManager. Monetary rows, colors and settlement behavior are unchanged. Time is floored to completed seconds; 60 minutes is displayed as 60:00.
+
+In DeliverySummaryTest open **Summary > 10 Timed delivery (3 seconds)**. After about three seconds the panel shows **Time 00:03**. The test temporarily enables the real progress timer while world speed remains disabled, so it never accumulates distance/highscores. The normal instant demo displays 00:00. Automatic checks now also verify that the real elapsed time is presented correctly. Formatting validation covers 02:05, 60:00, negative and invalid input.

@@ -283,12 +283,26 @@ public static class DashboardGpsSetup
             Require(display.GetManeuverClip(DashboardNavigationSource.Maneuver.Left) == fields.FindProperty("turnLeftVoice").objectReferenceValue, "left voice");
             Require(display.GetManeuverClip(DashboardNavigationSource.Maneuver.Right) == fields.FindProperty("turnRightVoice").objectReferenceValue, "right voice");
             Require(display.GetManeuverClip(DashboardNavigationSource.Maneuver.Straight) == fields.FindProperty("straightVoice").objectReferenceValue, "straight voice");
+            source.Publish("miss-test", DashboardNavigationSource.Maneuver.Left, 20);
+            Require(!source.ReportTurnTaken("stale-id", DashboardNavigationSource.Maneuver.Right), "ignore stale exit");
+            Require(source.ReportTurnTaken("miss-test", DashboardNavigationSource.Maneuver.Straight), "accept missed exit");
+            Require(source.State == DashboardNavigationSource.NavigationState.Recalculating && status.text == "Recalculating...", "wrong exit automatically recalculates");
+            Require(status.color == fields.FindProperty("recalculatingColor").colorValue && !arrow.gameObject.activeSelf, "amber recalculation hides arrow");
+            Require(!source.ReportTurnTaken("miss-test", DashboardNavigationSource.Maneuver.Straight), "ignore duplicate miss");
+            source.Publish("correct-test", DashboardNavigationSource.Maneuver.Right, 10);
+            Require(source.ReportTurnTaken("correct-test", DashboardNavigationSource.Maneuver.Right) && source.State == DashboardNavigationSource.NavigationState.NoRoute, "correct exit completes maneuver");
             source.Changed -= renderSnapshot;
             display.SetPreviewState(false, false);
             source.Publish("c", DashboardNavigationSource.Maneuver.Left, 125);
             Require(!arrow.gameObject.activeSelf && status.text == "Waiting for route", "inactive display");
         }
         finally { EditorSceneManager.ClosePreviewScene(validationScene); }
+        var blink = new DashboardArrowBlink();
+        Require(blink.Step(true, false, 0f), "blink starts visible");
+        Require(!blink.Step(true, false, 0.45f), "blink off phase");
+        Require(!blink.Step(true, true, 2f), "pause freezes blink");
+        Require(blink.Step(true, false, 0.4f), "blink on phase");
+        Require(blink.Step(false, false, 0f), "leaving zone restores arrow");
         var gate = new DashboardWarningGate();
         Require(!gate.TryConsume("a", 72, 70, true), "above threshold");
         Require(gate.TryConsume("a", 68, 70, true), "crossing threshold");

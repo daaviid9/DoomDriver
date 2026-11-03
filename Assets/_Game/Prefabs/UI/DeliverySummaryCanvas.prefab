@@ -224,12 +224,12 @@ GameObject:
   - component: {fileID: 7729054687346879012}
   - component: {fileID: 6040736167398159178}
   m_Layer: 5
-  m_Name: Subheading
+  m_Name: Delivery time
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &3750086278647244391
 RectTransform:
   m_ObjectHideFlags: 0
@@ -246,8 +246,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -360, y: 225}
-  m_SizeDelta: {x: 720, y: 40}
+  m_AnchoredPosition: {x: -272, y: 217}
+  m_SizeDelta: {x: 544, y: 30}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &7729054687346879012
 CanvasRenderer:
@@ -277,7 +277,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Delivered. Time to take a breath.
+  m_text: Time  00:00
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -304,8 +304,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 26
-  m_fontSizeBase: 26
+  m_fontSize: 22
+  m_fontSizeBase: 22
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -2705,6 +2705,7 @@ MonoBehaviour:
   missedTurnsText: {fileID: 2915053206248987180}
   netText: {fileID: 4216086550018592319}
   detailText: {fileID: 3352796705426815373}
+  elapsedTimeText: {fileID: 6040736167398159178}
   continueButton: {fileID: 2829770362080597539}
   fadeSeconds: 0.3
   tallySeconds: 1.1

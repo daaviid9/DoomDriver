@@ -99,6 +99,7 @@ public static class DeliverySummarySetup
             shade.GetComponent<Image>().raycastTarget = true;
             var card = Box(root.transform, "Receipt", Vector2.zero, new Vector2(640, 660), new Color(0.1f, 0.14f, 0.18f));
             Text(card, "Heading", -272, 265, 544, 62, 38, "Delivery complete", false);
+            var elapsed = Text(card, "Delivery time", -272, 217, 544, 30, 22, "Time  00:00", false);
             var fee = Row(card, "Base fee", 165, "+€15.00");
             var tip = Row(card, "Time tip", 113, "+€0.00");
             var damage = Row(card, "Damage penalties", 61, "−€0.00");
@@ -125,6 +126,7 @@ public static class DeliverySummarySetup
             Set(so, "missedTurnsText", missed);
             Set(so, "netText", net);
             Set(so, "detailText", details);
+            Set(so, "elapsedTimeText", elapsed);
             Set(so, "continueButton", button);
             so.ApplyModifiedPropertiesWithoutUndo();
             root.GetComponent<CanvasGroup>().alpha = 0;
@@ -186,6 +188,11 @@ public static class DeliverySummarySetup
     [MenuItem("DoomDriver/Summary/Validate summary")]
     public static void Validate()
     {
+        if (DeliverySummaryUI.FormatElapsedTime(125.9f) != "Time  02:05" ||
+            DeliverySummaryUI.FormatElapsedTime(3600) != "Time  60:00" ||
+            DeliverySummaryUI.FormatElapsedTime(-1) != "Time  00:00" ||
+            DeliverySummaryUI.FormatElapsedTime(float.NaN) != "Time  00:00")
+            throw new Exception("Elapsed time formatting mismatch");
         var r = new DeliveryResult(15m, 3.456m, 2.125m, 1m);
         if (r.NetEarnings != 15.33m || r.TimeTip != 3.46m || r.DamagePenalty != 2.13m) throw new Exception("Currency rounding mismatch");
         if (new DeliveryResult(1, 0, 10, 0).NetEarnings != 0) throw new Exception("Debt floor mismatch");
@@ -195,7 +202,7 @@ public static class DeliverySummarySetup
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Path);
         if (prefab == null) throw new Exception("Missing prefab");
         var so = new SerializedObject(prefab.GetComponent<DeliverySummaryUI>());
-        foreach (string field in new[] { "panel", "baseFeeText", "timeTipText", "damageText", "missedTurnsText", "netText", "detailText", "continueButton" })
+        foreach (string field in new[] { "panel", "baseFeeText", "timeTipText", "damageText", "missedTurnsText", "netText", "detailText", "elapsedTimeText", "continueButton" })
             if (so.FindProperty(field).objectReferenceValue == null) throw new Exception("Unbound " + field);
         const string testScenePath = "Assets/_Game/Scenes/_Tests/DeliverySummaryTest.unity";
         if (!File.Exists(testScenePath)) throw new Exception("Missing isolated summary test scene");

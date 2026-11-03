@@ -17,6 +17,7 @@ public sealed class DeliverySummaryUI : MonoBehaviour
     [SerializeField] private TMP_Text missedTurnsText;
     [SerializeField] private TMP_Text netText;
     [SerializeField] private TMP_Text detailText;
+    [SerializeField] private TMP_Text elapsedTimeText;
     [SerializeField] private Button continueButton;
     [SerializeField, Min(0.01f)] private float fadeSeconds = 0.3f;
     [SerializeField, Min(0.01f)] private float tallySeconds = 1.1f;
@@ -70,12 +71,20 @@ public sealed class DeliverySummaryUI : MonoBehaviour
         SetVisible(true);
         continueButton.interactable = true;
         var result = manager.CompletedDelivery;
+        if (elapsedTimeText != null) elapsedTimeText.text = FormatElapsedTime(result.ElapsedSeconds);
         bool capped = result.BaseFee + result.TimeTip < result.DamagePenalty + result.MissedTurnPenalty;
         detailText.gameObject.SetActive(capped);
         detailText.text = capped ? "Minimum earnings: €0.00" : string.Empty;
         tallyRoutine = StartCoroutine(Animate(result));
         continueButton.Select();
     }
+    public static string FormatElapsedTime(float seconds)
+    {
+        if (float.IsNaN(seconds) || float.IsInfinity(seconds)) seconds = 0;
+        int total = (int)System.Math.Min(int.MaxValue, System.Math.Max(0d, System.Math.Floor(seconds)));
+        return string.Format(CultureInfo.InvariantCulture, "Time  {0:00}:{1:00}", total / 60, total % 60);
+    }
+
     private IEnumerator Animate(DeliveryResult result)
     {
         float elapsed = 0;

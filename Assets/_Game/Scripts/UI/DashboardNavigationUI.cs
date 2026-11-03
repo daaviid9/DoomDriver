@@ -21,6 +21,8 @@ public sealed class DashboardNavigationUI : MonoBehaviour
     [SerializeField] private Color recalculatingColor = new Color(1f, 0.55f, 0.12f);
 
     private readonly DashboardWarningGate warningGate = new DashboardWarningGate();
+    private readonly DashboardArrowBlink arrowBlink = new DashboardArrowBlink();
+    private string blinkManeuverId;
     private GameManager gameManager;
     private PauseController pauseController;
     private bool initialized;
@@ -43,6 +45,19 @@ public sealed class DashboardNavigationUI : MonoBehaviour
         initialized = true;
         Subscribe();
         Refresh();
+    }
+
+    private void Update() => UpdateArrowVisibility(Time.unscaledDeltaTime);
+
+    private void UpdateArrowVisibility(float deltaTime)
+    {
+        if (arrow == null) return;
+        bool navigating = Active && source != null && source.State == DashboardNavigationSource.NavigationState.Navigating;
+        string id = navigating ? source.ManeuverId : null;
+        if (id != blinkManeuverId) { arrowBlink.Reset(); blinkManeuverId = id; }
+        bool visible = arrowBlink.Step(navigating && source.RemainingMeters > 0f && source.RemainingMeters < 50f, Paused, deltaTime);
+        bool show = navigating && visible;
+        if (arrow.gameObject.activeSelf != show) arrow.gameObject.SetActive(show);
     }
 
     private void OnEnable()
@@ -91,6 +106,8 @@ public sealed class DashboardNavigationUI : MonoBehaviour
     private void ResetDelivery()
     {
         warningGate.Reset();
+        arrowBlink.Reset();
+        blinkManeuverId = null;
         recalculationAnnounced = false;
         audioManeuverId = null;
         if (warningAudio != null) warningAudio.Stop();
@@ -115,7 +132,7 @@ public sealed class DashboardNavigationUI : MonoBehaviour
         bool recalculating = Active && source != null && source.State == DashboardNavigationSource.NavigationState.Recalculating;
         if (arrow != null)
         {
-            arrow.gameObject.SetActive(navigating);
+            UpdateArrowVisibility(0f);
             if (navigating)
             {
                 float angle = source.Direction == DashboardNavigationSource.Maneuver.Left ? 90f
@@ -196,4 +213,17 @@ public sealed class DashboardWarningGate
     }
 
     public void Reset() => warned.Clear();
+}
+
+/// <summary>Slow 1.25 Hz blink below 50 m. Pausing freezes the phase; leaving the zone restores visibility.</summary>
+public sealed class DashboardArrowBlink
+{
+    private float phase;
+    public bool Step(bool eligible, bool paused, float deltaTime)
+    {
+        if (!eligible) { Reset(); return true; }
+        if (!paused) phase = (phase + Mathf.Max(0f, deltaTime)) % 0.8f;
+        return phase < 0.4f;
+    }
+    public void Reset() => phase = 0f;
 }
