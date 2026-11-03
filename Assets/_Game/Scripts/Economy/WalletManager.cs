@@ -12,6 +12,10 @@ public class WalletManager : MonoBehaviour
     [Tooltip("Initial wallet balance given to new players")]
     [SerializeField] private float initialBalance = 50f;
 
+    [Tooltip("Disable only in isolated test scenes: balance stays in memory and PlayerPrefs is untouched.")]
+    [SerializeField] private bool persistBalance = true;
+    public bool PersistsBalance => persistBalance;
+
     private float currentBalance;
     public float Balance => currentBalance;
 
@@ -40,11 +44,12 @@ public class WalletManager : MonoBehaviour
 
     private void LoadBalance()
     {
-        currentBalance = PlayerPrefs.GetFloat(BalancePrefKey, initialBalance);
+        currentBalance = persistBalance ? PlayerPrefs.GetFloat(BalancePrefKey, initialBalance) : initialBalance;
     }
 
     private void SaveBalance()
     {
+        if (!persistBalance) return;
         PlayerPrefs.SetFloat(BalancePrefKey, currentBalance);
         PlayerPrefs.Save();
     }
