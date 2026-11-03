@@ -1,32 +1,32 @@
 # Dev 5 — Card 5.2: Delivery Summary
 
-## Rýchly test — rovnaký postup ako pri GPS 5.1
+## Quick Test — Same Procedure as for GPS 5.1
 
-1. V Unity použi **Assets → Refresh** a počkaj na dokončenie kompilácie.
-2. V okne **Project** otvor priečinok `Assets/_Game/Scenes/_Tests` a dvojklikom otvor **DeliverySummaryTest**. Ulož vlastné rozpracované zmeny scény, ak sa Unity opýta.
-3. Stlač **Play**. Nič ďalšie netreba nastavovať ani šoférovať. Summary sa otvorí samo: Base fee **15.00**, Time tip **3.50**, Damage penalties **2.00**, Missed-turn penalties **1.00**, Net earnings **15.50 €**. Čísla sa dopočítajú za približne sekundu.
-4. Vľavo vidíš **Test wallet: €50.00**. Klikni **Continue**: panel sa skryje, stav bude **OrderSelection**, peňaženka bude **€65.50**.
-5. V **Hierarchy** vyber **Summary Demo - Inspector context menu**. V **Inspectore** nájdi komponent **Delivery Summary Demo** (dole). Klikni na jeho **⋮** v pravom hornom rohu a otvor podmenu **Summary**. Je to rovnaký spôsob ovládania ako `GPS Demo` pri 5.1.
+1. In Unity, use **Assets → Refresh** and wait for compilation to complete.
+2. In the **Project** window, open the `Assets/_Game/Scenes/_Tests` folder and double-click **DeliverySummaryTest**. Save any unsaved scene changes if prompted by Unity.
+3. Press **Play**. No additional setup or driving is required. The Summary opens automatically: Base fee **15.00**, Time tip **3.50**, Damage penalties **2.00**, Missed-turn penalties **1.00**, Net earnings **15.50 €**. Numbers tally up within approximately one second.
+4. On the left you will see **Test wallet: €50.00**. Click **Continue**: the panel hides, state switches to **OrderSelection**, and wallet balance updates to **€65.50**.
+5. In the **Hierarchy**, select **Summary Demo - Inspector context menu**. In the **Inspector**, locate the **Delivery Summary Demo** component (at the bottom). Click its **⋮** in the upper right corner and open the **Summary** submenu. This controls the test identically to the `GPS Demo` in 5.1.
 
-| Príkaz v Summary menu | Čo očakávať |
+| Command in Summary menu | What to expect |
 | --- | --- |
-| **1 Show sample (15.50 EUR)** | Znovu otvorí ukážku všetkých položiek. |
-| **2 Show fallback (15 EUR)** | Základ 15 €, ostatné nula. Ide o dočasnú testovaciu odmenu. |
-| **3 Show high penalties (0 EUR)** | Pokuty 20 + 5 €, výsledok 0 €, vysvetlenie nulovej hranice; Continue nič neodpočíta. |
-| **4 Apply Inspector amounts** | Použije čísla Base Fee, Time Tip, Damage Penalty, Missed Turn Penalty z komponentu. |
-| **5 Double Continue** | Pri otvorenom paneli simuluje dvojklik: len jedna výplata, vľavo PASS. |
-| **6 Reopen panel (no payment)** | Vypne/zapne UI komponent, znovu spustí animáciu bez výplaty. |
-| **7 Toggle pause** | Pozastaví čas. Animácia sumy pokračuje; Continue vráti nepozastavenú lobby. |
-| **8 Fail delivery (no summary)** | Stav DeliveryFailed, žiadny úspešný panel ani výplata. |
-| **9 Run automatic checks** | Spustí sériu kontrol; asi po 2 sekundách vľavo **ALL CHECKS PASSED**, jednotlivé výsledky sú aj v Console. |
+| **1 Show sample (15.50 EUR)** | Reopens the preview with all line items. |
+| **2 Show fallback (15 EUR)** | Base 15 €, other lines zero. This is the temporary placeholder reward. |
+| **3 Show high penalties (0 EUR)** | Penalties 20 + 5 €, result 0 €, zero floor explanation; Continue deducts nothing. |
+| **4 Apply Inspector amounts** | Uses the Base Fee, Time Tip, Damage Penalty, and Missed Turn Penalty values configured on the component. |
+| **5 Double Continue** | Simulates a rapid double-click while the panel is open: pays only once, shows PASS on the left. |
+| **6 Reopen panel (no payment)** | Toggles the UI component off and on, restarting the animation without paying out. |
+| **7 Toggle pause** | Pauses time. Amount animation continues; Continue returns to an unpaused lobby. |
+| **8 Fail delivery (no summary)** | State DeliveryFailed, no success panel or payout. |
+| **9 Run automatic checks** | Runs a sequence of automated checks; after ~2 seconds shows **ALL CHECKS PASSED** on the left, with detailed results in the Console. |
 
-Pred ďalšou ukážkou môžeš stlačiť Continue. Ak necháš predchádzajúcu úspešnú ukážku otvorenú, ďalší príkaz ju najprv riadne zúčtuje a až potom začne novú. Zostatok preto počas série testov rastie. Stop → Play ho obnoví na 50 €.
+You can press Continue before triggering the next sample. If you leave the previous successful sample open, the next command will properly settle it before starting a new one. Therefore, the balance will grow across repeated tests. Stopping and pressing Play resets it back to 50 €.
 
-**Táto scéna nemení uložené peniaze ani distance highscore.** Používa skutočný GameManager, WalletManager a summary prefab, ale wallet má vypnuté ukladanie a pohyb sveta/distance tracker sú deaktivované. Údaj času je preto v tomto UI teste 0 s; počiatočné demo poškodenie je skutočných 20 HP. Čas a reálnu jazdu naďalej overuj v hlavnej scéne.
+**This scene does not alter persistent wallet funds or distance highscores.** It uses the real GameManager, WalletManager, and summary prefab, but wallet persistence is disabled, and world movement / distance tracking are deactivated. The elapsed time display in this UI test is therefore 0 s; initial demo vehicle damage is 20 real HP. Continue verifying elapsed time and actual driving in the main scene.
 
-Automatické Play kontroly pokrývajú: žiadnu výplatu pri dokončení/opakovanom dokončení/reopen; zachytenie poškodenia; zákaz obídenia výsledku novou jazdou; presný koniec animácie počas pauzy; skutočný Button callback a dvojklik; skrytie/raycasty/lobby; unpause a reset zdravia pri stabilnom výsledku; skoré Continue a nulu; reset fallbacku v ďalšej jazde; cestu R aj reentrantný wallet callback; zlyhanie bez odmeny.
+Automatic Play checks cover: no payout on completion / duplicate completion / reopen; damage snapshotting; prevention of bypassing an active result with a new delivery; exact animation completion during pause; real Button callback and double-click handling; hiding / raycasts / lobby transition; unpause and health reset with a stable result snapshot; early Continue and zero-floor clamping; fallback reset on next delivery; R key and reentrant wallet callback paths; failure state without reward.
 
-Scéna je už uložená v projekte; generovacie menu netreba na bežný test používať. **DoomDriver → Summary → Validate summary** kontroluje prefab, účtovné pravidlá a izoláciu testovacej scény bez spustenia Play. Príkaz **Create missing test scene** slúži iba na obnovenie chýbajúcej scény.
+The scene is already saved in the project; running generation menus is not needed for normal testing. **DoomDriver → Summary → Validate summary** verifies the prefab, accounting rules, and test scene isolation without entering Play mode. The **Create missing test scene** command serves only to recreate the scene if deleted.
 
 ## Implementation
 

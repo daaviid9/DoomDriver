@@ -45,7 +45,7 @@ public sealed class DeliverySummaryUI : MonoBehaviour
         if (manager == null) return;
         manager.OnDeliveryCompleted += Show;
         manager.OnGameStateChanged += StateChanged;
-        continueButton.onClick.AddListener(Continue);
+        if (continueButton != null) continueButton.onClick.AddListener(Continue);
         StateChanged(manager.CurrentState);
         if (manager.CurrentState == GameState.DeliveryCompleted) Show();
     }
@@ -69,14 +69,20 @@ public sealed class DeliverySummaryUI : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         SetVisible(true);
-        continueButton.interactable = true;
+        if (continueButton != null)
+        {
+            continueButton.interactable = true;
+            continueButton.Select();
+        }
         var result = manager.CompletedDelivery;
         if (elapsedTimeText != null) elapsedTimeText.text = FormatElapsedTime(result.ElapsedSeconds);
         bool capped = result.BaseFee + result.TimeTip < result.DamagePenalty + result.MissedTurnPenalty;
-        detailText.gameObject.SetActive(capped);
-        detailText.text = capped ? "Minimum earnings: €0.00" : string.Empty;
+        if (detailText != null)
+        {
+            detailText.gameObject.SetActive(capped);
+            detailText.text = capped ? "Minimum earnings: €0.00" : string.Empty;
+        }
         tallyRoutine = StartCoroutine(Animate(result));
-        continueButton.Select();
     }
     public static string FormatElapsedTime(float seconds)
     {
@@ -131,8 +137,16 @@ public sealed class DeliverySummaryUI : MonoBehaviour
         tallyRoutine = null;
         if (showing)
         {
-            Cursor.lockState = oldCursorLock;
-            Cursor.visible = oldCursorVisible;
+            if (manager != null && manager.CurrentState == GameState.OrderSelection)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+            else
+            {
+                Cursor.lockState = oldCursorLock;
+                Cursor.visible = oldCursorVisible;
+            }
         }
         showing = false;
         SetVisible(false);

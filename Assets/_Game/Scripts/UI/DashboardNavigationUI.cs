@@ -169,10 +169,14 @@ public sealed class DashboardNavigationUI : MonoBehaviour
             else if (!recalculationAnnounced)
             {
                 if (warningAudio != null) warningAudio.Stop();
-                if (!Paused && useVoiceGuidance && warningAudio != null && recalculatingVoice != null)
+                if (!Paused && warningAudio != null)
                 {
-                    warningAudio.PlayOneShot(recalculatingVoice);
-                    recalculationAnnounced = true;
+                    AudioClip recalcClip = (useVoiceGuidance && recalculatingVoice != null) ? recalculatingVoice : warningClip;
+                    if (recalcClip != null)
+                    {
+                        warningAudio.PlayOneShot(recalcClip);
+                        recalculationAnnounced = true;
+                    }
                 }
             }
             return;

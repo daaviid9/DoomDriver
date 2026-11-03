@@ -127,6 +127,11 @@ public class GameManager : MonoBehaviour
     {
         if (currentState != GameState.DeliveryActive) return;
 
+        if (deliveryHealth == null)
+        {
+            deliveryHealth = FindFirstObjectByType<VehicleHealth>();
+        }
+
         var input = rewardInput ?? new DeliveryResult(15m, 0m, 0m, 0m, true);
         CompletedDelivery = new DeliveryResult(input.BaseFee, input.TimeTip, input.DamagePenalty,
             input.MissedTurnPenalty, input.IsPlaceholder,
@@ -160,12 +165,14 @@ public class GameManager : MonoBehaviour
             {
                 if (CompletedDelivery == null || WalletManager.Instance == null)
                 {
-                    Debug.LogError("[Summary] Cannot settle delivery: result or wallet is missing.");
-                    return;
+                    Debug.LogWarning("[Summary] Cannot settle delivery payout: result or wallet is missing. Returning to lobby without payout.");
                 }
-                // Set before notifying wallet listeners: reentrant Continue cannot pay twice.
-                rewardSettled = true;
-                WalletManager.Instance.AddFunds((float)CompletedDelivery.NetEarnings);
+                else
+                {
+                    // Set before notifying wallet listeners: reentrant Continue cannot pay twice.
+                    rewardSettled = true;
+                    WalletManager.Instance.AddFunds((float)CompletedDelivery.NetEarnings);
+                }
             }
             if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
             ObstacleSpawner.ClearAllObstacles();
