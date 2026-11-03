@@ -154,7 +154,14 @@ public class GameUIController : MonoBehaviour
     /// </summary>
     private void ResolveMissingReferences()
     {
-        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+        // Dashboard/phone world-space canvases are not the screen HUD.
+        Canvas canvas = null;
+        foreach (var candidate in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.InstanceID))
+        {
+            if (candidate.renderMode == RenderMode.WorldSpace) continue;
+            canvas = candidate;
+            break;
+        }
         if (canvas == null) return;
 
         Transform[] allTransforms = canvas.GetComponentsInChildren<Transform>(true);
