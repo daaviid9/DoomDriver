@@ -29,7 +29,11 @@ public sealed class DeliverySummaryUI : MonoBehaviour
     private bool oldCursorVisible;
     private CursorLockMode oldCursorLock;
 
-    private void Awake() { SetVisible(false); }
+    private void Awake()
+    {
+        if (panel == null) panel = GetComponent<CanvasGroup>() ?? GetComponentInChildren<CanvasGroup>(true);
+        SetVisible(false);
+    }
     private void Start()
     {
         started = true;
@@ -38,14 +42,27 @@ public sealed class DeliverySummaryUI : MonoBehaviour
             new GameObject("Summary EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
         Bind();
     }
-    private void OnEnable() { if (started) Bind(); }
+    private void OnEnable()
+    {
+        Bind();
+        if (manager != null && manager.CurrentState == GameState.DeliveryCompleted)
+        {
+            Show();
+        }
+    }
     private void Bind()
     {
         manager = GameManager.Instance;
         if (manager == null) return;
+        manager.OnDeliveryCompleted -= Show;
         manager.OnDeliveryCompleted += Show;
+        manager.OnGameStateChanged -= StateChanged;
         manager.OnGameStateChanged += StateChanged;
-        if (continueButton != null) continueButton.onClick.AddListener(Continue);
+        if (continueButton != null)
+        {
+            continueButton.onClick.RemoveListener(Continue);
+            continueButton.onClick.AddListener(Continue);
+        }
         StateChanged(manager.CurrentState);
         if (manager.CurrentState == GameState.DeliveryCompleted) Show();
     }
@@ -62,6 +79,7 @@ public sealed class DeliverySummaryUI : MonoBehaviour
     private void StateChanged(GameState state) { if (state != GameState.DeliveryCompleted) Hide(); }
     private void Show()
     {
+        if (!gameObject.activeSelf) gameObject.SetActive(true);
         if (manager == null || manager.CompletedDelivery == null || showing) return;
         showing = true;
         oldCursorVisible = Cursor.visible;
@@ -69,6 +87,7 @@ public sealed class DeliverySummaryUI : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         SetVisible(true);
+        if (panel != null) panel.alpha = 0f;
         if (continueButton != null)
         {
             continueButton.interactable = true;
@@ -153,8 +172,9 @@ public sealed class DeliverySummaryUI : MonoBehaviour
     }
     private void SetVisible(bool visible)
     {
+        if (panel == null) panel = GetComponent<CanvasGroup>() ?? GetComponentInChildren<CanvasGroup>(true);
         if (panel == null) return;
-        panel.alpha = 0;
+        panel.alpha = visible ? 1f : 0f;
         panel.interactable = visible;
         panel.blocksRaycasts = visible;
     }
