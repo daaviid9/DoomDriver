@@ -108,7 +108,8 @@ public class GameUIController : MonoBehaviour
                 break;
 
             case GameState.DeliveryCompleted:
-                if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(true);
+                // DeliverySummaryUI exclusively owns the success presentation.
+                if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
                 break;
 
             case GameState.DeliveryFailed:
@@ -154,7 +155,14 @@ public class GameUIController : MonoBehaviour
     /// </summary>
     private void ResolveMissingReferences()
     {
-        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
+        // Dashboard/phone world-space canvases are not the screen HUD.
+        Canvas canvas = null;
+        foreach (var candidate in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.InstanceID))
+        {
+            if (candidate.renderMode == RenderMode.WorldSpace || candidate.GetComponent<DeliverySummaryUI>() != null) continue;
+            canvas = candidate;
+            break;
+        }
         if (canvas == null) return;
 
         Transform[] allTransforms = canvas.GetComponentsInChildren<Transform>(true);

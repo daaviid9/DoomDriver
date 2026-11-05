@@ -18,6 +18,11 @@ public class GameManager : MonoBehaviour
     [Header("State Machine")]
     [SerializeField] private GameState currentState = GameState.OrderSelection;
     public GameState CurrentState => currentState;
+    public DeliveryResult CompletedDelivery { get; private set; }
+    private DeliveryResult rewardInput;
+    private VehicleHealth deliveryHealth;
+    private bool rewardSettled;
+    private bool returningToLobby;
 
     [Header("Scene Navigation")]
     [Tooltip("Name of the scene to load on exit to menu")]
@@ -43,6 +48,7 @@ public class GameManager : MonoBehaviour
         }
 
         EnsureCompanionControllers();
+        deliveryHealth = FindFirstObjectByType<VehicleHealth>();
     }
 
     private void Start()
@@ -96,24 +102,42 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void StartDelivery()
     {
-        if (currentState == GameState.DeliveryActive) return;
+        if (currentState != GameState.OrderSelection) return;
+        CompletedDelivery = null;
+        rewardInput = null;
+        rewardSettled = false;
 
         ObstacleSpawner.ClearAllObstacles();
         SetState(GameState.DeliveryActive);
     }
 
     /// <summary>
-    /// Successfully finishes the active delivery, pays out reward to WalletManager, and enters completed state.
+    /// Snapshots the successful delivery. Payment occurs only when returning to the lobby.
     /// </summary>
+    // Integration point: order/navigation backend supplies final accounting amounts before completion.
+    // Never infer financial penalties from the presentation-only GPS source.
+    public bool SetDeliveryReward(DeliveryResult result)
+    {
+        if (currentState != GameState.DeliveryActive || result == null) return false;
+        rewardInput = result;
+        return true;
+    }
+
     public void CompleteDelivery()
     {
         if (currentState != GameState.DeliveryActive) return;
 
-        // Reward payout directly into WalletManager (Single Source of Truth)
-        if (WalletManager.Instance != null)
+        if (deliveryHealth == null)
         {
-            WalletManager.Instance.AddFunds(15f);
+            deliveryHealth = FindFirstObjectByType<VehicleHealth>();
         }
+
+        var input = rewardInput ?? new DeliveryResult(15m, 0m, 0m, 0m, true);
+        CompletedDelivery = new DeliveryResult(input.BaseFee, input.TimeTip, input.DamagePenalty,
+            input.MissedTurnPenalty, input.IsPlaceholder,
+            DeliveryProgressTracker.Instance != null ? DeliveryProgressTracker.Instance.DeliveryTimeElapsed : 0f,
+            deliveryHealth != null ? Mathf.Clamp(deliveryHealth.MaxHealth - deliveryHealth.CurrentHealth, 0, deliveryHealth.MaxHealth) : 0);
+        if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
 
         SetState(GameState.DeliveryCompleted);
     }
@@ -123,7 +147,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void FailDelivery()
     {
-        if (currentState == GameState.DeliveryFailed) return;
+        if (currentState != GameState.DeliveryActive) return;
 
         SetState(GameState.DeliveryFailed);
     }
@@ -133,10 +157,29 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void ReturnToOrderSelection()
     {
-        ObstacleSpawner.ClearAllObstacles();
-        SetState(GameState.OrderSelection);
+        if (returningToLobby || currentState == GameState.OrderSelection) return;
+        returningToLobby = true;
+        try
+        {
+            if (currentState == GameState.DeliveryCompleted && !rewardSettled)
+            {
+                if (CompletedDelivery == null || WalletManager.Instance == null)
+                {
+                    Debug.LogWarning("[Summary] Cannot settle delivery payout: result or wallet is missing. Returning to lobby without payout.");
+                }
+                else
+                {
+                    // Set before notifying wallet listeners: reentrant Continue cannot pay twice.
+                    rewardSettled = true;
+                    WalletManager.Instance.AddFunds((float)CompletedDelivery.NetEarnings);
+                }
+            }
+            if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
+            ObstacleSpawner.ClearAllObstacles();
+            SetState(GameState.OrderSelection);
+        }
+        finally { returningToLobby = false; }
     }
-
     /// <summary>
     /// Restarts the current active scene.
     /// </summary>
