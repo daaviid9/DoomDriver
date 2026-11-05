@@ -8,7 +8,6 @@ public enum RoadChunkType
     Straight,
     TurnLeft,
     TurnRight,
-    TJunction,
     Crossroads
 }
 
@@ -43,5 +42,21 @@ public class RoadChunk : MonoBehaviour
             gameObject.tag = "Untagged";
         }
     }
-}
 
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        if (renderers == null || renderers.Length == 0) return;
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            bounds.Encapsulate(renderers[i].bounds);
+        }
+
+        Gizmos.color = new Color(1f, 0.92f, 0.016f, 0.75f);
+        Gizmos.DrawWireCube(bounds.center, bounds.size);
+    }
+#endif
+}
