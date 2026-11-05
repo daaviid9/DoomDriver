@@ -4,6 +4,7 @@ using UnityEngine;
 /// <summary>
 /// Procedural spawner for modular road chunks and intersections.
 /// Controls the forward sequence of road segments based on active DeliveryOrder or debug sequences.
+/// Publishes upcoming turn distance to DashboardNavigationSource (Dev 5 integration contract).
 /// Adheres to AGENTS.md conventions: Single Responsibility, Decoupled Events, and Zero Update allocations.
 /// </summary>
 public class EnvironmentSpawner : MonoBehaviour
@@ -64,10 +65,13 @@ public class EnvironmentSpawner : MonoBehaviour
 
     private int debugTurnIndex = 0;
     private int currentStraightCounter = 0;
+    private DashboardNavigationSource navigationSource;
 
     // Events for decoupled observation (e.g. TurnTrigger, GPS UI)
     public event System.Action<RoadChunk> OnChunkSpawned;
     public event System.Action<RoadChunk> OnChunkDespawned;
+
+    public IReadOnlyList<GameObject> ActiveChunks => activeChunks;
 
     private void Awake()
     {
@@ -90,6 +94,8 @@ public class EnvironmentSpawner : MonoBehaviour
 
     private void Start()
     {
+        navigationSource = Object.FindFirstObjectByType<DashboardNavigationSource>();
+
         if (GameManager.Instance != null)
         {
             GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionReset;
@@ -119,6 +125,8 @@ public class EnvironmentSpawner : MonoBehaviour
             DeleteOldestChunk();
             SpawnNextChunkInSequence();
         }
+
+        UpdateNavigationSource();
     }
 
     /// <summary>
@@ -161,6 +169,51 @@ public class EnvironmentSpawner : MonoBehaviour
     }
 
     /// <summary>
+    /// Configures the route queue based on total route distance and sequence of turns.
+    /// Turn sequence integer values match OrderManager: 0 = Straight, 1 = Left, 2 = Right.
+    /// </summary>
+    public void ConfigureRouteFromTurns(float totalDistance, int[] turnSequence)
+    {
+        plannedRouteQueue.Clear();
+
+        if (turnSequence == null || turnSequence.Length == 0)
+        {
+            int chunkCount = Mathf.Max(3, Mathf.RoundToInt(totalDistance / defaultChunkLength));
+            for (int i = 0; i < chunkCount; i++)
+            {
+                plannedRouteQueue.Enqueue(RoadChunkType.Straight);
+            }
+            return;
+        }
+
+        int totalChunks = Mathf.Max(turnSequence.Length * 3, Mathf.RoundToInt(totalDistance / defaultChunkLength));
+        int chunksPerTurn = Mathf.Max(2, totalChunks / (turnSequence.Length + 1));
+
+        for (int t = 0; t < turnSequence.Length; t++)
+        {
+            for (int s = 0; s < chunksPerTurn; s++)
+            {
+                plannedRouteQueue.Enqueue(RoadChunkType.Straight);
+            }
+
+            RoadChunkType turnType = turnSequence[t] switch
+            {
+                1 => RoadChunkType.TurnLeft,
+                2 => RoadChunkType.TurnRight,
+                _ => RoadChunkType.Straight
+            };
+            plannedRouteQueue.Enqueue(turnType);
+        }
+
+        for (int s = 0; s < chunksPerTurn; s++)
+        {
+            plannedRouteQueue.Enqueue(RoadChunkType.Straight);
+        }
+
+        Debug.Log($"[EnvironmentSpawner] Configured route for distance {totalDistance:F0}m with {turnSequence.Length} turns (Total chunks in queue: {plannedRouteQueue.Count}).");
+    }
+
+    /// <summary>
     /// Called when the player misses a turn ('Recalculating').
     /// Dynamically injects extra straight road chunks into the front of the route to extend the trip.
     /// </summary>
@@ -182,7 +235,50 @@ public class EnvironmentSpawner : MonoBehaviour
             plannedRouteQueue.Enqueue(existingList[i]);
         }
 
+        if (navigationSource != null)
+        {
+            navigationSource.SetRecalculating();
+        }
+
         Debug.Log($"[EnvironmentSpawner] Recalculating: Injected {extraStraightChunks} extra straight chunks.");
+    }
+
+    private void UpdateNavigationSource()
+    {
+        if (navigationSource == null) return;
+
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive)
+        {
+            return;
+        }
+
+        // Find nearest active intersection ahead of vehicle (Z >= -2f)
+        RoadChunk nearestTurnChunk = null;
+        for (int i = 0; i < activeChunks.Count; i++)
+        {
+            if (activeChunks[i] != null && activeChunks[i].TryGetComponent<RoadChunk>(out var rc))
+            {
+                if (rc.IsIntersection && activeChunks[i].transform.position.z >= -2f)
+                {
+                    nearestTurnChunk = rc;
+                    break;
+                }
+            }
+        }
+
+        if (nearestTurnChunk != null)
+        {
+            float dist = nearestTurnChunk.transform.position.z;
+            DashboardNavigationSource.Maneuver dir = nearestTurnChunk.ChunkType switch
+            {
+                RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
+                RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
+                _ => DashboardNavigationSource.Maneuver.Straight
+            };
+
+            string id = $"turn-{nearestTurnChunk.GetInstanceID()}";
+            navigationSource.Publish(id, dir, dist);
+        }
     }
 
     private void SpawnNextChunkInSequence()
@@ -340,10 +436,15 @@ public class EnvironmentSpawner : MonoBehaviour
         currentStraightCounter = 0;
         debugTurnIndex = 0;
         InitializeRoad();
+
+        if (navigationSource != null)
+        {
+            navigationSource.ClearRoute();
+        }
     }
 
     private void HandleDeliveryStarted()
     {
-        // When delivery starts, ensure road is seamless
+        // When delivery starts, road is initialized
     }
 }
