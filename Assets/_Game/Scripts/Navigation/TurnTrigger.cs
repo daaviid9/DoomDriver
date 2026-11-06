@@ -12,6 +12,7 @@ public class TurnTrigger : MonoBehaviour
     private RoadChunk roadChunk;
     private bool hasTriggered = false;
     private bool isInEvaluationZone = false;
+    private bool hasClearedObstacles = false;
     private DashboardNavigationSource.Maneuver recordedManeuver = DashboardNavigationSource.Maneuver.Straight;
 
     [Header("Evaluation Settings")]
@@ -37,8 +38,16 @@ public class TurnTrigger : MonoBehaviour
         float carZ = VehicleMovement.Instance != null ? VehicleMovement.Instance.transform.position.z : 0f;
         float distanceToCenter = roadChunk.GetDistanceToCenter(carZ);
 
+        // Keep intersection corridor completely clear of traffic obstacles
+        if (!hasClearedObstacles && distanceToCenter <= 50f)
+        {
+            hasClearedObstacles = true;
+            ObstacleSpawner.ClearObstaclesInZRange(transform.position.z - 10f, transform.position.z + roadChunk.ChunkLength + 10f);
+        }
+
         // 1. Check if vehicle is in the approach / evaluation window
-        if (distanceToCenter <= roadChunk.TurnTriggerWindow && distanceToCenter >= -roadChunk.TurnTriggerWindow)
+        float approachWindow = Mathf.Max(roadChunk.TurnTriggerWindow, 12f);
+        if (distanceToCenter <= approachWindow && distanceToCenter >= -roadChunk.TurnTriggerWindow)
         {
             isInEvaluationZone = true;
             SamplePlayerIntent();
@@ -94,6 +103,11 @@ public class TurnTrigger : MonoBehaviour
         {
             RouteController.Instance.ReportTurnOutcome(this, recordedManeuver, expectedManeuver, isCorrect);
         }
+
+        if (isCorrect && VehicleMovement.Instance != null)
+        {
+            VehicleMovement.Instance.EaseToCenter(1.2f);
+        }
     }
 
     private DashboardNavigationSource.Maneuver GetExpectedManeuver()
@@ -112,3 +126,4 @@ public class TurnTrigger : MonoBehaviour
         };
     }
 }
+

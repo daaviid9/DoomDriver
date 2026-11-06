@@ -62,6 +62,9 @@ public class VehicleMovement : MonoBehaviour
     [Tooltip("Speed penalty applied to the world when contacting the curb")]
     [SerializeField] private float curbSpeedPenalty = 2.5f;
 
+    [Tooltip("Minimum time in seconds between consecutive curb contact penalties")]
+    [SerializeField] private float curbBounceCooldown = 0.5f;
+
     [Header("Steering Wheel Settings")]
     [SerializeField] private Transform steeringWheel;
     [SerializeField] private float maxSteeringAngle = 90f;
@@ -81,6 +84,8 @@ public class VehicleMovement : MonoBehaviour
     private float currentTilt = 0f;
     private float lastX = 0f;
     private bool isManeuvering = false;
+    private float lastCurbBounceTime = -1f;
+    private Coroutine easeToCenterCoroutine;
 
     public SteeringMode CurrentMode => steeringMode;
     public int TargetLane => targetLane;
@@ -361,12 +366,51 @@ public class VehicleMovement : MonoBehaviour
 
     private void TriggerCurbBounce()
     {
+        if (Time.time - lastCurbBounceTime < curbBounceCooldown) return;
+        lastCurbBounceTime = Time.time;
+
         OnCurbContact?.Invoke();
 
         if (WorldSpeedController.Instance != null && curbSpeedPenalty > 0f)
         {
             WorldSpeedController.Instance.ApplySpeedPenalty(curbSpeedPenalty);
         }
+    }
+
+    /// <summary>
+    /// Smoothly guides vehicle laterally toward the center lane (X=0) after completing a turn maneuver.
+    /// User steering input smoothly overrides this recovery.
+    /// </summary>
+    public void EaseToCenter(float duration = 1.0f)
+    {
+        if (easeToCenterCoroutine != null)
+        {
+            StopCoroutine(easeToCenterCoroutine);
+        }
+        easeToCenterCoroutine = StartCoroutine(EaseToCenterRoutine(duration));
+    }
+
+    private System.Collections.IEnumerator EaseToCenterRoutine(float duration)
+    {
+        float elapsed = 0f;
+        float startX = transform.position.x;
+
+        while (elapsed < duration)
+        {
+            // If user applies active steering input, hand back control immediately
+            if (Mathf.Abs(moveInput.x) > 0.1f)
+            {
+                yield break;
+            }
+
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / duration);
+            float currentX = Mathf.Lerp(startX, 0f, t);
+            transform.position = new Vector3(currentX, transform.position.y, transform.position.z);
+            yield return null;
+        }
+
+        easeToCenterCoroutine = null;
     }
 
     #endregion
@@ -376,6 +420,12 @@ public class VehicleMovement : MonoBehaviour
     /// </summary>
     public void ResetMovement()
     {
+        if (easeToCenterCoroutine != null)
+        {
+            StopCoroutine(easeToCenterCoroutine);
+            easeToCenterCoroutine = null;
+        }
+
         targetLane = startingLane;
         moveInput = Vector2.zero;
         lateralVelocity = 0f;

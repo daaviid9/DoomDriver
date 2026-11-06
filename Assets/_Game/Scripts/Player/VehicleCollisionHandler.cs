@@ -8,9 +8,9 @@ using UnityEngine;
 public class VehicleCollisionHandler : MonoBehaviour
 {
     [Header("Default Damage by Category")]
-    [SerializeField] private int carDamage = 100;
-    [SerializeField] private int barricadeDamage = 50;
-    [SerializeField] private int edgeDamage = 30;
+    [SerializeField] private int carDamage = 40;
+    [SerializeField] private int barricadeDamage = 30;
+    [SerializeField] private int edgeDamage = 15;
 
     [Header("Speed penalty")]
     [SerializeField] private int smallPenalty = 4;

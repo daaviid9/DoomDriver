@@ -564,6 +564,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WalletManager
   initialBalance: 50
+  persistBalance: 1
 --- !u!114 &194867912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1727,9 +1728,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91ab2d58a74e4fe498c19eb821037ca0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VehicleCollisionHandler
-  carDamage: 100
-  barricadeDamage: 50
-  edgeDamage: 30
+  carDamage: 40
+  barricadeDamage: 30
+  edgeDamage: 15
   smallPenalty: 4
   highPenalty: 7
 --- !u!114 &432921403
@@ -4010,14 +4011,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1bc567f0ddccbd84faa009ed237ab9f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentSpawner
+  straightPrefabs:
+  - {fileID: 4535990458550586430, guid: b752f55d41a4f0d43800086e1ab86500, type: 3}
+  - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
+  - {fileID: 7591798394180682832, guid: a320f61d3469f70488f3300e6fcbad6a, type: 3}
+  turnLeftPrefabs:
+  - {fileID: 2901758840150988877, guid: 28cc5e11361dc824893338dc2d7bf411, type: 3}
+  turnRightPrefabs:
+  - {fileID: 726137431232173450, guid: e3709057894b08449b2306ab4d33cf12, type: 3}
+  tJunctionPrefabs:
+  - {fileID: 4821960158831423682, guid: 547b461b36c9ad6498e3ab321c0c5b54, type: 3}
+  crossroadsPrefabs:
+  - {fileID: 2369663547445153715, guid: 9f4a7159720dee94583160ce8503f217, type: 3}
   chunkPrefabs:
   - {fileID: 4535990458550586430, guid: b752f55d41a4f0d43800086e1ab86500, type: 3}
   - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
   - {fileID: 7591798394180682832, guid: a320f61d3469f70488f3300e6fcbad6a, type: 3}
-  chunkLength: 44.75
+  defaultChunkLength: 44.75
   numberOfChunksOnScreen: 5
   startZPosition: -50
   destroyZPosition: -50
+  useDebugSequence: 1
+  debugStraightsBetweenTurns: 3
+  debugTurnSequence: 010000000200000003000000
 --- !u!4 &1650050935
 Transform:
   m_ObjectHideFlags: 0
@@ -5330,6 +5346,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[1]'
       value: 
       objectReference: {fileID: 2100000, guid: 3845a6e4984d9ff44ab86aca45d9ad4f, type: 2}
+    - target: {fileID: 5156197877485608927, guid: 5a96d676a8a8c624abcc70a5e125bca8, type: 3}
+      propertyPath: m_AdditionalShaderChannelsFlag
+      value: 25
+      objectReference: {fileID: 0}
     - target: {fileID: 5661301515789599620, guid: 5a96d676a8a8c624abcc70a5e125bca8, type: 3}
       propertyPath: 'm_Materials.Array.data[1]'
       value: 
@@ -5342,6 +5362,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[1]'
       value: 
       objectReference: {fileID: 2100000, guid: 3845a6e4984d9ff44ab86aca45d9ad4f, type: 2}
+    - target: {fileID: 7628528092299353251, guid: 5a96d676a8a8c624abcc70a5e125bca8, type: 3}
+      propertyPath: m_AdditionalShaderChannelsFlag
+      value: 25
+      objectReference: {fileID: 0}
     - target: {fileID: 7776414893027589554, guid: 5a96d676a8a8c624abcc70a5e125bca8, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.32

@@ -56,8 +56,59 @@ public class ObstacleSpawner : MonoBehaviour
         // If we have traveled the required distance, spawn an obstacle
         if (distanceTraveled >= spawnInterval)
         {
-            SpawnSophisticatedObstacle();
+            if (!IsNearIntersection(spawnDistanceForward))
+            {
+                SpawnSophisticatedObstacle();
+            }
             distanceTraveled = 0; // Reset distance to the next obstacle
+        }
+    }
+
+    /// <summary>
+    /// Checks whether the target world Z position falls within or near any active intersection chunk.
+    /// Prevents spawning traffic or barricades that block turn maneuvers.
+    /// </summary>
+    public static bool IsNearIntersection(float targetZ, float safetyMargin = 35f)
+    {
+        if (EnvironmentSpawner.Instance == null) return false;
+
+        var chunks = EnvironmentSpawner.Instance.ActiveChunks;
+        for (int i = 0; i < chunks.Count; i++)
+        {
+            var chunkObj = chunks[i];
+            if (chunkObj == null) continue;
+
+            if (chunkObj.TryGetComponent<RoadChunk>(out var roadChunk) && roadChunk.IsIntersection)
+            {
+                float chunkMinZ = chunkObj.transform.position.z - safetyMargin;
+                float chunkMaxZ = chunkObj.transform.position.z + roadChunk.ChunkLength + safetyMargin;
+
+                if (targetZ >= chunkMinZ && targetZ <= chunkMaxZ)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Clears any spawned obstacles in the specified world Z corridor. Useful for keeping intersections clean.
+    /// </summary>
+    public static void ClearObstaclesInZRange(float minZ, float maxZ)
+    {
+        GameObject[] obstacles = GameObject.FindGameObjectsWithTag("Obstacle");
+        for (int i = 0; i < obstacles.Length; i++)
+        {
+            if (obstacles[i] != null)
+            {
+                float z = obstacles[i].transform.position.z;
+                if (z >= minZ && z <= maxZ)
+                {
+                    Destroy(obstacles[i]);
+                }
+            }
         }
     }
 
