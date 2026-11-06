@@ -9,12 +9,17 @@ namespace DoomDriver.Phone
     /// <summary>
     /// UI controller for the courier app shown in the lobby.
     /// Subscribes to OrderManager.OnOffersGenerated and populates three order cards.
+    /// Automatically manages canvas visibility between lobby and driving phases.
     /// </summary>
     public class CourierAppUI : MonoBehaviour
     {
         [Header("UI References")]
+        [Tooltip("Canvas component for the courier app. If null, automatically resolved from this GameObject.")]
+        [SerializeField] private Canvas appCanvas;
+
         [Tooltip("Parent object that holds the three card UI objects")]
         [SerializeField] private Transform cardsContainer;
+
         [Tooltip("Prefab for a single order card, containing OrderCardView component")]
         [SerializeField] private GameObject cardPrefab;
 
@@ -22,13 +27,23 @@ namespace DoomDriver.Phone
 
         private void Awake()
         {
+            if (appCanvas == null)
+            {
+                appCanvas = GetComponent<Canvas>();
+            }
+
+            if (appCanvas != null && appCanvas.worldCamera == null)
+            {
+                appCanvas.worldCamera = Camera.main;
+            }
+
             if (cardsContainer == null)
             {
                 Transform found = transform.Find("CardsContainer");
                 cardsContainer = found != null ? found : this.transform;
             }
 
-            Debug.Log($"<color=magenta>[CourierAppUI]</color> Awake on '{gameObject.name}'. Container: {(cardsContainer != null ? cardsContainer.name : "NULL")}, Prefab: {(cardPrefab != null ? cardPrefab.name : "NULL")}");
+            Debug.Log($"<color=magenta>[CourierAppUI]</color> Awake on '{gameObject.name}'. Canvas: {(appCanvas != null ? appCanvas.name : "NULL")}, Container: {(cardsContainer != null ? cardsContainer.name : "NULL")}, Prefab: {(cardPrefab != null ? cardPrefab.name : "NULL")}");
         }
 
         private void OnEnable()
@@ -44,6 +59,17 @@ namespace DoomDriver.Phone
         private void Start()
         {
             Subscribe();
+
+            // Ensure canvas visibility matches the active game state
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.OrderSelection)
+            {
+                SetAppVisible(false);
+            }
+            else
+            {
+                SetAppVisible(true);
+            }
+
             // If offers already exist in OrderManager when UI starts, populate them immediately
             if (OrderManager.Instance != null)
             {
@@ -99,8 +125,8 @@ namespace DoomDriver.Phone
 
         private void HandleOrderSelectionStarted()
         {
-            Debug.Log("<color=magenta>[CourierAppUI]</color> GameManager.OnOrderSelectionStarted received.");
-            if (cardsContainer != null) cardsContainer.gameObject.SetActive(true);
+            Debug.Log("<color=magenta>[CourierAppUI]</color> GameManager.OnOrderSelectionStarted received. Showing courier app.");
+            SetAppVisible(true);
 
             if (OrderManager.Instance != null && OrderManager.Instance.CurrentOffers != null && OrderManager.Instance.CurrentOffers.Count > 0)
             {
@@ -110,8 +136,30 @@ namespace DoomDriver.Phone
 
         private void HandleDeliveryStarted()
         {
-            Debug.Log("<color=magenta>[CourierAppUI]</color> GameManager.OnDeliveryStarted received. Hiding cards container.");
-            if (cardsContainer != null) cardsContainer.gameObject.SetActive(false);
+            Debug.Log("<color=magenta>[CourierAppUI]</color> GameManager.OnDeliveryStarted received. Hiding courier app.");
+            SetAppVisible(false);
+        }
+
+        /// <summary>
+        /// Controls rendering of the courier app canvas and all its elements (cards, background, etc.).
+        /// </summary>
+        public void SetAppVisible(bool isVisible)
+        {
+            if (appCanvas != null)
+            {
+                appCanvas.enabled = isVisible;
+            }
+
+            if (cardsContainer != null)
+            {
+                cardsContainer.gameObject.SetActive(isVisible);
+            }
+
+            var rootImage = GetComponent<Image>();
+            if (rootImage != null)
+            {
+                rootImage.enabled = isVisible;
+            }
         }
 
         private void PopulateOffers(IReadOnlyList<DeliveryOrder> offers)
@@ -163,8 +211,6 @@ namespace DoomDriver.Phone
             }
 
             Debug.Log($"<color=magenta>[CourierAppUI]</color> Successfully populated {cardViews.Count} order cards inside '{cardsContainer.name}'.");
-
         }
     }
 }
-
