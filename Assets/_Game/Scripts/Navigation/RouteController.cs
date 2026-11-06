@@ -120,6 +120,79 @@ public class RouteController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Executes a smooth 90-degree world pivot turn transition (Temple Run style).
+    /// Pivots the intersection chunk so the side street becomes the new forward track,
+    /// animates the car cornering drift, prunes old forward chunks, and resumes generation.
+    /// </summary>
+    public void ExecuteWorldTurn(RoadChunk intersectionChunk, DashboardNavigationSource.Maneuver direction)
+    {
+        if (intersectionChunk == null) return;
+        StartCoroutine(WorldTurnRoutine(intersectionChunk, direction));
+    }
+
+    private System.Collections.IEnumerator WorldTurnRoutine(RoadChunk intersectionChunk, DashboardNavigationSource.Maneuver direction)
+    {
+        float duration = 0.55f;
+        float targetAngle = (direction == DashboardNavigationSource.Maneuver.Left) ? 90f : -90f;
+
+        // 1. Prune chunks ahead on the old straight road so they don't block the new street
+        if (EnvironmentSpawner.Instance != null)
+        {
+            EnvironmentSpawner.Instance.PruneChunksAheadOf(intersectionChunk.gameObject);
+        }
+
+        // 2. Start vehicle drift animation (yaw, tilt, wheel rotation, tire screech)
+        if (VehicleMovement.Instance != null)
+        {
+            VehicleMovement.Instance.StartTurnManeuver(direction, duration);
+        }
+
+        // 3. Small camera bump/shake for turn apex feel
+        if (CameraShake.Instance != null)
+        {
+            CameraShake.Instance.Shake(duration * 0.5f, 0.12f);
+        }
+
+        // 4. Smoothly rotate the intersection chunk around its intersection center
+        float elapsed = 0f;
+        float lastAngle = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float smoothT = Mathf.SmoothStep(0f, 1f, t);
+            float currentAngle = Mathf.Lerp(0f, targetAngle, smoothT);
+            float deltaAngle = currentAngle - lastAngle;
+
+            if (intersectionChunk != null)
+            {
+                // Pivot point is the world position of the intersection center
+                Vector3 pivot = intersectionChunk.transform.position + intersectionChunk.transform.rotation * new Vector3(0f, 0f, intersectionChunk.IntersectionCenterZ);
+                intersectionChunk.transform.RotateAround(pivot, Vector3.up, deltaAngle);
+            }
+
+            lastAngle = currentAngle;
+            yield return null;
+        }
+
+        // 5. Finalize alignment of the intersection chunk
+        if (intersectionChunk != null)
+        {
+            intersectionChunk.transform.rotation = Quaternion.Euler(0f, targetAngle, 0f);
+            Vector3 finalPos = intersectionChunk.transform.position;
+            finalPos.x = 0f;
+            intersectionChunk.transform.position = finalPos;
+        }
+
+        // 6. Resume generation in the new forward direction (+Z)
+        if (EnvironmentSpawner.Instance != null && intersectionChunk != null)
+        {
+            EnvironmentSpawner.Instance.ResumeGenerationAfterTurn(intersectionChunk);
+        }
+    }
+
     private void UpdateUpcomingManeuverGPS()
     {
         if (recalculatingTimer > 0f)

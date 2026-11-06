@@ -33,7 +33,7 @@ public class EnvironmentSpawner : MonoBehaviour
     [SerializeField] private float defaultChunkLength = 44.75f;
 
     [Tooltip("Number of chunks visible simultaneously on screen.")]
-    [SerializeField] private int numberOfChunksOnScreen = 7;
+    [SerializeField] private int numberOfChunksOnScreen = 5;
 
     [Tooltip("Starting Z position for the first spawned chunk (e.g. -50m behind player).")]
     [SerializeField] private float startZPosition = -50f;
@@ -277,6 +277,56 @@ public class EnvironmentSpawner : MonoBehaviour
 
             string id = $"turn-{nearestTurnChunk.GetInstanceID()}";
             navigationSource.Publish(id, dir, dist);
+        }
+    }
+
+    /// <summary>
+    /// Destroys all chunks in activeChunks located ahead of the specified intersection chunk.
+    /// Called when the player turns so the old straight road doesn't overlap the new street.
+    /// </summary>
+    public void PruneChunksAheadOf(GameObject intersectionChunk)
+    {
+        if (intersectionChunk == null) return;
+        int index = activeChunks.IndexOf(intersectionChunk);
+        if (index < 0) return;
+
+        for (int i = activeChunks.Count - 1; i > index; i--)
+        {
+            GameObject chunkToPrune = activeChunks[i];
+            activeChunks.RemoveAt(i);
+            if (chunkToPrune != null)
+            {
+                if (chunkToPrune.TryGetComponent<RoadChunk>(out var rc))
+                {
+                    OnChunkDespawned?.Invoke(rc);
+                }
+                Destroy(chunkToPrune);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resumes procedural chunk generation forward along +Z after a 90-degree world turn.
+    /// Populates new road segments from the end of the rotated intersection chunk.
+    /// </summary>
+    public void ResumeGenerationAfterTurn(RoadChunk intersectionChunk)
+    {
+        if (intersectionChunk == null) return;
+
+        // The intersection center is at world Z = intersectionChunk.transform.position.z + intersectionCenterZ
+        // The rotated side branch extends forward along +Z by defaultChunkLength (44.75m)
+        float branchForwardEnd = intersectionChunk.transform.position.z + intersectionChunk.IntersectionCenterZ + defaultChunkLength;
+
+        // Fill activeChunks back up to numberOfChunksOnScreen
+        while (activeChunks.Count < numberOfChunksOnScreen)
+        {
+            GameObject lastChunk = activeChunks[activeChunks.Count - 1];
+            float spawnZ = (lastChunk == intersectionChunk.gameObject)
+                ? branchForwardEnd
+                : (lastChunk.transform.position.z + defaultChunkLength);
+
+            RoadChunkType nextType = GetNextChunkTypeFromQueue();
+            SpawnChunk(nextType, spawnZ);
         }
     }
 

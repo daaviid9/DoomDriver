@@ -104,9 +104,19 @@ public class TurnTrigger : MonoBehaviour
             RouteController.Instance.ReportTurnOutcome(this, recordedManeuver, expectedManeuver, isCorrect);
         }
 
-        if (isCorrect && VehicleMovement.Instance != null)
+        if (isCorrect)
         {
-            VehicleMovement.Instance.EaseToCenter(1.2f);
+            if (recordedManeuver == DashboardNavigationSource.Maneuver.Left || recordedManeuver == DashboardNavigationSource.Maneuver.Right)
+            {
+                if (RouteController.Instance != null)
+                {
+                    RouteController.Instance.ExecuteWorldTurn(roadChunk, recordedManeuver);
+                }
+            }
+            else if (VehicleMovement.Instance != null)
+            {
+                VehicleMovement.Instance.EaseToCenter(1.2f);
+            }
         }
     }
 
