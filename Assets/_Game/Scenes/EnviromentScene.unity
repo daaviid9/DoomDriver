@@ -4016,9 +4016,9 @@ MonoBehaviour:
   - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
   - {fileID: 7591798394180682832, guid: a320f61d3469f70488f3300e6fcbad6a, type: 3}
   turnLeftPrefabs:
-  - {fileID: 2901758840150988877, guid: 28cc5e11361dc824893338dc2d7bf411, type: 3}
+  - {fileID: 9180165884780382515, guid: a47c1fc509f1f294694684c3c5cf6b10, type: 3}
   turnRightPrefabs:
-  - {fileID: 726137431232173450, guid: e3709057894b08449b2306ab4d33cf12, type: 3}
+  - {fileID: 7591798394180682832, guid: 45e211619cb70fd47b13c71f0aaa32f2, type: 3}
   tJunctionPrefabs:
   - {fileID: 4821960158831423682, guid: 547b461b36c9ad6498e3ab321c0c5b54, type: 3}
   crossroadsPrefabs:
@@ -4028,7 +4028,7 @@ MonoBehaviour:
   - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
   - {fileID: 7591798394180682832, guid: a320f61d3469f70488f3300e6fcbad6a, type: 3}
   defaultChunkLength: 44.75
-  numberOfChunksOnScreen: 5
+  numberOfChunksOnScreen: 7
   startZPosition: -50
   destroyZPosition: -50
   useDebugSequence: 1

@@ -17,6 +17,9 @@ public class RouteController : MonoBehaviour
     [Tooltip("Number of extra straight road segments injected when recalculating (e.g. 3 chunks = ~134m).")]
     [SerializeField] private int recalculationChunks = 3;
 
+    [Tooltip("Duration in seconds the GPS displays the orange 'Recalculating...' status before resuming navigation cues.")]
+    [SerializeField] private float recalculatingDuration = 2.5f;
+
     [Header("Route State")]
     [SerializeField] private int completedTurnsCount = 0;
     [SerializeField] private int missedTurnsCount = 0;
@@ -24,6 +27,7 @@ public class RouteController : MonoBehaviour
     [SerializeField] private DashboardNavigationSource.Maneuver currentManeuverDirection = DashboardNavigationSource.Maneuver.Straight;
 
     private DashboardNavigationSource navigationSource;
+    private float recalculatingTimer = 0f;
 
     public int CompletedTurnsCount => completedTurnsCount;
     public int MissedTurnsCount => missedTurnsCount;
@@ -101,6 +105,7 @@ public class RouteController : MonoBehaviour
         else
         {
             missedTurnsCount++;
+            recalculatingTimer = recalculatingDuration;
             Debug.LogWarning($"<color=orange>[RouteController] Missed turn! Activating Recalculating.</color> (Total misses: {missedTurnsCount}, Penalty: -{TotalMissedTurnPenalty}€)");
             OnMissedTurn?.Invoke(missedTurnsCount);
             OnRecalculating?.Invoke();
@@ -117,6 +122,12 @@ public class RouteController : MonoBehaviour
 
     private void UpdateUpcomingManeuverGPS()
     {
+        if (recalculatingTimer > 0f)
+        {
+            recalculatingTimer -= Time.deltaTime;
+            return;
+        }
+
         if (navigationSource == null)
         {
             navigationSource = UnityEngine.Object.FindFirstObjectByType<DashboardNavigationSource>();
@@ -134,6 +145,12 @@ public class RouteController : MonoBehaviour
             {
                 if (chunk.IsIntersection && chunk.GetDistanceToCenter() >= -chunk.TurnTriggerWindow)
                 {
+                    // Skip intersections that have already triggered/completed their evaluation
+                    if (chunk.TryGetComponent<TurnTrigger>(out var trigger) && trigger.HasTriggered)
+                    {
+                        continue;
+                    }
+
                     nearestIntersection = chunk;
                     break;
                 }
@@ -158,7 +175,15 @@ public class RouteController : MonoBehaviour
         }
         else
         {
-            if (HasActiveManeuver)
+            // If active delivery is running but no intersection is within view yet, guide the player to continue straight
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
+            {
+                float straightDistance = 150f;
+                currentManeuverId = "delivery-straight-corridor";
+                currentManeuverDirection = DashboardNavigationSource.Maneuver.Straight;
+                navigationSource.Publish(currentManeuverId, currentManeuverDirection, straightDistance);
+            }
+            else if (HasActiveManeuver)
             {
                 currentManeuverId = "";
                 navigationSource.ClearRoute();
@@ -171,6 +196,7 @@ public class RouteController : MonoBehaviour
         completedTurnsCount = 0;
         missedTurnsCount = 0;
         currentManeuverId = "";
+        recalculatingTimer = 0f;
 
         if (navigationSource != null)
         {

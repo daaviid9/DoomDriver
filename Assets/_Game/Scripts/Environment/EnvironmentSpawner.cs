@@ -33,7 +33,7 @@ public class EnvironmentSpawner : MonoBehaviour
     [SerializeField] private float defaultChunkLength = 44.75f;
 
     [Tooltip("Number of chunks visible simultaneously on screen.")]
-    [SerializeField] private int numberOfChunksOnScreen = 5;
+    [SerializeField] private int numberOfChunksOnScreen = 7;
 
     [Tooltip("Starting Z position for the first spawned chunk (e.g. -50m behind player).")]
     [SerializeField] private float startZPosition = -50f;
