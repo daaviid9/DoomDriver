@@ -18,6 +18,8 @@ public enum SteeringMode
 /// </summary>
 public class VehicleMovement : MonoBehaviour
 {
+    public static VehicleMovement Instance { get; private set; }
+
     [Header("Steering Mode")]
     [Tooltip("Switch between discrete 3-lane steps or smooth analog steering")]
     [SerializeField] private SteeringMode steeringMode = SteeringMode.AnalogContinuous;
@@ -105,6 +107,11 @@ public class VehicleMovement : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+
         controls = new InputSystem_Actions();
 
         // Event-driven input handling: capture input updates and neutral releases

@@ -245,6 +245,8 @@ public class EnvironmentSpawner : MonoBehaviour
 
     private void UpdateNavigationSource()
     {
+        // If RouteController is present in the scene, let it own GPS publishing (SoC)
+        if (RouteController.Instance != null) return;
         if (navigationSource == null) return;
 
         if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive)
@@ -252,13 +254,13 @@ public class EnvironmentSpawner : MonoBehaviour
             return;
         }
 
-        // Find nearest active intersection ahead of vehicle (Z >= -2f)
+        // Find nearest active intersection ahead of vehicle
         RoadChunk nearestTurnChunk = null;
         for (int i = 0; i < activeChunks.Count; i++)
         {
             if (activeChunks[i] != null && activeChunks[i].TryGetComponent<RoadChunk>(out var rc))
             {
-                if (rc.IsIntersection && activeChunks[i].transform.position.z >= -2f)
+                if (rc.IsIntersection && rc.GetDistanceToCenter() >= -rc.TurnTriggerWindow)
                 {
                     nearestTurnChunk = rc;
                     break;
@@ -268,7 +270,7 @@ public class EnvironmentSpawner : MonoBehaviour
 
         if (nearestTurnChunk != null)
         {
-            float dist = nearestTurnChunk.transform.position.z;
+            float dist = Mathf.Max(0f, nearestTurnChunk.GetDistanceToCenter());
             DashboardNavigationSource.Maneuver dir = nearestTurnChunk.ChunkType switch
             {
                 RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
@@ -355,6 +357,12 @@ public class EnvironmentSpawner : MonoBehaviour
         if (!newChunk.TryGetComponent<RoadChunk>(out var roadChunk))
         {
             roadChunk = newChunk.AddComponent<RoadChunk>();
+        }
+
+        // Ensure TurnTrigger component exists on intersection chunks for turn detection
+        if (roadChunk.IsIntersection && newChunk.GetComponent<TurnTrigger>() == null)
+        {
+            newChunk.AddComponent<TurnTrigger>();
         }
 
         // Ensure WorldMover component exists

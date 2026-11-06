@@ -132,7 +132,13 @@ public class GameManager : MonoBehaviour
             deliveryHealth = FindFirstObjectByType<VehicleHealth>();
         }
 
-        var input = rewardInput ?? new DeliveryResult(15m, 0m, 0m, 0m, true);
+        decimal missedPenalty = RouteController.Instance != null ? RouteController.Instance.TotalMissedTurnPenalty : 0m;
+        var input = rewardInput ?? new DeliveryResult(15m, 0m, 0m, missedPenalty, true);
+        if (rewardInput != null && rewardInput.MissedTurnPenalty == 0m && missedPenalty > 0m)
+        {
+            input = new DeliveryResult(rewardInput.BaseFee, rewardInput.TimeTip, rewardInput.DamagePenalty, missedPenalty, rewardInput.IsPlaceholder);
+        }
+
         CompletedDelivery = new DeliveryResult(input.BaseFee, input.TimeTip, input.DamagePenalty,
             input.MissedTurnPenalty, input.IsPlaceholder,
             DeliveryProgressTracker.Instance != null ? DeliveryProgressTracker.Instance.DeliveryTimeElapsed : 0f,
@@ -244,6 +250,11 @@ public class GameManager : MonoBehaviour
         if (GameUIController.Instance == null && GetComponent<GameUIController>() == null)
         {
             gameObject.AddComponent<GameUIController>();
+        }
+
+        if (RouteController.Instance == null && GetComponent<RouteController>() == null)
+        {
+            gameObject.AddComponent<RouteController>();
         }
     }
 

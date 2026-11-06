@@ -45,6 +45,73 @@ public static class JunctionPrefabsSetup
                   $"▶ <b>Výška (os Y):</b> {bounds.size.y:F2} m");
     }
 
+    [MenuItem("DoomDriver/Environment/Attach Visual Side Branches to Junction Prefabs")]
+    public static void AttachSideBranches()
+    {
+        GameObject sideBranchSource = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Prefabs/Environment/RoadChunk_01.prefab");
+        if (sideBranchSource == null)
+        {
+            Debug.LogError("[JunctionPrefabsSetup] Cannot find RoadChunk_01.prefab to use as side branch.");
+            return;
+        }
+
+        AttachBranchToPrefab("Assets/_Game/Prefabs/Environment/RoadChunk_TurnLeft.prefab", sideBranchSource, isLeft: true, isRight: false);
+        AttachBranchToPrefab("Assets/_Game/Prefabs/Environment/RoadChunk_TurnRight.prefab", sideBranchSource, isLeft: false, isRight: true);
+        AttachBranchToPrefab("Assets/_Game/Prefabs/Environment/RoadChunk_Crossroads.prefab", sideBranchSource, isLeft: true, isRight: true);
+
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("<color=green>[JunctionPrefabsSetup] Visual side branches successfully attached to junction prefabs!</color>");
+    }
+
+    private static void AttachBranchToPrefab(string prefabPath, GameObject branchSource, bool isLeft, bool isRight)
+    {
+        GameObject prefabRoot = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+        if (prefabRoot == null) return;
+
+        GameObject instance = PrefabUtility.LoadPrefabContents(prefabPath);
+        bool modified = false;
+
+        RoadChunk roadChunk = instance.GetComponent<RoadChunk>();
+        Vector3 leftPos = roadChunk != null ? roadChunk.LeftBranchOffset : new Vector3(-25.8f, 0f, 19f);
+        Vector3 rightPos = roadChunk != null ? roadChunk.RightBranchOffset : new Vector3(25.8f, 0f, 19f);
+
+        if (isLeft && instance.transform.Find("SideBranch_Left") == null)
+        {
+            GameObject leftBranch = (GameObject)PrefabUtility.InstantiatePrefab(branchSource, instance.transform);
+            leftBranch.name = "SideBranch_Left";
+            leftBranch.transform.localPosition = leftPos;
+            leftBranch.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+
+            // Strip nested WorldMover and RoadChunk so they move under parent
+            if (leftBranch.TryGetComponent<WorldMover>(out var mover)) Object.DestroyImmediate(mover);
+            if (leftBranch.TryGetComponent<RoadChunk>(out var chunkComp)) Object.DestroyImmediate(chunkComp);
+
+            modified = true;
+        }
+
+        if (isRight && instance.transform.Find("SideBranch_Right") == null)
+        {
+            GameObject rightBranch = (GameObject)PrefabUtility.InstantiatePrefab(branchSource, instance.transform);
+            rightBranch.name = "SideBranch_Right";
+            rightBranch.transform.localPosition = rightPos;
+            rightBranch.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+
+            if (rightBranch.TryGetComponent<WorldMover>(out var mover)) Object.DestroyImmediate(mover);
+            if (rightBranch.TryGetComponent<RoadChunk>(out var chunkComp)) Object.DestroyImmediate(chunkComp);
+
+            modified = true;
+        }
+
+        if (modified)
+        {
+            PrefabUtility.SaveAsPrefabAsset(instance, prefabPath);
+            Debug.Log($"[JunctionPrefabsSetup] Attached side branch(es) to {Path.GetFileName(prefabPath)} at {leftPos} / {rightPos}.");
+        }
+
+        PrefabUtility.UnloadPrefabContents(instance);
+    }
+
     [MenuItem("DoomDriver/Environment/Create Missing Junction Prefabs")]
     public static void CreateJunctionPrefabs()
     {
