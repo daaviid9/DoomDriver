@@ -49,6 +49,41 @@ public class RoadChunk : MonoBehaviour
     public float TurnTriggerWindow => turnTriggerWindow;
     public float BranchExitDistance { get => branchExitDistance; set => branchExitDistance = value; }
 
+    // Attached preview road segments for side branches (visible before and during turn maneuver)
+    private GameObject leftBranchChunk;
+    private GameObject rightBranchChunk;
+
+    public GameObject LeftBranchChunk => leftBranchChunk;
+    public GameObject RightBranchChunk => rightBranchChunk;
+
+    public void SetBranchChunk(DashboardNavigationSource.Maneuver direction, GameObject chunk)
+    {
+        if (direction == DashboardNavigationSource.Maneuver.Left)
+        {
+            leftBranchChunk = chunk;
+        }
+        else if (direction == DashboardNavigationSource.Maneuver.Right)
+        {
+            rightBranchChunk = chunk;
+        }
+    }
+
+    public GameObject DetachBranchChunk(DashboardNavigationSource.Maneuver direction)
+    {
+        GameObject chunk = null;
+        if (direction == DashboardNavigationSource.Maneuver.Left)
+        {
+            chunk = leftBranchChunk;
+            leftBranchChunk = null;
+        }
+        else if (direction == DashboardNavigationSource.Maneuver.Right)
+        {
+            chunk = rightBranchChunk;
+            rightBranchChunk = null;
+        }
+        return chunk;
+    }
+
     private void Awake()
     {
         // Ensure WorldMover component is present so the chunk moves with the world

@@ -321,7 +321,8 @@ public class EnvironmentSpawner : MonoBehaviour
 
     /// <summary>
     /// Resumes procedural chunk generation forward along +Z after a 90-degree world turn.
-    /// Populates new road segments starting seamlessly from the rotated intersection branch exit.
+    /// If a preview branch chunk was already visible during the turn, promotes it to the active road;
+    /// otherwise spawns new road segments starting from the rotated intersection branch exit.
     /// </summary>
     public void ResumeGenerationAfterTurn(RoadChunk intersectionChunk, DashboardNavigationSource.Maneuver direction = DashboardNavigationSource.Maneuver.Left)
     {
@@ -329,26 +330,59 @@ public class EnvironmentSpawner : MonoBehaviour
 
         if (intersectionChunk == null) return;
 
-        // Calculate exact world position of the rotated branch exit
-        Vector3 worldBranchExit = intersectionChunk.GetBranchExitWorldPosition(direction);
-        float spawnZ = worldBranchExit.z + branchExitDistanceOffset;
+        float spawnZ;
 
-        // Fill activeChunks back up to numberOfChunksOnScreen
+        // 1. Check if a branch preview chunk was attached to this intersection
+        GameObject branchChunk = intersectionChunk.DetachBranchChunk(direction);
+
+        if (branchChunk != null)
+        {
+            // Detach from parent and maintain exact world position and rotation
+            branchChunk.transform.SetParent(null, true);
+
+            // Re-enable WorldMover so it continues moving down -Z with the world
+            if (!branchChunk.TryGetComponent<WorldMover>(out var mover))
+            {
+                mover = branchChunk.AddComponent<WorldMover>();
+            }
+            mover.enabled = true;
+
+            // Ensure RoadChunk component exists
+            if (!branchChunk.TryGetComponent<RoadChunk>(out var rc))
+            {
+                rc = branchChunk.AddComponent<RoadChunk>();
+            }
+
+            // Add to activeChunks as the immediate successor to intersectionChunk
+            activeChunks.Add(branchChunk);
+            OnChunkSpawned?.Invoke(rc);
+
+            float chunkLength = (rc.ChunkLength > 0.1f) ? rc.ChunkLength : defaultChunkLength;
+            spawnZ = branchChunk.transform.position.z + chunkLength;
+
+            Debug.Log($"[EnvironmentSpawner] Promoted {direction} preview branch chunk to active road at Z={branchChunk.transform.position.z:F2}. Next spawn at Z={spawnZ:F2}.");
+        }
+        else
+        {
+            // Fallback if no preview chunk was attached: calculate branch exit in world space
+            Vector3 worldBranchExit = intersectionChunk.GetBranchExitWorldPosition(direction);
+            spawnZ = worldBranchExit.z + branchExitDistanceOffset;
+        }
+
+        // 2. Fill activeChunks back up to numberOfChunksOnScreen
         while (activeChunks.Count < numberOfChunksOnScreen)
         {
             RoadChunkType nextType = GetNextChunkTypeFromQueue();
             GameObject newChunk = SpawnChunk(nextType, spawnZ);
 
-            float chunkLength = defaultChunkLength;
-            if (newChunk != null && newChunk.TryGetComponent<RoadChunk>(out var rc))
+            float length = defaultChunkLength;
+            if (newChunk != null && newChunk.TryGetComponent<RoadChunk>(out var roadChunk))
             {
-                chunkLength = rc.ChunkLength;
+                length = roadChunk.ChunkLength;
             }
 
-            spawnZ += chunkLength;
+            spawnZ += length;
         }
-
-        Debug.Log($"[EnvironmentSpawner] Resumed generation after {direction} turn. First new chunk spawned at Z={worldBranchExit.z + branchExitDistanceOffset:F2} (Branch exit Z={worldBranchExit.z:F2}, Offset={branchExitDistanceOffset:F2}).");
     }
 
     private void SpawnNextChunkInSequence()
@@ -442,8 +476,71 @@ public class EnvironmentSpawner : MonoBehaviour
         newChunk.tag = "Untagged";
         activeChunks.Add(newChunk);
 
+        // Pre-attach preview straight chunks to side branches so the player sees real streets down the side roads
+        if (roadChunk.IsIntersection)
+        {
+            AttachSideBranchPreviews(roadChunk);
+        }
+
         OnChunkSpawned?.Invoke(roadChunk);
         return newChunk;
+    }
+
+    /// <summary>
+    /// Spawns straight road chunks attached to the side branches of an intersection.
+    /// These chunks are immediately visible to the player when approaching and during the turn maneuver,
+    /// eliminating any visual gap or empty void.
+    /// </summary>
+    private void AttachSideBranchPreviews(RoadChunk roadChunk)
+    {
+        if (roadChunk == null || straightPrefabs == null || straightPrefabs.Length == 0) return;
+
+        if (roadChunk.ChunkType == RoadChunkType.TurnLeft || roadChunk.ChunkType == RoadChunkType.Crossroads)
+        {
+            AttachBranchPreview(roadChunk, DashboardNavigationSource.Maneuver.Left);
+        }
+
+        if (roadChunk.ChunkType == RoadChunkType.TurnRight || roadChunk.ChunkType == RoadChunkType.Crossroads)
+        {
+            AttachBranchPreview(roadChunk, DashboardNavigationSource.Maneuver.Right);
+        }
+    }
+
+    private void AttachBranchPreview(RoadChunk intersectionChunk, DashboardNavigationSource.Maneuver direction)
+    {
+        GameObject prefab = PickRandomPrefab(straightPrefabs);
+        if (prefab == null) return;
+
+        float exitDist = (intersectionChunk.BranchExitDistance > 0.1f)
+            ? intersectionChunk.BranchExitDistance
+            : defaultBranchExitDistance;
+        exitDist += branchExitDistanceOffset;
+
+        Vector3 localPos = (direction == DashboardNavigationSource.Maneuver.Left)
+            ? new Vector3(-exitDist, 0f, intersectionChunk.IntersectionCenterZ)
+            : new Vector3(exitDist, 0f, intersectionChunk.IntersectionCenterZ);
+
+        Quaternion localRot = (direction == DashboardNavigationSource.Maneuver.Left)
+            ? Quaternion.Euler(0f, -90f, 0f)
+            : Quaternion.Euler(0f, 90f, 0f);
+
+        GameObject previewChunk = Instantiate(prefab, intersectionChunk.transform);
+        previewChunk.name = $"{prefab.name}_Branch_{direction}";
+        previewChunk.transform.localPosition = localPos;
+        previewChunk.transform.localRotation = localRot;
+        previewChunk.transform.localScale = Vector3.one;
+
+        // Ensure WorldMover is disabled while attached to the parent intersection chunk so it does not double-translate
+        if (previewChunk.TryGetComponent<WorldMover>(out var mover))
+        {
+            mover.enabled = false;
+        }
+
+        // Tag as Untagged
+        previewChunk.tag = "Untagged";
+
+        // Store reference on the intersection RoadChunk
+        intersectionChunk.SetBranchChunk(direction, previewChunk);
     }
 
     private GameObject PickPrefabForType(RoadChunkType type)
