@@ -37,6 +37,9 @@ public class RoadChunk : MonoBehaviour
     [Tooltip("Detection tolerance window (+/- meters around intersectionCenterZ) for evaluating player turn.")]
     [SerializeField] private float turnTriggerWindow = 4f;
 
+    [Tooltip("Distance from intersection center (Z=19) to where the next chunk attaches along the branch after a turn (default 25.8m). Tune this to eliminate gaps or overlaps.")]
+    [SerializeField] private float branchExitDistance = 25.8f;
+
     public RoadChunkType ChunkType => chunkType;
     public float ChunkLength => chunkLength;
     public bool IsIntersection => chunkType != RoadChunkType.Straight;
@@ -44,6 +47,7 @@ public class RoadChunk : MonoBehaviour
     public Vector3 LeftBranchOffset => leftBranchOffset;
     public Vector3 RightBranchOffset => rightBranchOffset;
     public float TurnTriggerWindow => turnTriggerWindow;
+    public float BranchExitDistance { get => branchExitDistance; set => branchExitDistance = value; }
 
     private void Awake()
     {

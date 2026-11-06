@@ -41,6 +41,10 @@ public class EnvironmentSpawner : MonoBehaviour
     [Tooltip("Z position behind the player where chunks are safely recycled/destroyed.")]
     [SerializeField] private float destroyZPosition = -50f;
 
+    [Header("Turn Attachment & Spacing")]
+    [Tooltip("Default distance from the intersection center (Z=19) to where the next chunk attaches after a 90-degree turn (default 25.8m). Tune this to eliminate road gaps.")]
+    [SerializeField] private float defaultBranchExitDistance = 25.8f;
+
     [Header("Procedural Route & Testing")]
     [Tooltip("If true, generates a repeating sequence of straights and turns when no delivery order is active.")]
     [SerializeField] private bool useDebugSequence = true;
@@ -313,9 +317,14 @@ public class EnvironmentSpawner : MonoBehaviour
     {
         if (intersectionChunk == null) return;
 
+        // Determine attachment distance along the rotated branch
+        float exitDistance = (intersectionChunk.BranchExitDistance > 0.1f)
+            ? intersectionChunk.BranchExitDistance
+            : defaultBranchExitDistance;
+
         // The intersection center is at world Z = intersectionChunk.transform.position.z + intersectionCenterZ
-        // The rotated side branch extends forward along +Z by defaultChunkLength (44.75m)
-        float branchForwardEnd = intersectionChunk.transform.position.z + intersectionChunk.IntersectionCenterZ + defaultChunkLength;
+        // The rotated side branch extends forward along +Z by exitDistance
+        float branchForwardEnd = intersectionChunk.transform.position.z + intersectionChunk.IntersectionCenterZ + exitDistance;
 
         // Fill activeChunks back up to numberOfChunksOnScreen
         while (activeChunks.Count < numberOfChunksOnScreen)
