@@ -51,6 +51,11 @@ public class GameManager : MonoBehaviour
         deliveryHealth = FindFirstObjectByType<VehicleHealth>();
     }
 
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
     private void Start()
     {
         ObstacleSpawner.ClearAllObstacles();
@@ -127,16 +132,8 @@ public class GameManager : MonoBehaviour
     {
         if (currentState != GameState.DeliveryActive) return;
 
-        if (deliveryHealth == null)
-        {
-            deliveryHealth = FindFirstObjectByType<VehicleHealth>();
-        }
-
-        var input = rewardInput ?? new DeliveryResult(15m, 0m, 0m, 0m, true);
-        CompletedDelivery = new DeliveryResult(input.BaseFee, input.TimeTip, input.DamagePenalty,
-            input.MissedTurnPenalty, input.IsPlaceholder,
-            DeliveryProgressTracker.Instance != null ? DeliveryProgressTracker.Instance.DeliveryTimeElapsed : 0f,
-            deliveryHealth != null ? Mathf.Clamp(deliveryHealth.MaxHealth - deliveryHealth.CurrentHealth, 0, deliveryHealth.MaxHealth) : 0);
+        // DeliveryProgressTracker is the single source of truth for computed rewards
+        CompletedDelivery = rewardInput ?? new DeliveryResult(15m, 0m, 0m, 0m, true);
         if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
 
         SetState(GameState.DeliveryCompleted);
@@ -245,6 +242,8 @@ public class GameManager : MonoBehaviour
         {
             gameObject.AddComponent<GameUIController>();
         }
+
+
     }
 
 #if UNITY_EDITOR

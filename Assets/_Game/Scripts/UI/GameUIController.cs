@@ -15,6 +15,9 @@ public class GameUIController : MonoBehaviour
     [SerializeField] private GameObject deliveryCompletedPanel;
     [SerializeField] private GameObject pausePanel;
 
+    [Header("Delivery Timer")]
+    [SerializeField] private DoomDriver.UI.DeliveryTimerUI deliveryTimer;
+
     [Header("Distance & Score Display")]
     [SerializeField] private TMP_Text scoreText;
     [SerializeField] private TMP_Text highscoreText;
@@ -59,6 +62,7 @@ public class GameUIController : MonoBehaviour
     private void OnDestroy()
     {
         UnsubscribeFromEvents();
+        if (Instance == this) Instance = null;
     }
 
     private void SubscribeToEvents()
@@ -108,11 +112,15 @@ public class GameUIController : MonoBehaviour
                 break;
 
             case GameState.DeliveryCompleted:
-                // DeliverySummaryUI exclusively owns the success presentation.
-                if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
+                if (gameOverPanel != null) gameOverPanel.SetActive(false);
+                if (deliveryCompletedPanel != null)
+                {
+                    deliveryCompletedPanel.SetActive(true);
+                }
                 break;
 
             case GameState.DeliveryFailed:
+                if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
                 if (gameOverPanel != null)
                 {
                     gameOverPanel.SetActive(true);
@@ -146,7 +154,15 @@ public class GameUIController : MonoBehaviour
 
         if (scoreText != null)
         {
-            scoreText.text = $"{meters} m";
+            if (DeliveryProgressTracker.Instance != null && DeliveryProgressTracker.Instance.TargetDistance > 0f)
+            {
+                int target = Mathf.FloorToInt(DeliveryProgressTracker.Instance.TargetDistance);
+                scoreText.text = $"{meters} / {target} m";
+            }
+            else
+            {
+                scoreText.text = $"{meters} m";
+            }
         }
     }
 
@@ -187,6 +203,19 @@ public class GameUIController : MonoBehaviour
             else if (finalDistanceText == null && string.Equals(t.name, "FinalDistanceText", System.StringComparison.OrdinalIgnoreCase))
             {
                 finalDistanceText = t.GetComponent<TMP_Text>();
+            }
+            else if (deliveryCompletedPanel == null && (t.GetComponent<DeliverySummaryUI>() != null || string.Equals(t.name, "DeliverySummaryPanel", System.StringComparison.OrdinalIgnoreCase) || string.Equals(t.name, "DeliverySummaryCanvas", System.StringComparison.OrdinalIgnoreCase)))
+            {
+                deliveryCompletedPanel = t.gameObject;
+            }
+        }
+
+        if (deliveryTimer == null)
+        {
+            deliveryTimer = canvas.GetComponentInChildren<DoomDriver.UI.DeliveryTimerUI>(true);
+            if (deliveryTimer == null)
+            {
+                Debug.LogWarning("[GameUIController] DeliveryTimerUI not found under Canvas. Please drag the 'DeliveryTimer' prefab under Canvas in your scene.");
             }
         }
     }
