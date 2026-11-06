@@ -21,9 +21,6 @@ public class EnvironmentSpawner : MonoBehaviour
     [Tooltip("Prefabs for right-turn intersections.")]
     [SerializeField] private GameObject[] turnRightPrefabs;
 
-    [Tooltip("Prefabs for T-junction intersections.")]
-    [SerializeField] private GameObject[] tJunctionPrefabs;
-
     [Tooltip("Prefabs for 4-way crossroads.")]
     [SerializeField] private GameObject[] crossroadsPrefabs;
 
@@ -56,7 +53,7 @@ public class EnvironmentSpawner : MonoBehaviour
     {
         RoadChunkType.TurnLeft,
         RoadChunkType.TurnRight,
-        RoadChunkType.TJunction
+        RoadChunkType.Crossroads
     };
 
     // Active spawned chunks tracked in world
@@ -390,9 +387,6 @@ public class EnvironmentSpawner : MonoBehaviour
 
             case RoadChunkType.TurnRight:
                 return PickRandomPrefab(turnRightPrefabs) ?? PickRandomPrefab(crossroadsPrefabs);
-
-            case RoadChunkType.TJunction:
-                return PickRandomPrefab(tJunctionPrefabs) ?? PickRandomPrefab(crossroadsPrefabs);
 
             case RoadChunkType.Crossroads:
                 return PickRandomPrefab(crossroadsPrefabs);
