@@ -79,6 +79,23 @@ public class RoadChunk : MonoBehaviour
         return (transform.position.z + intersectionCenterZ) - originZ;
     }
 
+    /// <summary>
+    /// Calculates the world-space position where the next straight road chunk should attach after a 90-degree turn.
+    /// In local space, the left branch exits at (-branchExitDistance, 0, intersectionCenterZ)
+    /// and the right branch exits at (+branchExitDistance, 0, intersectionCenterZ).
+    /// Calling TransformPoint accurately maps this to world space under any rotation.
+    /// </summary>
+    public Vector3 GetBranchExitWorldPosition(DashboardNavigationSource.Maneuver direction)
+    {
+        float exitDistance = (branchExitDistance > 0.1f) ? branchExitDistance : 25.8f;
+
+        Vector3 localExit = (direction == DashboardNavigationSource.Maneuver.Left)
+            ? new Vector3(-exitDistance, 0f, intersectionCenterZ)
+            : new Vector3(exitDistance, 0f, intersectionCenterZ);
+
+        return transform.TransformPoint(localExit);
+    }
+
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
@@ -98,7 +115,7 @@ public class RoadChunk : MonoBehaviour
         if (IsIntersection)
         {
             // Draw intersection center line across the road
-            Vector3 centerPos = transform.position + new Vector3(0f, 0.2f, intersectionCenterZ);
+            Vector3 centerPos = transform.TransformPoint(new Vector3(0f, 0.2f, intersectionCenterZ));
             Gizmos.color = Color.magenta;
             Gizmos.DrawLine(centerPos + Vector3.left * 10f, centerPos + Vector3.right * 10f);
             Gizmos.DrawWireSphere(centerPos, 1.5f);
@@ -107,14 +124,14 @@ public class RoadChunk : MonoBehaviour
             Gizmos.color = Color.cyan;
             if (chunkType == RoadChunkType.TurnLeft || chunkType == RoadChunkType.Crossroads)
             {
-                Vector3 leftAnchor = transform.position + leftBranchOffset;
+                Vector3 leftAnchor = GetBranchExitWorldPosition(DashboardNavigationSource.Maneuver.Left);
                 Gizmos.DrawWireSphere(leftAnchor, 1.2f);
                 Gizmos.DrawLine(centerPos, leftAnchor);
             }
 
             if (chunkType == RoadChunkType.TurnRight || chunkType == RoadChunkType.Crossroads)
             {
-                Vector3 rightAnchor = transform.position + rightBranchOffset;
+                Vector3 rightAnchor = GetBranchExitWorldPosition(DashboardNavigationSource.Maneuver.Right);
                 Gizmos.DrawWireSphere(rightAnchor, 1.2f);
                 Gizmos.DrawLine(centerPos, rightAnchor);
             }

@@ -136,9 +136,10 @@ public class RouteController : MonoBehaviour
         float duration = 0.55f;
         float targetAngle = (direction == DashboardNavigationSource.Maneuver.Left) ? 90f : -90f;
 
-        // 1. Prune chunks ahead on the old straight road so they don't block the new street
+        // 1. Notify EnvironmentSpawner that a world turn is in progress and prune chunks ahead
         if (EnvironmentSpawner.Instance != null)
         {
+            EnvironmentSpawner.Instance.IsWorldTurnInProgress = true;
             EnvironmentSpawner.Instance.PruneChunksAheadOf(intersectionChunk.gameObject);
         }
 
@@ -154,42 +155,83 @@ public class RouteController : MonoBehaviour
             CameraShake.Instance.Shake(duration * 0.5f, 0.12f);
         }
 
-        // 4. Smoothly rotate the intersection chunk around its intersection center
+        // 4. Smoothly rotate the intersection chunk around its intersection center.
+        // Disable WorldMover during rotation so we manage position and rotation with 100% precision without frame fighting.
+        WorldMover worldMover = intersectionChunk.GetComponent<WorldMover>();
+        if (worldMover != null)
+        {
+            worldMover.enabled = false;
+        }
+
+        Vector3 localCenter = new Vector3(0f, 0f, intersectionChunk.IntersectionCenterZ);
+        // Track the world position of the intersection center starting from its current location
+        Vector3 centerWorld = intersectionChunk.transform.TransformPoint(localCenter);
+
         float elapsed = 0f;
-        float lastAngle = 0f;
 
         while (elapsed < duration)
         {
-            elapsed += Time.deltaTime;
+            if (PauseController.Instance != null && PauseController.Instance.IsPaused)
+            {
+                yield return null;
+                continue;
+            }
+
+            float dt = Time.deltaTime;
+            elapsed += dt;
+
+            // Move the world intersection center backwards along world -Z at current forward driving speed
+            float forwardSpeed = (WorldSpeedController.Instance != null) ? WorldSpeedController.Instance.CurrentSpeed : 0f;
+            centerWorld.z -= forwardSpeed * dt;
+
             float t = Mathf.Clamp01(elapsed / duration);
             float smoothT = Mathf.SmoothStep(0f, 1f, t);
             float currentAngle = Mathf.Lerp(0f, targetAngle, smoothT);
-            float deltaAngle = currentAngle - lastAngle;
 
             if (intersectionChunk != null)
             {
-                // Pivot point is the world position of the intersection center
-                Vector3 pivot = intersectionChunk.transform.position + intersectionChunk.transform.rotation * new Vector3(0f, 0f, intersectionChunk.IntersectionCenterZ);
-                intersectionChunk.transform.RotateAround(pivot, Vector3.up, deltaAngle);
+                Quaternion rot = Quaternion.Euler(0f, currentAngle, 0f);
+                intersectionChunk.transform.rotation = rot;
+
+                // Closed-form exact placement:
+                // Ensures intersection center is always locked at X = 0 and smoothly moves down Z.
+                // Since chunk.pos + rot * localCenter = centerWorld,
+                // chunk.pos = centerWorld - rot * localCenter.
+                Vector3 rotOffset = rot * localCenter;
+                intersectionChunk.transform.position = new Vector3(
+                    0f - rotOffset.x,
+                    centerWorld.y,
+                    centerWorld.z - rotOffset.z
+                );
             }
 
-            lastAngle = currentAngle;
             yield return null;
         }
 
         // 5. Finalize alignment of the intersection chunk
         if (intersectionChunk != null)
         {
-            intersectionChunk.transform.rotation = Quaternion.Euler(0f, targetAngle, 0f);
-            Vector3 finalPos = intersectionChunk.transform.position;
-            finalPos.x = 0f;
-            intersectionChunk.transform.position = finalPos;
+            Quaternion finalRot = Quaternion.Euler(0f, targetAngle, 0f);
+            intersectionChunk.transform.rotation = finalRot;
+
+            Vector3 finalRotOffset = finalRot * localCenter;
+            intersectionChunk.transform.position = new Vector3(
+                0f - finalRotOffset.x,
+                centerWorld.y,
+                centerWorld.z - finalRotOffset.z
+            );
+
+            // Re-enable WorldMover so it continues moving down -Z with the world
+            if (worldMover != null)
+            {
+                worldMover.enabled = true;
+            }
         }
 
         // 6. Resume generation in the new forward direction (+Z)
         if (EnvironmentSpawner.Instance != null && intersectionChunk != null)
         {
-            EnvironmentSpawner.Instance.ResumeGenerationAfterTurn(intersectionChunk);
+            EnvironmentSpawner.Instance.ResumeGenerationAfterTurn(intersectionChunk, direction);
         }
     }
 

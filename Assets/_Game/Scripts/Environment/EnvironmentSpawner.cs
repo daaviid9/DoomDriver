@@ -45,6 +45,9 @@ public class EnvironmentSpawner : MonoBehaviour
     [Tooltip("Default distance from the intersection center (Z=19) to where the next chunk attaches after a 90-degree turn (default 25.8m). Tune this to eliminate road gaps.")]
     [SerializeField] private float defaultBranchExitDistance = 25.8f;
 
+    [Tooltip("Global fine-tuning offset in meters for adjusting distance between intersection and the newly spawned road after a turn. Positive moves road further away, negative brings it closer.")]
+    [SerializeField] private float branchExitDistanceOffset = 0f;
+
     [Header("Procedural Route & Testing")]
     [Tooltip("If true, generates a repeating sequence of straights and turns when no delivery order is active.")]
     [SerializeField] private bool useDebugSequence = true;
@@ -71,6 +74,10 @@ public class EnvironmentSpawner : MonoBehaviour
     // Events for decoupled observation (e.g. TurnTrigger, GPS UI)
     public event System.Action<RoadChunk> OnChunkSpawned;
     public event System.Action<RoadChunk> OnChunkDespawned;
+
+    private bool isWorldTurnInProgress = false;
+    public bool IsWorldTurnInProgress { get => isWorldTurnInProgress; set => isWorldTurnInProgress = value; }
+    public float BranchExitDistanceOffset { get => branchExitDistanceOffset; set => branchExitDistanceOffset = value; }
 
     public IReadOnlyList<GameObject> ActiveChunks => activeChunks;
 
@@ -124,7 +131,10 @@ public class EnvironmentSpawner : MonoBehaviour
         if (activeChunks.Count > 0 && activeChunks[0] != null && activeChunks[0].transform.position.z < destroyZPosition)
         {
             DeleteOldestChunk();
-            SpawnNextChunkInSequence();
+            if (!isWorldTurnInProgress)
+            {
+                SpawnNextChunkInSequence();
+            }
         }
 
         UpdateNavigationSource();
@@ -311,32 +321,34 @@ public class EnvironmentSpawner : MonoBehaviour
 
     /// <summary>
     /// Resumes procedural chunk generation forward along +Z after a 90-degree world turn.
-    /// Populates new road segments from the end of the rotated intersection chunk.
+    /// Populates new road segments starting seamlessly from the rotated intersection branch exit.
     /// </summary>
-    public void ResumeGenerationAfterTurn(RoadChunk intersectionChunk)
+    public void ResumeGenerationAfterTurn(RoadChunk intersectionChunk, DashboardNavigationSource.Maneuver direction = DashboardNavigationSource.Maneuver.Left)
     {
+        isWorldTurnInProgress = false;
+
         if (intersectionChunk == null) return;
 
-        // Determine attachment distance along the rotated branch
-        float exitDistance = (intersectionChunk.BranchExitDistance > 0.1f)
-            ? intersectionChunk.BranchExitDistance
-            : defaultBranchExitDistance;
-
-        // The intersection center is at world Z = intersectionChunk.transform.position.z + intersectionCenterZ
-        // The rotated side branch extends forward along +Z by exitDistance
-        float branchForwardEnd = intersectionChunk.transform.position.z + intersectionChunk.IntersectionCenterZ + exitDistance;
+        // Calculate exact world position of the rotated branch exit
+        Vector3 worldBranchExit = intersectionChunk.GetBranchExitWorldPosition(direction);
+        float spawnZ = worldBranchExit.z + branchExitDistanceOffset;
 
         // Fill activeChunks back up to numberOfChunksOnScreen
         while (activeChunks.Count < numberOfChunksOnScreen)
         {
-            GameObject lastChunk = activeChunks[activeChunks.Count - 1];
-            float spawnZ = (lastChunk == intersectionChunk.gameObject)
-                ? branchForwardEnd
-                : (lastChunk.transform.position.z + defaultChunkLength);
-
             RoadChunkType nextType = GetNextChunkTypeFromQueue();
-            SpawnChunk(nextType, spawnZ);
+            GameObject newChunk = SpawnChunk(nextType, spawnZ);
+
+            float chunkLength = defaultChunkLength;
+            if (newChunk != null && newChunk.TryGetComponent<RoadChunk>(out var rc))
+            {
+                chunkLength = rc.ChunkLength;
+            }
+
+            spawnZ += chunkLength;
         }
+
+        Debug.Log($"[EnvironmentSpawner] Resumed generation after {direction} turn. First new chunk spawned at Z={worldBranchExit.z + branchExitDistanceOffset:F2} (Branch exit Z={worldBranchExit.z:F2}, Offset={branchExitDistanceOffset:F2}).");
     }
 
     private void SpawnNextChunkInSequence()
@@ -481,6 +493,7 @@ public class EnvironmentSpawner : MonoBehaviour
 
     private void ClearActiveChunks()
     {
+        isWorldTurnInProgress = false;
         for (int i = 0; i < activeChunks.Count; i++)
         {
             if (activeChunks[i] != null)
