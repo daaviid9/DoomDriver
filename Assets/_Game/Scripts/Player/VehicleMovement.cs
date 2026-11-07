@@ -18,6 +18,8 @@ public enum SteeringMode
 /// </summary>
 public class VehicleMovement : MonoBehaviour
 {
+    public static VehicleMovement Instance { get; private set; }
+
     [Header("Steering Mode")]
     [Tooltip("Switch between discrete 3-lane steps or smooth analog steering")]
     [SerializeField] private SteeringMode steeringMode = SteeringMode.AnalogContinuous;
@@ -60,6 +62,9 @@ public class VehicleMovement : MonoBehaviour
     [Tooltip("Speed penalty applied to the world when contacting the curb")]
     [SerializeField] private float curbSpeedPenalty = 2.5f;
 
+    [Tooltip("Minimum time in seconds between consecutive curb contact penalties")]
+    [SerializeField] private float curbBounceCooldown = 0.5f;
+
     [Header("Steering Wheel Settings")]
     [SerializeField] private Transform steeringWheel;
     [SerializeField] private float maxSteeringAngle = 90f;
@@ -79,6 +84,12 @@ public class VehicleMovement : MonoBehaviour
     private float currentTilt = 0f;
     private float lastX = 0f;
     private bool isManeuvering = false;
+    private float lastCurbBounceTime = -1f;
+    private Coroutine easeToCenterCoroutine;
+    private bool isTurnManeuverActive = false;
+    private Coroutine turnManeuverCoroutine;
+
+    public bool IsTurnManeuverActive => isTurnManeuverActive;
 
     public SteeringMode CurrentMode => steeringMode;
     public int TargetLane => targetLane;
@@ -105,6 +116,11 @@ public class VehicleMovement : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+
         controls = new InputSystem_Actions();
 
         // Event-driven input handling: capture input updates and neutral releases
@@ -167,6 +183,8 @@ public class VehicleMovement : MonoBehaviour
     /// </summary>
     private void UpdateMovement()
     {
+        if (isTurnManeuverActive) return;
+
         if (steeringMode == SteeringMode.DiscreteLanes)
         {
             UpdateDiscreteMovement();
@@ -354,12 +372,134 @@ public class VehicleMovement : MonoBehaviour
 
     private void TriggerCurbBounce()
     {
+        if (isTurnManeuverActive) return;
+        if (Time.time - lastCurbBounceTime < curbBounceCooldown) return;
+        lastCurbBounceTime = Time.time;
+
         OnCurbContact?.Invoke();
 
         if (WorldSpeedController.Instance != null && curbSpeedPenalty > 0f)
         {
             WorldSpeedController.Instance.ApplySpeedPenalty(curbSpeedPenalty);
         }
+    }
+
+    /// <summary>
+    /// Initiates a dynamic cornering drift maneuver during a 90-degree world turn.
+    /// Smoothly animates vehicle body yaw, roll, steering wheel rotation, and centers position.
+    /// </summary>
+    public void StartTurnManeuver(DashboardNavigationSource.Maneuver direction, float duration)
+    {
+        if (turnManeuverCoroutine != null)
+        {
+            StopCoroutine(turnManeuverCoroutine);
+        }
+        if (easeToCenterCoroutine != null)
+        {
+            StopCoroutine(easeToCenterCoroutine);
+            easeToCenterCoroutine = null;
+        }
+
+        turnManeuverCoroutine = StartCoroutine(TurnManeuverRoutine(direction, duration));
+    }
+
+    private System.Collections.IEnumerator TurnManeuverRoutine(DashboardNavigationSource.Maneuver direction, float duration)
+    {
+        isTurnManeuverActive = true;
+        isManeuvering = true;
+        OnManeuveringStateChanged?.Invoke(true);
+
+        float elapsed = 0f;
+        float startX = transform.position.x;
+        float targetYaw = (direction == DashboardNavigationSource.Maneuver.Left) ? -20f : 20f;
+        float targetRoll = (direction == DashboardNavigationSource.Maneuver.Left) ? 3.5f : -3.5f;
+        float targetWheel = (direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle : maxSteeringAngle;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float smoothT = Mathf.SmoothStep(0f, 1f, t);
+
+            // Interpolate lateral X smoothly to center lane (0)
+            float currentX = Mathf.Lerp(startX, 0f, smoothT);
+            transform.position = new Vector3(currentX, transform.position.y, transform.position.z);
+
+            // Sine curve for dynamic yaw and roll: peaks at apex (t = 0.5), returns to 0
+            float apexWeight = Mathf.Sin(t * Mathf.PI);
+            float yaw = targetYaw * apexWeight;
+            float roll = targetRoll * apexWeight;
+            transform.localRotation = Quaternion.Euler(0f, yaw, roll);
+
+            // Rotate steering wheel into the corner, then back to center
+            if (steeringWheel != null)
+            {
+                steeringWheel.localRotation = Quaternion.Euler(0f, 0f, targetWheel * apexWeight);
+            }
+
+            yield return null;
+        }
+
+        EndTurnManeuver();
+    }
+
+    public void EndTurnManeuver()
+    {
+        if (turnManeuverCoroutine != null)
+        {
+            StopCoroutine(turnManeuverCoroutine);
+            turnManeuverCoroutine = null;
+        }
+
+        isTurnManeuverActive = false;
+        isManeuvering = false;
+        lateralVelocity = 0f;
+        currentTilt = 0f;
+        transform.position = new Vector3(0f, transform.position.y, transform.position.z);
+        transform.localRotation = Quaternion.identity;
+
+        if (steeringWheel != null)
+        {
+            steeringWheel.localRotation = Quaternion.identity;
+        }
+
+        OnManeuveringStateChanged?.Invoke(false);
+    }
+
+    /// <summary>
+    /// Smoothly guides vehicle laterally toward the center lane (X=0) after completing a turn maneuver.
+    /// User steering input smoothly overrides this recovery.
+    /// </summary>
+    public void EaseToCenter(float duration = 1.0f)
+    {
+        if (easeToCenterCoroutine != null)
+        {
+            StopCoroutine(easeToCenterCoroutine);
+        }
+        easeToCenterCoroutine = StartCoroutine(EaseToCenterRoutine(duration));
+    }
+
+    private System.Collections.IEnumerator EaseToCenterRoutine(float duration)
+    {
+        float elapsed = 0f;
+        float startX = transform.position.x;
+
+        while (elapsed < duration)
+        {
+            // If user applies active steering input, hand back control immediately
+            if (Mathf.Abs(moveInput.x) > 0.1f)
+            {
+                yield break;
+            }
+
+            elapsed += Time.deltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / duration);
+            float currentX = Mathf.Lerp(startX, 0f, t);
+            transform.position = new Vector3(currentX, transform.position.y, transform.position.z);
+            yield return null;
+        }
+
+        easeToCenterCoroutine = null;
     }
 
     #endregion
@@ -369,6 +509,14 @@ public class VehicleMovement : MonoBehaviour
     /// </summary>
     public void ResetMovement()
     {
+        EndTurnManeuver();
+
+        if (easeToCenterCoroutine != null)
+        {
+            StopCoroutine(easeToCenterCoroutine);
+            easeToCenterCoroutine = null;
+        }
+
         targetLane = startingLane;
         moveInput = Vector2.zero;
         lateralVelocity = 0f;

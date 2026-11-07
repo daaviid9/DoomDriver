@@ -1730,9 +1730,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91ab2d58a74e4fe498c19eb821037ca0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VehicleCollisionHandler
-  carDamage: 100
-  barricadeDamage: 50
-  edgeDamage: 30
+  carDamage: 40
+  barricadeDamage: 30
+  edgeDamage: 15
   smallPenalty: 4
   highPenalty: 7
 --- !u!114 &432921403
@@ -3963,14 +3963,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1bc567f0ddccbd84faa009ed237ab9f8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentSpawner
+  straightPrefabs:
+  - {fileID: 4535990458550586430, guid: b752f55d41a4f0d43800086e1ab86500, type: 3}
+  - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
+  - {fileID: 7591798394180682832, guid: a320f61d3469f70488f3300e6fcbad6a, type: 3}
+  turnLeftPrefabs:
+  - {fileID: 9180165884780382515, guid: a47c1fc509f1f294694684c3c5cf6b10, type: 3}
+  turnRightPrefabs:
+  - {fileID: 7591798394180682832, guid: 45e211619cb70fd47b13c71f0aaa32f2, type: 3}
+  tJunctionPrefabs:
+  - {fileID: 4821960158831423682, guid: 547b461b36c9ad6498e3ab321c0c5b54, type: 3}
+  crossroadsPrefabs:
+  - {fileID: 2369663547445153715, guid: 9f4a7159720dee94583160ce8503f217, type: 3}
   chunkPrefabs:
   - {fileID: 4535990458550586430, guid: b752f55d41a4f0d43800086e1ab86500, type: 3}
   - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
   - {fileID: 7591798394180682832, guid: a320f61d3469f70488f3300e6fcbad6a, type: 3}
-  chunkLength: 44.75
-  numberOfChunksOnScreen: 5
+  defaultChunkLength: 44.75
+  numberOfChunksOnScreen: 7
   startZPosition: -50
   destroyZPosition: -50
+  useDebugSequence: 1
+  debugStraightsBetweenTurns: 3
+  debugTurnSequence: 010000000200000003000000
 --- !u!4 &1650050935
 Transform:
   m_ObjectHideFlags: 0

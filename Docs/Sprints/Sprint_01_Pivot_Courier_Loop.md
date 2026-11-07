@@ -97,21 +97,24 @@ flowchart TD
 ---
 
 ### 👤 DEV 4 – Road Network, Intersections & Dynamic Route Extension
+- **Status:** **COMPLETED** (Detailed documentation: [`Dev4_Road_Network_and_Navigation.md`](./Dev4_Road_Network_and_Navigation.md))
 - **Card 4.1 – Procedural Intersection Generation**
   - Extend `EnvironmentSpawner` to generate road chunks based on the selected `DeliveryOrder` profile.
   - Create prefabs for left turn, right turn, and T‑junction/straight chunks.
   - Ensure spawner places intersections at the correct distances defined by the order.
-  - **Key Files:** `Assets/_Game/Scripts/Environment/EnvironmentSpawner.cs`, new `Assets/_Game/Scripts/Environment/RoadChunk.cs`, prefabs in `Assets/_Game/Prefabs/Environment/`.
-  - **Definition of Done:** `EnvironmentSpawner` inserts intersections at the right points; road segments connect seamlessly without gaps or collision issues; world movement and despawning work as with straight chunks.
+  - Pre-attach preview branch chunks to eliminate empty visual voids during turns.
+  - **Key Files:** `Assets/_Game/Scripts/Environment/EnvironmentSpawner.cs`, `Assets/_Game/Scripts/Environment/RoadChunk.cs`, prefabs in `Assets/_Game/Prefabs/Environment/`.
+  - **Definition of Done:** `EnvironmentSpawner` inserts intersections at the right points; road segments connect seamlessly without gaps or collision issues; world movement and despawning work as with straight chunks. *(Verified & Complete)*
 
 - **Card 4.2 – Turn Detection & Recalculating**
   - Create `TurnTrigger` component on intersection prefabs.
   - When the car passes a trigger, check X position and wheel angle:
     - **Correct turn:** Player follows GPS cue → advance to next route point.
     - **Missed turn / wrong turn:** Activate *Recalculating* state.
-  - In *Recalculating*: fire `OnMissedTurn`, add 2‑3 extra road chunks (+~180 m), record penalty.
-  - **Key Files:** `Assets/_Game/Scripts/Navigation/TurnTrigger.cs`, `Assets/_Game/Scripts/Navigation/RouteController.cs`, integrate with `EnvironmentSpawner.cs` and `GameManager.cs`.
-  - **Definition of Done:** System reliably distinguishes correct vs. missed turns; missed turns extend the route and apply penalties; works robustly for repeated misses.
+  - In *Recalculating*: fire `OnMissedTurn`, add 2‑3 extra road chunks (+~134 m), record penalty (-5.00 €).
+  - Execute mathematical closed-form 90° world rotation without translation drift.
+  - **Key Files:** `Assets/_Game/Scripts/Navigation/TurnTrigger.cs`, `Assets/_Game/Scripts/Navigation/RouteController.cs`, integrate with `EnvironmentSpawner.cs`, `DashboardNavigationSource.cs`, `DeliveryProgressTracker.cs`, and `GameManager.cs`.
+  - **Definition of Done:** System reliably distinguishes correct vs. missed turns; missed turns extend the route and apply penalties; works robustly for repeated misses. *(Verified & Complete)*
 
 ---
 

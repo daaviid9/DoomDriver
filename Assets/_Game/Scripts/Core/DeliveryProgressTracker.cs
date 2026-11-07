@@ -185,11 +185,13 @@ public class DeliveryProgressTracker : MonoBehaviour
         int lostHp = (vehicleHealth != null) ? Mathf.Clamp(vehicleHealth.MaxHealth - vehicleHealth.CurrentHealth, 0, vehicleHealth.MaxHealth) : 0;
         decimal damagePenalty = (decimal)(lostHp * damagePenaltyPerHp);
 
+        decimal missedPenalty = (RouteController.Instance != null) ? RouteController.Instance.TotalMissedTurnPenalty : 0m;
+
         var result = new DeliveryResult(
             baseFee: adjustedBaseFee,
             timeTip: timeTip,
             damagePenalty: damagePenalty,
-            missedTurnPenalty: 0m,
+            missedTurnPenalty: missedPenalty,
             isPlaceholder: false,
             elapsedSeconds: deliveryTimeElapsed,
             damageHp: lostHp

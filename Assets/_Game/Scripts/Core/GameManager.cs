@@ -132,8 +132,14 @@ public class GameManager : MonoBehaviour
     {
         if (currentState != GameState.DeliveryActive) return;
 
-        // DeliveryProgressTracker is the single source of truth for computed rewards
-        CompletedDelivery = rewardInput ?? new DeliveryResult(15m, 0m, 0m, 0m, true);
+        decimal missedPenalty = RouteController.Instance != null ? RouteController.Instance.TotalMissedTurnPenalty : 0m;
+        var input = rewardInput ?? new DeliveryResult(15m, 0m, 0m, missedPenalty, true);
+        if (rewardInput != null && rewardInput.MissedTurnPenalty == 0m && missedPenalty > 0m)
+        {
+            input = new DeliveryResult(rewardInput.BaseFee, rewardInput.TimeTip, rewardInput.DamagePenalty, missedPenalty, rewardInput.IsPlaceholder);
+        }
+
+        CompletedDelivery = input;
         if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
 
         SetState(GameState.DeliveryCompleted);
@@ -243,7 +249,10 @@ public class GameManager : MonoBehaviour
             gameObject.AddComponent<GameUIController>();
         }
 
-
+        if (RouteController.Instance == null && GetComponent<RouteController>() == null)
+        {
+            gameObject.AddComponent<RouteController>();
+        }
     }
 
 #if UNITY_EDITOR
@@ -251,10 +260,21 @@ public class GameManager : MonoBehaviour
     {
         if (UnityEngine.InputSystem.Keyboard.current == null) return;
 
+        bool enterPressed = UnityEngine.InputSystem.Keyboard.current.enterKey.wasPressedThisFrame ||
+                            UnityEngine.InputSystem.Keyboard.current.numpadEnterKey.wasPressedThisFrame;
+
         // Enter: Start delivery from lobby
-        if (UnityEngine.InputSystem.Keyboard.current.enterKey.wasPressedThisFrame && currentState == GameState.OrderSelection)
+        if (enterPressed && currentState == GameState.OrderSelection)
         {
             Debug.Log("<color=cyan>[DEBUG]</color> Enter pressed -> Starting Delivery!");
+            if (DoomDriver.Economy.OrderManager.Instance != null && DoomDriver.Economy.OrderManager.Instance.SelectedOrder == null)
+            {
+                if (DoomDriver.Economy.OrderManager.Instance.CurrentOffers != null && DoomDriver.Economy.OrderManager.Instance.CurrentOffers.Count > 0)
+                {
+                    DoomDriver.Economy.OrderManager.Instance.SelectOrder(0);
+                    return;
+                }
+            }
             StartDelivery();
         }
         // C: Complete delivery
