@@ -4,270 +4,308 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Video;
 
-public class PhoneSystem : MonoBehaviour
+namespace DoomDriver.Phone
 {
-    [Header("UI References")]
-    public Slider fomoSlider;       
-    public ReelsManager reelsManager;  // Link to your ReelsManager script
-
-    [Header("Hand Reference")]
-    public HandController handController;
-
-    [Header("Post-Processing Settings")]
-    public Volume postProcessVolume; 
-    public float maxVignetteIntensity = 1f;
-    public float vignettePower = 2f;
-    
-    [Header("Values")]
-    public float fomoValue = 100f;
-    public float drainRate = 8f;   
-    public float refillRate = 20f;  
-    
-    [Header("Camera Zoom & FOV Settings")]
-    public Camera mainCamera;
-    [Tooltip("Default wide FOV when looking at the road while driving")]
-    public float normalFOV = 60f;
-    [Tooltip("Moderate FOV when holding Space to scroll reels during active driving")]
-    public float phoneFOV = 40f; 
-    [Tooltip("FOV during OrderSelection in lobby (calibrated for phone framing)")]
-    [Range(25f, 65f)]
-    public float orderSelectionFOV = 40.8f;
-    [Tooltip("Downward pitch tilt angle (in degrees) in lobby to look down at the phone")]
-    [Range(0f, 25f)]
-    public float orderSelectionPitchTilt = 17.6f;
-    [Tooltip("Speed of camera FOV and effect transitions")]
-    public float fovTransitionSpeed = 3f;
-
-    [Header("Lobby / OrderSelection Presentation (Independent from FOMO)")]
-    [Tooltip("Enable depth-of-field background blur behind the phone in lobby")]
-    public bool enableLobbyBlur = true;
-    [Tooltip("Distance from camera where background blur begins (phone is at ~0.6m)")]
-    public float lobbyBlurStart = 0.8f;
-    [Tooltip("Distance from camera where blur reaches full strength")]
-    public float lobbyBlurEnd = 2.2f;
-    [Tooltip("Maximum blur radius (Gaussian)")]
-    [Range(0.5f, 2f)]
-    public float lobbyBlurRadius = 1.5f;
-
-    [Tooltip("Enable subtle background darkening in lobby to focus attention on phone")]
-    public bool enableLobbyDarkening = true;
-    [Tooltip("Side darkening intensity in lobby")]
-    [Range(0f, 1f)]
-    public float lobbyVignetteIntensity = 0.45f;
-    [Tooltip("Smoothness of the side darkening vignette in lobby")]
-    [Range(0.1f, 1f)]
-    public float lobbyVignetteSmoothness = 0.6f;
-
-    private InputSystem_Actions controls;
-    private bool isScrolling = false;
-    private Vignette vignette;
-    private ColorAdjustments colorAdjustments;
-    private DepthOfField depthOfField;
-    private Quaternion defaultCameraRotation;
-    private bool hasCachedCameraRotation = false;
-
-    void Awake()
+    /// <summary>
+    /// Manages phone UI, FOMO meter, and camera/post-process behaviour for the two gameplay phases.
+    /// </summary>
+    public class PhoneSystem : MonoBehaviour
     {
-        // Safety: If there is another PhoneSystem component in the scene, keep the one on Main Camera to avoid conflicts
-        PhoneSystem[] allSystems = Object.FindObjectsByType<PhoneSystem>(FindObjectsSortMode.None);
-        if (allSystems.Length > 1 && gameObject.name != "Main Camera")
+        public enum PhoneMode { OrderSelection, DeliveryActive }
+
+        // ---------------------------------------------------------------------
+        // Serialized fields – keep private to honour encapsulation
+        // ---------------------------------------------------------------------
+        [Header("UI References")]
+        [SerializeField] private Slider fomoSlider;
+        [SerializeField] private ReelsManager reelsManager;
+
+        [Header("Hand Reference")]
+        [SerializeField] private HandController handController;
+
+        [Header("Post-Processing Settings")]
+        [SerializeField] private Volume postProcessVolume;
+        [SerializeField] private float maxVignetteIntensity = 1f;
+        [SerializeField] private float vignettePower = 2f;
+
+        [Header("Gameplay Values")]
+        [SerializeField] private float fomoValue = 100f;
+        [SerializeField] private float drainRate = 8f;
+        [SerializeField] private float refillRate = 20f;
+
+        [Header("Camera Zoom & FOV Settings")]
+        [SerializeField] private Camera mainCamera;
+        [SerializeField] private float normalFOV = 60f;
+        [SerializeField] private float phoneFOV = 40f;
+        [SerializeField, Range(25f, 65f)] private float orderSelectionFOV = 40.8f;
+        [SerializeField, Range(0f, 25f)] private float orderSelectionPitchTilt = 17.6f;
+        [SerializeField] private float fovTransitionSpeed = 3f;
+
+        [Header("Lobby Presentation (Independent from FOMO)")]
+        [SerializeField] private bool enableLobbyBlur = true;
+        [SerializeField] private float lobbyBlurStart = 0.8f;
+        [SerializeField] private float lobbyBlurEnd = 2.2f;
+        [SerializeField, Range(0.5f, 2f)] private float lobbyBlurRadius = 1.5f;
+        [SerializeField] private bool enableLobbyDarkening = true;
+        [SerializeField, Range(0f, 1f)] private float lobbyVignetteIntensity = 0.45f;
+        [SerializeField, Range(0.1f, 1f)] private float lobbyVignetteSmoothness = 0.6f;
+
+        // ---------------------------------------------------------------------
+        // Cached component references
+        // ---------------------------------------------------------------------
+        private InputSystem_Actions controls;
+        private bool isScrolling = false;
+        private Vignette vignette;
+        private ColorAdjustments colorAdjustments;
+        private DepthOfField depthOfField;
+        private Quaternion defaultCameraRotation;
+        private bool hasCachedCameraRotation = false;
+
+        private PhoneMode currentMode = PhoneMode.OrderSelection;
+
+        // =====================================================================
+        // Unity lifecycle
+        // =====================================================================
+        private void Awake()
         {
-            Debug.LogWarning($"[PhoneSystem] Disabling duplicate PhoneSystem on '{gameObject.name}' to prevent camera conflicts.");
-            enabled = false;
-            return;
+            // Ensure only one instance on the main camera.
+            PhoneSystem[] allSystems = Object.FindObjectsByType<PhoneSystem>(FindObjectsSortMode.None);
+            if (allSystems.Length > 1 && gameObject.name != "Main Camera")
+            {
+                Debug.LogWarning($"<color=cyan>[PhoneSystem]</color> Disabling duplicate on '{gameObject.name}'.");
+                enabled = false;
+                return;
+            }
+
+            controls = new InputSystem_Actions();
+            controls.Player.Jump.performed += _ => isScrolling = true;
+            controls.Player.Jump.canceled += _ => isScrolling = false;
+
+            if (mainCamera == null) mainCamera = Camera.main;
+            if (mainCamera != null && !hasCachedCameraRotation)
+            {
+                defaultCameraRotation = mainCamera.transform.localRotation;
+                hasCachedCameraRotation = true;
+            }
+
+            // Grab post-process effects if they exist.
+            if (postProcessVolume == null) postProcessVolume = GetComponent<Volume>();
+            if (postProcessVolume != null && postProcessVolume.profile != null)
+            {
+                postProcessVolume.profile.TryGet(out vignette);
+                postProcessVolume.profile.TryGet(out colorAdjustments);
+                postProcessVolume.profile.TryGet(out depthOfField);
+            }
+
+            // Clamp legacy serialized values.
+            if (orderSelectionFOV < 36f || orderSelectionFOV > 50f) orderSelectionFOV = 40.8f;
+            if (orderSelectionPitchTilt < 10f || orderSelectionPitchTilt > 22f) orderSelectionPitchTilt = 17.6f;
+
+            Debug.Log($"<color=cyan>[PhoneSystem]</color> Awake on '{gameObject.name}'. Target lobby FOV: {orderSelectionFOV}");
         }
 
-        controls = new InputSystem_Actions();
-        controls.Player.Jump.performed += ctx => isScrolling = true;
-        controls.Player.Jump.canceled += ctx => isScrolling = false;
-
-        if (mainCamera == null) mainCamera = Camera.main;
-        if (mainCamera != null && !hasCachedCameraRotation)
+        private void OnEnable()
         {
-            defaultCameraRotation = mainCamera.transform.localRotation;
-            hasCachedCameraRotation = true;
+            controls?.Enable();
+            SubscribeToGameManager();
         }
 
-        if (postProcessVolume == null) postProcessVolume = GetComponent<Volume>();
-        if (postProcessVolume != null && postProcessVolume.profile != null)
+        private void OnDisable()
         {
-            postProcessVolume.profile.TryGet(out vignette);
-            postProcessVolume.profile.TryGet(out colorAdjustments);
-            postProcessVolume.profile.TryGet(out depthOfField);
+            controls?.Disable();
+            UnsubscribeFromGameManager();
         }
 
-        // Safety: If scene has older serialized values, ensure calibrated defaults from playtest are applied
-        if (orderSelectionFOV < 36f || orderSelectionFOV > 50f) orderSelectionFOV = 40.8f;
-        if (orderSelectionPitchTilt < 10f || orderSelectionPitchTilt > 22f) orderSelectionPitchTilt = 17.6f;
-    }
-
-    void OnEnable()
-    {
-        if (controls != null) controls.Enable();
-    }
-
-    void OnDisable()
-    {
-        if (controls != null) controls.Disable();
-    }
-
-    void Start()
-    {
-        if (fomoSlider != null)
+        private void Start()
         {
-            fomoSlider.maxValue = 100;
-            fomoSlider.value = fomoValue;
+            SubscribeToGameManager();
+
+            if (fomoSlider != null)
+            {
+                fomoSlider.maxValue = 100;
+                fomoSlider.value = fomoValue;
+            }
+
+            // Initialise camera if we start directly in the lobby.
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.OrderSelection && mainCamera != null)
+            {
+                ApplyLobbyCameraInstant();
+            }
         }
 
-        // Snap camera immediately to lobby framing at game start so it doesn't slowly zoom from 60
-        if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.OrderSelection && mainCamera != null)
+        private void SubscribeToGameManager()
         {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.OnOrderSelectionStarted -= OnOrderSelectionStarted;
+                GameManager.Instance.OnOrderSelectionStarted += OnOrderSelectionStarted;
+
+                GameManager.Instance.OnDeliveryStarted -= OnDeliveryStarted;
+                GameManager.Instance.OnDeliveryStarted += OnDeliveryStarted;
+            }
+        }
+
+        private void UnsubscribeFromGameManager()
+        {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.OnOrderSelectionStarted -= OnOrderSelectionStarted;
+                GameManager.Instance.OnDeliveryStarted -= OnDeliveryStarted;
+            }
+        }
+
+        private void OnOrderSelectionStarted()
+        {
+            SwitchMode(PhoneMode.OrderSelection);
+        }
+
+        private void OnDeliveryStarted()
+        {
+            SwitchMode(PhoneMode.DeliveryActive);
+        }
+
+        private void Update()
+        {
+            if (currentMode == PhoneMode.OrderSelection)
+                HandleLobby();
+            else
+                HandleDeliveryActive();
+        }
+
+        // =====================================================================
+        // Mode handling
+        // =====================================================================
+        private void SwitchMode(PhoneMode mode)
+        {
+            currentMode = mode;
+            Debug.Log($"<color=cyan>[PhoneSystem]</color> Switched PhoneMode to: {mode}");
+        }
+
+        // ---------------------------------------------------------------------
+        // Lobby (OrderSelection) handling
+        // ---------------------------------------------------------------------
+        private void HandleLobby()
+        {
+            // FOMO is reset when not driving.
+            fomoValue = 100f;
+            if (fomoSlider != null) fomoSlider.value = fomoValue;
+
+            // Ensure reels are off.
+            reelsManager?.SetActive(false);
+
+            // Raise phone hand and configure camera.
+            handController?.SetRaised(true);
+            UpdateLobbyCamera();
+            ApplyLobbyPostProcessing();
+        }
+
+        private void UpdateLobbyCamera()
+        {
+            if (mainCamera == null) return;
+            mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, orderSelectionFOV, Time.deltaTime * fovTransitionSpeed);
+            Quaternion targetRot = defaultCameraRotation * Quaternion.Euler(orderSelectionPitchTilt, 0f, 0f);
+            mainCamera.transform.localRotation = Quaternion.Slerp(mainCamera.transform.localRotation, targetRot, Time.deltaTime * fovTransitionSpeed);
+        }
+
+        private void ApplyLobbyCameraInstant()
+        {
+            if (mainCamera == null) return;
             mainCamera.fieldOfView = orderSelectionFOV;
             Quaternion targetRot = defaultCameraRotation * Quaternion.Euler(orderSelectionPitchTilt, 0f, 0f);
             mainCamera.transform.localRotation = targetRot;
         }
-    }
 
-    void Update()
-    {
-        // Check current game state
-        bool isDeliveryActive = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive;
-        bool isOrderSelection = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.OrderSelection;
-
-        // When NOT in active delivery driving:
-        if (!isDeliveryActive)
+        private void ApplyLobbyPostProcessing()
         {
-            // Reset FOMO to full focus (no FOMO meter draining outside active drive)
-            fomoValue = 100f;
-            if (fomoSlider != null) fomoSlider.value = fomoValue;
-
-            // Reels video is always disabled in lobby / completion
-            if (reelsManager != null) reelsManager.SetActive(false);
-
-            // In OrderSelection (Lobby): phone is raised and camera focuses on the phone with optional blur & side darkening
-            if (isOrderSelection)
+            // Depth of field blur.
+            if (depthOfField != null)
             {
-                if (handController != null) handController.SetRaised(true);
-
-                if (mainCamera != null)
+                if (enableLobbyBlur)
                 {
-                    mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, orderSelectionFOV, Time.deltaTime * fovTransitionSpeed);
-
-                    // Tilt camera downwards slightly to look down at the phone
-                    Quaternion targetRot = defaultCameraRotation * Quaternion.Euler(orderSelectionPitchTilt, 0f, 0f);
-                    mainCamera.transform.localRotation = Quaternion.Slerp(mainCamera.transform.localRotation, targetRot, Time.deltaTime * fovTransitionSpeed);
+                    depthOfField.mode.Override(DepthOfFieldMode.Gaussian);
+                    depthOfField.gaussianStart.Override(lobbyBlurStart);
+                    depthOfField.gaussianEnd.Override(lobbyBlurEnd);
+                    depthOfField.gaussianMaxRadius.Override(lobbyBlurRadius);
                 }
-
-                // Background blur (Depth of Field) behind the phone in lobby
-                if (depthOfField != null)
-                {
-                    if (enableLobbyBlur)
-                    {
-                        depthOfField.mode.Override(DepthOfFieldMode.Gaussian);
-                        depthOfField.gaussianStart.Override(lobbyBlurStart);
-                        depthOfField.gaussianEnd.Override(lobbyBlurEnd);
-                        depthOfField.gaussianMaxRadius.Override(lobbyBlurRadius);
-                    }
-                    else
-                    {
-                        depthOfField.mode.Override(DepthOfFieldMode.Off);
-                    }
-                }
-
-                // Subtle cinematic side darkening to focus purely on the phone in the center
-                if (vignette != null)
-                {
-                    float targetIntensity = enableLobbyDarkening ? lobbyVignetteIntensity : 0f;
-                    float currentInt = vignette.intensity.value;
-                    vignette.intensity.Override(Mathf.Lerp(currentInt, targetIntensity, Time.deltaTime * fovTransitionSpeed));
-                    vignette.smoothness.Override(lobbyVignetteSmoothness);
-                }
-                if (colorAdjustments != null)
-                {
-                    colorAdjustments.postExposure.Override(0f);
-                }
-            }
-            else
-            {
-                // In DeliveryCompleted or Failed: phone is lowered, camera at normal FOV and normal rotation, disable lobby blur & vignette
-                if (handController != null) handController.SetRaised(false);
-
-                if (mainCamera != null)
-                {
-                    mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, normalFOV, Time.deltaTime * fovTransitionSpeed);
-                    mainCamera.transform.localRotation = Quaternion.Slerp(mainCamera.transform.localRotation, defaultCameraRotation, Time.deltaTime * fovTransitionSpeed);
-                }
-
-                if (depthOfField != null)
+                else
                 {
                     depthOfField.mode.Override(DepthOfFieldMode.Off);
                 }
-
-                if (vignette != null)
-                {
-                    float currentInt = vignette.intensity.value;
-                    vignette.intensity.Override(Mathf.Lerp(currentInt, 0f, Time.deltaTime * fovTransitionSpeed));
-                }
-                if (colorAdjustments != null)
-                {
-                    colorAdjustments.postExposure.Override(0f);
-                }
             }
 
-            return;
+            // Vignette darkening.
+            if (vignette != null)
+            {
+                float target = enableLobbyDarkening ? lobbyVignetteIntensity : 0f;
+                vignette.intensity.Override(Mathf.Lerp(vignette.intensity.value, target, Time.deltaTime * fovTransitionSpeed));
+                vignette.smoothness.Override(lobbyVignetteSmoothness);
+            }
+
+            // Reset exposure.
+            if (colorAdjustments != null) colorAdjustments.postExposure.Override(0f);
         }
 
-        // --- ACTIVE DELIVERY LOGIC (Driving) ---
-
-        // Disable lobby depth of field during driving so road visibility is clear
-        if (depthOfField != null && depthOfField.mode.value != DepthOfFieldMode.Off)
+        // ---------------------------------------------------------------------
+        // Delivery active handling (driving)
+        // ---------------------------------------------------------------------
+        private void HandleDeliveryActive()
         {
-            depthOfField.mode.Override(DepthOfFieldMode.Off);
+            // Ensure lobby effects are disabled.
+            if (depthOfField != null && depthOfField.mode.value != DepthOfFieldMode.Off)
+                depthOfField.mode.Override(DepthOfFieldMode.Off);
+
+            // Keep camera upright.
+            if (mainCamera != null)
+                mainCamera.transform.localRotation = Quaternion.Slerp(mainCamera.transform.localRotation, defaultCameraRotation, Time.deltaTime * fovTransitionSpeed);
+
+            // Update FOMO meter.
+            UpdateFomo();
+
+            // Apply post-process based on current FOMO.
+            UpdateDrivingPostProcessing();
+
+            // Handle scrolling/reels.
+            UpdateScrolling();
         }
 
-        // Ensure camera returns to default level orientation during active driving
-        if (mainCamera != null)
+        private void UpdateFomo()
         {
-            mainCamera.transform.localRotation = Quaternion.Slerp(mainCamera.transform.localRotation, defaultCameraRotation, Time.deltaTime * fovTransitionSpeed);
+            if (isScrolling)
+                fomoValue += refillRate * Time.deltaTime;
+            else
+                fomoValue -= drainRate * Time.deltaTime;
+
+            fomoValue = Mathf.Clamp(fomoValue, 0f, 100f);
+            if (fomoSlider != null) fomoSlider.value = fomoValue;
         }
 
-        // 1. Post-Processing based on FOMO meter
-        if (vignette != null)
+        private void UpdateDrivingPostProcessing()
         {
-            float fomoNormalized = fomoValue / 100f;
-            float intensityFactor = 1f - Mathf.Pow(fomoNormalized, vignettePower);
-            
+            if (vignette == null) return;
+            float normalized = fomoValue / 100f;
+            float intensityFactor = 1f - Mathf.Pow(normalized, vignettePower);
             vignette.intensity.Override(intensityFactor * maxVignetteIntensity);
             vignette.smoothness.Override(Mathf.Lerp(0.2f, 1f, intensityFactor));
-
             if (colorAdjustments != null)
+                colorAdjustments.postExposure.Override(Mathf.Lerp(0f, -10f, Mathf.Pow(intensityFactor, 3f)));
+        }
+
+        private void UpdateScrolling()
+        {
+            if (isScrolling)
             {
-                float exposureFactor = Mathf.Pow(intensityFactor, 3f);
-                colorAdjustments.postExposure.Override(Mathf.Lerp(0f, -10f, exposureFactor));
+                reelsManager?.SetActive(true);
+                handController?.SetRaised(true);
+                if (mainCamera != null)
+                    mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, phoneFOV, Time.deltaTime * fovTransitionSpeed);
+            }
+            else
+            {
+                reelsManager?.SetActive(false);
+                handController?.SetRaised(false);
+                if (mainCamera != null)
+                    mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, normalFOV, Time.deltaTime * fovTransitionSpeed);
             }
         }
-
-        // 2. Scrolling Reels vs Road Watching
-        if (isScrolling)
-        {
-            if (reelsManager != null) reelsManager.SetActive(true);
-            if (handController != null) handController.SetRaised(true);
-            fomoValue += refillRate * Time.deltaTime;
-            
-            if (mainCamera != null)
-                mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, phoneFOV, Time.deltaTime * fovTransitionSpeed);
-        }
-        else
-        {
-            if (reelsManager != null) reelsManager.SetActive(false);
-            if (handController != null) handController.SetRaised(false);
-            fomoValue -= drainRate * Time.deltaTime;
-            
-            if (mainCamera != null)
-                mainCamera.fieldOfView = Mathf.Lerp(mainCamera.fieldOfView, normalFOV, Time.deltaTime * fovTransitionSpeed);
-        }
-
-        fomoValue = Mathf.Clamp(fomoValue, 0f, 100f);
-        if (fomoSlider != null) fomoSlider.value = fomoValue;
     }
 }

@@ -51,6 +51,11 @@ public class GameManager : MonoBehaviour
         deliveryHealth = FindFirstObjectByType<VehicleHealth>();
     }
 
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
+    }
+
     private void Start()
     {
         ObstacleSpawner.ClearAllObstacles();
@@ -127,11 +132,6 @@ public class GameManager : MonoBehaviour
     {
         if (currentState != GameState.DeliveryActive) return;
 
-        if (deliveryHealth == null)
-        {
-            deliveryHealth = FindFirstObjectByType<VehicleHealth>();
-        }
-
         decimal missedPenalty = RouteController.Instance != null ? RouteController.Instance.TotalMissedTurnPenalty : 0m;
         var input = rewardInput ?? new DeliveryResult(15m, 0m, 0m, missedPenalty, true);
         if (rewardInput != null && rewardInput.MissedTurnPenalty == 0m && missedPenalty > 0m)
@@ -139,10 +139,7 @@ public class GameManager : MonoBehaviour
             input = new DeliveryResult(rewardInput.BaseFee, rewardInput.TimeTip, rewardInput.DamagePenalty, missedPenalty, rewardInput.IsPlaceholder);
         }
 
-        CompletedDelivery = new DeliveryResult(input.BaseFee, input.TimeTip, input.DamagePenalty,
-            input.MissedTurnPenalty, input.IsPlaceholder,
-            DeliveryProgressTracker.Instance != null ? DeliveryProgressTracker.Instance.DeliveryTimeElapsed : 0f,
-            deliveryHealth != null ? Mathf.Clamp(deliveryHealth.MaxHealth - deliveryHealth.CurrentHealth, 0, deliveryHealth.MaxHealth) : 0);
+        CompletedDelivery = input;
         if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
 
         SetState(GameState.DeliveryCompleted);
@@ -263,10 +260,21 @@ public class GameManager : MonoBehaviour
     {
         if (UnityEngine.InputSystem.Keyboard.current == null) return;
 
+        bool enterPressed = UnityEngine.InputSystem.Keyboard.current.enterKey.wasPressedThisFrame ||
+                            UnityEngine.InputSystem.Keyboard.current.numpadEnterKey.wasPressedThisFrame;
+
         // Enter: Start delivery from lobby
-        if (UnityEngine.InputSystem.Keyboard.current.enterKey.wasPressedThisFrame && currentState == GameState.OrderSelection)
+        if (enterPressed && currentState == GameState.OrderSelection)
         {
             Debug.Log("<color=cyan>[DEBUG]</color> Enter pressed -> Starting Delivery!");
+            if (DoomDriver.Economy.OrderManager.Instance != null && DoomDriver.Economy.OrderManager.Instance.SelectedOrder == null)
+            {
+                if (DoomDriver.Economy.OrderManager.Instance.CurrentOffers != null && DoomDriver.Economy.OrderManager.Instance.CurrentOffers.Count > 0)
+                {
+                    DoomDriver.Economy.OrderManager.Instance.SelectOrder(0);
+                    return;
+                }
+            }
             StartDelivery();
         }
         // C: Complete delivery
