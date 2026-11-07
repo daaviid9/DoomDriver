@@ -95,3 +95,4 @@ The driver no longer travels on an endless straight highway. Instead, the game g
 8. Press **`C`** (or complete the route):
    * Verify `DeliverySummaryUI` opens and displays the **Missed-turn penalties** item corresponding to the misses made.
    * Press **Continue**: payout is credited to wallet and state returns to `OrderSelection`.
+
