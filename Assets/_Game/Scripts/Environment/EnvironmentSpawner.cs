@@ -616,6 +616,11 @@ public class EnvironmentSpawner : MonoBehaviour
 
     private void HandleDeliveryStarted()
     {
-        // When delivery starts, road is initialized
+        if (DoomDriver.Economy.OrderManager.Instance != null && DoomDriver.Economy.OrderManager.Instance.SelectedOrder != null)
+        {
+            var order = DoomDriver.Economy.OrderManager.Instance.SelectedOrder;
+            ConfigureRouteFromTurns(order.TotalDistance, order.TurnSequence);
+            Debug.Log($"[EnvironmentSpawner] Loaded route from selected order '{order.RestaurantName}': {order.TotalDistance:F0}m, {order.TurnCount} turns.");
+        }
     }
 }
