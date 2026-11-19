@@ -8,8 +8,8 @@ namespace DoomDriver.Phone
 {
     /// <summary>
     /// UI controller for the courier app shown in the lobby.
-    /// Subscribes to OrderManager.OnOffersGenerated and populates three order cards.
-    /// Automatically manages canvas visibility between lobby and driving phases.
+    /// Subscribes to OrderManager.OnOffersGenerated and populates order cards.
+    /// Connects spawned order cards into the modular PhoneInputNavigator.
     /// </summary>
     public class CourierAppUI : MonoBehaviour
     {
@@ -17,11 +17,25 @@ namespace DoomDriver.Phone
         [Tooltip("Canvas component for the courier app. If null, automatically resolved from this GameObject.")]
         [SerializeField] private Canvas appCanvas;
 
-        [Tooltip("Parent object that holds the three card UI objects")]
+        [Tooltip("Parent object that holds the card UI objects")]
         [SerializeField] private Transform cardsContainer;
 
         [Tooltip("Prefab for a single order card, containing OrderCardView component")]
         [SerializeField] private GameObject cardPrefab;
+
+        [Header("Navigation Integration")]
+        [Tooltip("Optional reference to PhoneInputNavigator. If null, resolved automatically.")]
+        [SerializeField] private PhoneInputNavigator navigator;
+
+        /// <summary>
+        /// Event fired whenever new order cards are spawned and ready.
+        /// </summary>
+        public event System.Action<IReadOnlyList<OrderCardView>> OnCardsPopulated;
+
+        /// <summary>
+        /// Read-only access to currently active spawned card views.
+        /// </summary>
+        public IReadOnlyList<OrderCardView> CardViews => cardViews;
 
         private readonly List<OrderCardView> cardViews = new List<OrderCardView>();
 
@@ -41,6 +55,11 @@ namespace DoomDriver.Phone
             {
                 Transform found = transform.Find("CardsContainer");
                 cardsContainer = found != null ? found : this.transform;
+            }
+
+            if (navigator == null)
+            {
+                navigator = GetComponent<PhoneInputNavigator>() ?? GetComponentInParent<PhoneInputNavigator>();
             }
 
             Debug.Log($"<color=magenta>[CourierAppUI]</color> Awake on '{gameObject.name}'. Canvas: {(appCanvas != null ? appCanvas.name : "NULL")}, Container: {(cardsContainer != null ? cardsContainer.name : "NULL")}, Prefab: {(cardPrefab != null ? cardPrefab.name : "NULL")}");
@@ -138,27 +157,27 @@ namespace DoomDriver.Phone
         {
             Debug.Log("<color=magenta>[CourierAppUI]</color> GameManager.OnDeliveryStarted received. Hiding courier app.");
             SetAppVisible(false);
+
+            if (navigator != null)
+            {
+                navigator.ClearNavigableItems();
+            }
         }
 
         /// <summary>
-        /// Controls rendering of the courier app canvas and all its elements (cards, background, etc.).
+        /// Controls rendering of the courier app canvas and all its elements.
         /// </summary>
         public void SetAppVisible(bool isVisible)
         {
+            if (PhoneOSController.Instance != null)
+            {
+                // When PhoneOSController is present, it manages OS canvas visibility centrally
+                return;
+            }
+
             if (appCanvas != null)
             {
                 appCanvas.enabled = isVisible;
-            }
-
-            if (cardsContainer != null)
-            {
-                cardsContainer.gameObject.SetActive(isVisible);
-            }
-
-            var rootImage = GetComponent<Image>();
-            if (rootImage != null)
-            {
-                rootImage.enabled = isVisible;
             }
         }
 
@@ -181,6 +200,9 @@ namespace DoomDriver.Phone
             if (offers == null || offers.Count == 0)
             {
                 Debug.LogWarning("<color=yellow>[CourierAppUI]</color> Received empty or null offers list.");
+                cardViews.Clear();
+                OnCardsPopulated?.Invoke(cardViews);
+                if (navigator != null) navigator.ClearNavigableItems();
                 return;
             }
 
@@ -210,7 +232,17 @@ namespace DoomDriver.Phone
                 Debug.Log($"<color=magenta>[CourierAppUI]</color> Spawned card {i}: {cardObj.name}");
             }
 
-            Debug.Log($"<color=magenta>[CourierAppUI]</color> Successfully populated {cardViews.Count} order cards inside '{cardsContainer.name}'.");
+            Debug.Log($"<color=magenta>[CourierAppUI]</color> Successfully populated {cardViews.Count} order cards. Registering with PhoneInputNavigator.");
+            OnCardsPopulated?.Invoke(cardViews);
+
+            // Register items generically into PhoneInputNavigator if CourierApp is active or OS controller not present
+            if (navigator != null)
+            {
+                if (PhoneOSController.Instance == null || PhoneOSController.Instance.CurrentScreen == PhoneScreen.CourierApp)
+                {
+                    navigator.SetNavigableItems(cardViews, 0);
+                }
+            }
         }
     }
 }

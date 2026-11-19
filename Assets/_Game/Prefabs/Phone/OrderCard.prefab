@@ -116,6 +116,11 @@ MonoBehaviour:
   hardTheme:
     primaryColor: {r: 0.95686275, g: 0.24705882, b: 0.36862746, a: 1}
     secondaryColor: {r: 0.99607843, g: 0.8039216, b: 0.827451, a: 1}
+  focusedScale: 1.04
+  scaleAnimationSpeed: 12
+  buttonOutline: {fileID: 9177774907117895369}
+  buttonFocusedOutlineThickness: {x: 3, y: -3}
+  buttonNormalOutlineThickness: {x: 1, y: -1}
 --- !u!114 &4910310475886645721
 MonoBehaviour:
   m_ObjectHideFlags: 0

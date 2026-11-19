@@ -260,25 +260,8 @@ public class GameManager : MonoBehaviour
     {
         if (UnityEngine.InputSystem.Keyboard.current == null) return;
 
-        bool enterPressed = UnityEngine.InputSystem.Keyboard.current.enterKey.wasPressedThisFrame ||
-                            UnityEngine.InputSystem.Keyboard.current.numpadEnterKey.wasPressedThisFrame;
-
-        // Enter: Start delivery from lobby
-        if (enterPressed && currentState == GameState.OrderSelection)
-        {
-            Debug.Log("<color=cyan>[DEBUG]</color> Enter pressed -> Starting Delivery!");
-            if (DoomDriver.Economy.OrderManager.Instance != null && DoomDriver.Economy.OrderManager.Instance.SelectedOrder == null)
-            {
-                if (DoomDriver.Economy.OrderManager.Instance.CurrentOffers != null && DoomDriver.Economy.OrderManager.Instance.CurrentOffers.Count > 0)
-                {
-                    DoomDriver.Economy.OrderManager.Instance.SelectOrder(0);
-                    return;
-                }
-            }
-            StartDelivery();
-        }
         // C: Complete delivery
-        else if (UnityEngine.InputSystem.Keyboard.current.cKey.wasPressedThisFrame && currentState == GameState.DeliveryActive)
+        if (UnityEngine.InputSystem.Keyboard.current.cKey.wasPressedThisFrame && currentState == GameState.DeliveryActive)
         {
             Debug.Log("<color=green>[DEBUG]</color> C pressed -> Completing Delivery!");
             CompleteDelivery();
