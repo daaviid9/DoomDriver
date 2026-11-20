@@ -34,6 +34,13 @@ public class PauseController : MonoBehaviour
     {
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
+            // If phone OS is open and currently inside a sub-app, Escape returns to Home instead of pausing
+            if (DoomDriver.Phone.PhoneOSController.Instance != null &&
+                DoomDriver.Phone.PhoneOSController.Instance.CurrentScreen != DoomDriver.Phone.PhoneScreen.Home)
+            {
+                return;
+            }
+
             TogglePause();
         }
     }

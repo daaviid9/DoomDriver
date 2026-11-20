@@ -1819,7 +1819,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7776414893027589554}
   m_Layer: 0
-  m_Name: carInterior
+  m_Name: CarInterior
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

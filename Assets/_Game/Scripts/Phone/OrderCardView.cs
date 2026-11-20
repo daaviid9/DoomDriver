@@ -1,14 +1,17 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 using DoomDriver.Economy;
 
 namespace DoomDriver.Phone
 {
     /// <summary>
-    /// Handles displaying a single DeliveryOrder on a UI card, applying difficulty color themes, and forwarding selection.
+    /// Handles displaying a single DeliveryOrder on a UI card, applying difficulty color themes,
+    /// managing visual hover/focus states, and forwarding selection.
+    /// Implements IPhoneNavigable to support generic phone keyboard and mouse navigation.
     /// </summary>
-    public class OrderCardView : MonoBehaviour
+    public class OrderCardView : MonoBehaviour, IPhoneNavigable, IPointerEnterHandler
     {
         [System.Serializable]
         public struct DifficultyTheme
@@ -67,8 +70,32 @@ namespace DoomDriver.Phone
             new Color(0.996f, 0.804f, 0.827f, 1f)  // #FECDD3 (light pastel red/pink)
         );
 
+        [Header("Focus & Hover Animation")]
+        [Tooltip("Scale multiplier when focused/selected via keyboard or hovered by mouse")]
+        [SerializeField] private float focusedScale = 1.04f;
+
+        [Tooltip("Speed of scale interpolation")]
+        [SerializeField] private float scaleAnimationSpeed = 12f;
+
+        [Header("Button Focus Outline")]
+        [Tooltip("Outline component on the Accept button. If null, automatically resolved from selectButton.")]
+        [SerializeField] private Outline buttonOutline;
+
+        [Tooltip("Outline thickness/distance (X, Y) on the Accept button when focused")]
+        [SerializeField] private Vector2 buttonFocusedOutlineThickness = new Vector2(3f, -3f);
+
+        [Tooltip("Outline thickness/distance (X, Y) on the Accept button when normal/unfocused")]
+        [SerializeField] private Vector2 buttonNormalOutlineThickness = new Vector2(1f, -1f);
+
+        /// <summary>
+        /// IPhoneNavigable event fired when pointer enters this card.
+        /// </summary>
+        public event System.Action<IPhoneNavigable> OnHovered;
+
         private DeliveryOrder boundOrder;
         private int boundIndex;
+        private bool isFocused = false;
+        private float currentScale = 1f;
 
         private void Awake()
         {
@@ -82,6 +109,16 @@ namespace DoomDriver.Phone
             else
             {
                 Debug.LogWarning($"<color=yellow>[OrderCardView]</color> selectButton is null on '{gameObject.name}'!");
+            }
+        }
+
+        private void Update()
+        {
+            float target = isFocused ? focusedScale : 1f;
+            if (Mathf.Abs(currentScale - target) > 0.001f)
+            {
+                currentScale = Mathf.Lerp(currentScale, target, Time.unscaledDeltaTime * scaleAnimationSpeed);
+                transform.localScale = Vector3.one * currentScale;
             }
         }
 
@@ -123,6 +160,11 @@ namespace DoomDriver.Phone
             {
                 buttonImage = selectButton.GetComponent<Image>();
             }
+
+            if (buttonOutline == null && selectButton != null)
+            {
+                buttonOutline = selectButton.GetComponent<Outline>();
+            }
         }
 
         /// <summary>
@@ -141,8 +183,46 @@ namespace DoomDriver.Phone
             if (tipText != null) tipText.text = $"+{order.MaxTip:F0} €";
 
             ApplyDifficultyTheme(order.Difficulty);
+            SetFocused(false);
 
             Debug.Log($"<color=green>[OrderCardView]</color> Setup [{index}]: {order.RestaurantName} ({order.Difficulty}) - {order.BasePayout:F0}€ payout, {order.TotalDistance:F0}m, limit: {FormatTime(order.TimeLimit)}");
+        }
+
+        /// <summary>
+        /// IPhoneNavigable implementation: sets visual focus state (scale animation and button outline thickness).
+        /// </summary>
+        public void SetFocused(bool focused)
+        {
+            isFocused = focused;
+
+            if (buttonOutline != null)
+            {
+                buttonOutline.effectDistance = focused ? buttonFocusedOutlineThickness : buttonNormalOutlineThickness;
+            }
+        }
+
+        /// <summary>
+        /// IPhoneNavigable implementation: triggers primary action (accepting order).
+        /// </summary>
+        public void Select()
+        {
+            AcceptOrder();
+        }
+
+        /// <summary>
+        /// Triggers order selection action. Can be called by UI Button or Phone Navigator.
+        /// </summary>
+        public void AcceptOrder()
+        {
+            OnSelectClicked();
+        }
+
+        /// <summary>
+        /// Pointer enter event implementation. Notifies navigators of hover.
+        /// </summary>
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            OnHovered?.Invoke(this);
         }
 
         /// <summary>
