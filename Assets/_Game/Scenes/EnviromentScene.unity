@@ -6186,7 +6186,7 @@ MonoBehaviour:
   crossroadsPrefabs:
   - {fileID: 2369663547445153715, guid: 9f4a7159720dee94583160ce8503f217, type: 3}
   yForkPrefabs:
-  - {fileID: 1000000001, guid: 8e4c7b2a91f5404588df173641b6cde2, type: 3}
+  - {fileID: 1100000000000000001, guid: 8e4c7b2a91f5404588df173641b6cde2, type: 3}
   chunkPrefabs:
   - {fileID: 4535990458550586430, guid: b752f55d41a4f0d43800086e1ab86500, type: 3}
   - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
@@ -6198,8 +6198,8 @@ MonoBehaviour:
   defaultBranchExitDistance: 25.8
   branchExitDistanceOffset: 0
   useDebugSequence: 1
-  debugStraightsBetweenTurns: 3
-  debugTurnSequence: 01000000020000000300000004000000
+  debugStraightsBetweenTurns: 1
+  debugTurnSequence: 04000000010000000200000003000000
 --- !u!4 &1650050935
 Transform:
   m_ObjectHideFlags: 0

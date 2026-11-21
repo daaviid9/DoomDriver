@@ -33,8 +33,10 @@ public static class YForkPrefabBuilder
     {
         EditorApplication.delayCall += () =>
         {
-            if (!File.Exists(TargetPrefabPath))
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TargetPrefabPath);
+            if (prefab == null)
             {
+                Debug.Log("<color=yellow>[YForkPrefabBuilder] Prefab missing or not loaded yet. Building now...</color>");
                 BuildExtendedYForkPrefab();
             }
             ValidateExtendedYForkSetup();
