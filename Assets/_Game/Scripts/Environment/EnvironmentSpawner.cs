@@ -24,6 +24,9 @@ public class EnvironmentSpawner : MonoBehaviour
     [Tooltip("Prefabs for 4-way crossroads.")]
     [SerializeField] private GameObject[] crossroadsPrefabs;
 
+    [Tooltip("Prefabs for extended Y-fork road segments (~85m length).")]
+    [SerializeField] private GameObject[] yForkPrefabs;
+
     [Header("Legacy / Fallback Prefabs")]
     [Tooltip("Retained for backwards compatibility with existing scene setups.")]
     public GameObject[] chunkPrefabs;
@@ -286,6 +289,7 @@ public class EnvironmentSpawner : MonoBehaviour
             {
                 RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
                 RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
+                RoadChunkType.YFork => DashboardNavigationSource.Maneuver.Left,
                 _ => DashboardNavigationSource.Maneuver.Straight
             };
 
@@ -495,12 +499,12 @@ public class EnvironmentSpawner : MonoBehaviour
     {
         if (roadChunk == null || straightPrefabs == null || straightPrefabs.Length == 0) return;
 
-        if (roadChunk.ChunkType == RoadChunkType.TurnLeft || roadChunk.ChunkType == RoadChunkType.Crossroads)
+        if (roadChunk.ChunkType == RoadChunkType.TurnLeft || roadChunk.ChunkType == RoadChunkType.Crossroads || roadChunk.ChunkType == RoadChunkType.YFork)
         {
             AttachBranchPreview(roadChunk, DashboardNavigationSource.Maneuver.Left);
         }
 
-        if (roadChunk.ChunkType == RoadChunkType.TurnRight || roadChunk.ChunkType == RoadChunkType.Crossroads)
+        if (roadChunk.ChunkType == RoadChunkType.TurnRight || roadChunk.ChunkType == RoadChunkType.Crossroads || roadChunk.ChunkType == RoadChunkType.YFork)
         {
             AttachBranchPreview(roadChunk, DashboardNavigationSource.Maneuver.Right);
         }
@@ -511,18 +515,13 @@ public class EnvironmentSpawner : MonoBehaviour
         GameObject prefab = PickRandomPrefab(straightPrefabs);
         if (prefab == null) return;
 
-        float exitDist = (intersectionChunk.BranchExitDistance > 0.1f)
-            ? intersectionChunk.BranchExitDistance
-            : defaultBranchExitDistance;
-        exitDist += branchExitDistanceOffset;
+        Vector3 localPos = intersectionChunk.GetBranchExitLocalPosition(direction);
+        if (intersectionChunk.ChunkType != RoadChunkType.YFork)
+        {
+            localPos.x += (direction == DashboardNavigationSource.Maneuver.Left ? -branchExitDistanceOffset : branchExitDistanceOffset);
+        }
 
-        Vector3 localPos = (direction == DashboardNavigationSource.Maneuver.Left)
-            ? new Vector3(-exitDist, 0f, intersectionChunk.IntersectionCenterZ)
-            : new Vector3(exitDist, 0f, intersectionChunk.IntersectionCenterZ);
-
-        Quaternion localRot = (direction == DashboardNavigationSource.Maneuver.Left)
-            ? Quaternion.Euler(0f, -90f, 0f)
-            : Quaternion.Euler(0f, 90f, 0f);
+        Quaternion localRot = intersectionChunk.GetBranchExitLocalRotation(direction);
 
         GameObject previewChunk = Instantiate(prefab, intersectionChunk.transform);
         previewChunk.name = $"{prefab.name}_Branch_{direction}";
@@ -558,6 +557,9 @@ public class EnvironmentSpawner : MonoBehaviour
 
             case RoadChunkType.Crossroads:
                 return PickRandomPrefab(crossroadsPrefabs);
+
+            case RoadChunkType.YFork:
+                return PickRandomPrefab(yForkPrefabs) ?? PickRandomPrefab(crossroadsPrefabs);
 
             default:
                 return PickRandomPrefab(straightPrefabs);

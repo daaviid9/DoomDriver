@@ -132,6 +132,7 @@ public class TurnTrigger : MonoBehaviour
         {
             RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
             RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
+            RoadChunkType.YFork => DashboardNavigationSource.Maneuver.Left,
             _ => DashboardNavigationSource.Maneuver.Straight
         };
     }

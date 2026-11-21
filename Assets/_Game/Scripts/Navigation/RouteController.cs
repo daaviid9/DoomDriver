@@ -280,6 +280,7 @@ public class RouteController : MonoBehaviour
             {
                 RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
                 RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
+                RoadChunkType.YFork => currentManeuverDirection != DashboardNavigationSource.Maneuver.Straight ? currentManeuverDirection : DashboardNavigationSource.Maneuver.Left,
                 _ => DashboardNavigationSource.Maneuver.Straight
             };
 

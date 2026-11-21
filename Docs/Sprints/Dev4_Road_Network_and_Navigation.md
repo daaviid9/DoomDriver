@@ -16,6 +16,7 @@ The driver no longer travels on an endless straight highway. Instead, the game g
 * `Assets/_Game/Prefabs/Environment/RoadChunk_TurnLeft.prefab`: T-junction branching left (`chunkLength = 44.75m`, `intersectionCenterZ = 19.0m`, `branchExitDistance = 25.8m`).
 * `Assets/_Game/Prefabs/Environment/RoadChunk_TurnRight.prefab`: T-junction branching right (`chunkLength = 44.75m`, `intersectionCenterZ = 19.0m`, `branchExitDistance = 25.8m`).
 * `Assets/_Game/Prefabs/Environment/RoadChunk_Crossroads.prefab`: 4-way crossroad supporting both left and right maneuvers.
+* [`Assets/_Game/Prefabs/Environment/RoadChunk_YFork.prefab`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Prefabs/Environment/RoadChunk_YFork.prefab): Extended ~85m Y-junction / fork road segment splitting smoothly into two branching paths (left fork vs. right fork) with dual exit branch anchors at $X = \pm 8\text{m}, Z = 85\text{m}$ (rotation $\pm 12^\circ$). Includes central divider island, apex crash attenuator, inner guardrails, island props, and flanking city buildings.
 * `Assets/_Game/Prefabs/Environment/RoadChunk_01.prefab`, `RoadChunk_02.prefab`, `RoadChunk_03.prefab`: Straight street variants with diverse buildings, street lights, and scenery.
 
 ### B. Scripts & Architecture
@@ -61,6 +62,24 @@ The driver no longer travels on an endless straight highway. Instead, the game g
    * A financial penalty (**5.00 €**) is recorded into `RouteController.TotalMissedTurnPenalty`.
    * The route is dynamically extended: 3 additional straight chunks (~134m) are injected before another compensatory turn is scheduled.
    * The GPS announces a new recalculated maneuver once the detour route is prepared.
+
+### Card 4.3 – Extended Y-Fork Road Prefabs & Branch Geometry
+1. **High-Speed Split Geometry (~85m Length):**
+   * Replaces abrupt 44.75m 90° T-junctions with a smooth, extended Y-fork avenue segment (`chunkLength = 85.0m`, `intersectionCenterZ = 45.0m`).
+   * The avenue splits gradually from $Z = 32.5\text{m}$ into dual diverging paths:
+     * **Left Fork:** Exits at $X = -8.0\text{m}, Z = 85.0\text{m}$ (rotation $Y = -12^\circ$).
+     * **Right Fork:** Exits at $X = +8.0\text{m}, Z = 85.0\text{m}$ (rotation $Y = +12^\circ$).
+2. **Central Divider Island & Crash Attenuator:**
+   * Features a reinforced safety wedge at the fork apex ($Z = 38.5\text{m}$):
+     * Crash attenuator barrier (`Road_Barrier.prefab`) and warning chevron sign (`Road_Work_Sign_1.prefab`).
+     * Left and right inner metal guardrails (`RoadBarrierMetalSheet.prefab`) spanning $Z = 46\text{m}$ to $70\text{m}$.
+     * Central island greenery trees (`Tree_2.prefab`) and median streetlights (`Light.prefab`).
+3. **Dual Exit Anchors & Preview Alignment (`EnvironmentSpawner`):**
+   * `RoadChunk.cs` defines `RoadChunkType.YFork` and dual exit anchors:
+     * `GetBranchExitLocalPosition(direction)` returns the exact local position.
+     * `GetBranchExitLocalRotation(direction)` returns the matching branch rotation ($\pm 12^\circ$).
+   * When `EnvironmentSpawner` spawns a Y-fork, `AttachSideBranchPreviews()` attaches preview chunks to **both** left and right exits simultaneously.
+   * The entire segment is framed with multi-story buildings and streetlights along both outer flanks without geometry holes or visual gaps.
 
 ---
 

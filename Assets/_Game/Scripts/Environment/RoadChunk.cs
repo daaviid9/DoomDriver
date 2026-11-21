@@ -8,7 +8,8 @@ public enum RoadChunkType
     Straight,
     TurnLeft,
     TurnRight,
-    Crossroads
+    Crossroads,
+    YFork
 }
 
 /// <summary>
@@ -40,14 +41,32 @@ public class RoadChunk : MonoBehaviour
     [Tooltip("Distance from intersection center (Z=19) to where the next chunk attaches along the branch after a turn (default 25.8m). Tune this to eliminate gaps or overlaps.")]
     [SerializeField] private float branchExitDistance = 25.8f;
 
+    [Header("Y-Fork Branch Anchors")]
+    [Tooltip("Local position of the left fork exit branch anchor.")]
+    [SerializeField] private Vector3 leftForkExitPosition = new Vector3(-7f, 0f, 85f);
+
+    [Tooltip("Local rotation (Euler angles) of the left fork exit branch anchor.")]
+    [SerializeField] private Vector3 leftForkExitRotation = new Vector3(0f, -12f, 0f);
+
+    [Tooltip("Local position of the right fork exit branch anchor.")]
+    [SerializeField] private Vector3 rightForkExitPosition = new Vector3(7f, 0f, 85f);
+
+    [Tooltip("Local rotation (Euler angles) of the right fork exit branch anchor.")]
+    [SerializeField] private Vector3 rightForkExitRotation = new Vector3(0f, 12f, 0f);
+
     public RoadChunkType ChunkType => chunkType;
     public float ChunkLength => chunkLength;
     public bool IsIntersection => chunkType != RoadChunkType.Straight;
+    public bool IsFork => chunkType == RoadChunkType.YFork;
     public float IntersectionCenterZ { get => intersectionCenterZ; set => intersectionCenterZ = value; }
     public Vector3 LeftBranchOffset => leftBranchOffset;
     public Vector3 RightBranchOffset => rightBranchOffset;
     public float TurnTriggerWindow => turnTriggerWindow;
     public float BranchExitDistance { get => branchExitDistance; set => branchExitDistance = value; }
+    public Vector3 LeftForkExitPosition { get => leftForkExitPosition; set => leftForkExitPosition = value; }
+    public Vector3 LeftForkExitRotation { get => leftForkExitRotation; set => leftForkExitRotation = value; }
+    public Vector3 RightForkExitPosition { get => rightForkExitPosition; set => rightForkExitPosition = value; }
+    public Vector3 RightForkExitRotation { get => rightForkExitRotation; set => rightForkExitRotation = value; }
 
     // Attached preview road segments for side branches (visible before and during turn maneuver)
     private GameObject leftBranchChunk;
@@ -115,20 +134,59 @@ public class RoadChunk : MonoBehaviour
     }
 
     /// <summary>
-    /// Calculates the world-space position where the next straight road chunk should attach after a 90-degree turn.
-    /// In local space, the left branch exits at (-branchExitDistance, 0, intersectionCenterZ)
-    /// and the right branch exits at (+branchExitDistance, 0, intersectionCenterZ).
-    /// Calling TransformPoint accurately maps this to world space under any rotation.
+    /// Returns the local exit position for attaching preview chunks or continuing road generation.
+    /// Supports both standard 90-degree side branches and extended Y-fork dual branch exits.
+    /// </summary>
+    public Vector3 GetBranchExitLocalPosition(DashboardNavigationSource.Maneuver direction)
+    {
+        if (chunkType == RoadChunkType.YFork)
+        {
+            return (direction == DashboardNavigationSource.Maneuver.Left)
+                ? leftForkExitPosition
+                : rightForkExitPosition;
+        }
+
+        float exitDistance = (branchExitDistance > 0.1f) ? branchExitDistance : 25.8f;
+
+        return (direction == DashboardNavigationSource.Maneuver.Left)
+            ? new Vector3(-exitDistance, 0f, intersectionCenterZ)
+            : new Vector3(exitDistance, 0f, intersectionCenterZ);
+    }
+
+    /// <summary>
+    /// Returns the local exit rotation for attaching preview chunks or continuing road generation.
+    /// Supports both standard 90-degree side branches and extended Y-fork dual branch exits.
+    /// </summary>
+    public Quaternion GetBranchExitLocalRotation(DashboardNavigationSource.Maneuver direction)
+    {
+        if (chunkType == RoadChunkType.YFork)
+        {
+            Vector3 euler = (direction == DashboardNavigationSource.Maneuver.Left)
+                ? leftForkExitRotation
+                : rightForkExitRotation;
+            return Quaternion.Euler(euler);
+        }
+
+        return (direction == DashboardNavigationSource.Maneuver.Left)
+            ? Quaternion.Euler(0f, -90f, 0f)
+            : Quaternion.Euler(0f, 90f, 0f);
+    }
+
+    /// <summary>
+    /// Calculates the world-space position where the next road chunk attaches along the branch.
+    /// Calling TransformPoint accurately maps this to world space under any position or rotation.
     /// </summary>
     public Vector3 GetBranchExitWorldPosition(DashboardNavigationSource.Maneuver direction)
     {
-        float exitDistance = (branchExitDistance > 0.1f) ? branchExitDistance : 25.8f;
+        return transform.TransformPoint(GetBranchExitLocalPosition(direction));
+    }
 
-        Vector3 localExit = (direction == DashboardNavigationSource.Maneuver.Left)
-            ? new Vector3(-exitDistance, 0f, intersectionCenterZ)
-            : new Vector3(exitDistance, 0f, intersectionCenterZ);
-
-        return transform.TransformPoint(localExit);
+    /// <summary>
+    /// Calculates the world-space rotation for attaching road chunks along the branch.
+    /// </summary>
+    public Quaternion GetBranchExitWorldRotation(DashboardNavigationSource.Maneuver direction)
+    {
+        return transform.rotation * GetBranchExitLocalRotation(direction);
     }
 
 #if UNITY_EDITOR
@@ -157,14 +215,15 @@ public class RoadChunk : MonoBehaviour
 
             // Draw branch anchor points
             Gizmos.color = Color.cyan;
-            if (chunkType == RoadChunkType.TurnLeft || chunkType == RoadChunkType.Crossroads)
+            if (chunkType == RoadChunkType.TurnLeft || chunkType == RoadChunkType.Crossroads || chunkType == RoadChunkType.YFork)
             {
                 Vector3 leftAnchor = GetBranchExitWorldPosition(DashboardNavigationSource.Maneuver.Left);
                 Gizmos.DrawWireSphere(leftAnchor, 1.2f);
                 Gizmos.DrawLine(centerPos, leftAnchor);
             }
 
-            if (chunkType == RoadChunkType.TurnRight || chunkType == RoadChunkType.Crossroads)
+            Gizmos.color = Color.green;
+            if (chunkType == RoadChunkType.TurnRight || chunkType == RoadChunkType.Crossroads || chunkType == RoadChunkType.YFork)
             {
                 Vector3 rightAnchor = GetBranchExitWorldPosition(DashboardNavigationSource.Maneuver.Right);
                 Gizmos.DrawWireSphere(rightAnchor, 1.2f);
