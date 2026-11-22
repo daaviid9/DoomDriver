@@ -122,11 +122,59 @@ public class RoadChunk : MonoBehaviour
             gameObject.AddComponent<TurnTrigger>();
         }
 
+        // Ensure ForkCrashBarrier and physical BoxCollider are attached to Road_Barrier_Crash on Y-Fork chunks
+        if (IsFork)
+        {
+            EnsureForkBarrierCollider();
+        }
+
         // Prevent accidental obstacle tagging
         if (gameObject.CompareTag("Obstacle"))
         {
             gameObject.tag = "Untagged";
         }
+    }
+
+    /// <summary>
+    /// Ensures the central divider barrier ('Road_Barrier_Crash') on Y-fork chunks has an active BoxCollider
+    /// (configured as trigger) and ForkCrashBarrier script for physical collision detection.
+    /// </summary>
+    public void EnsureForkBarrierCollider()
+    {
+        Transform barrier = transform.Find("Props/Road_Barrier_Crash");
+        if (barrier == null)
+        {
+            barrier = FindChildRecursive(transform, "Road_Barrier_Crash");
+        }
+
+        if (barrier != null)
+        {
+            BoxCollider box = barrier.GetComponent<BoxCollider>();
+            if (box == null)
+            {
+                box = barrier.gameObject.AddComponent<BoxCollider>();
+            }
+            box.isTrigger = true;
+            box.size = new Vector3(3.5f, 2.0f, 2.5f);
+            box.center = new Vector3(0f, 1.0f, 0f);
+
+            if (barrier.GetComponent<ForkCrashBarrier>() == null)
+            {
+                barrier.gameObject.AddComponent<ForkCrashBarrier>();
+            }
+        }
+    }
+
+    private Transform FindChildRecursive(Transform parent, string childName)
+    {
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.name == childName || child.name.Contains(childName)) return child;
+            Transform found = FindChildRecursive(child, childName);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     /// <summary>

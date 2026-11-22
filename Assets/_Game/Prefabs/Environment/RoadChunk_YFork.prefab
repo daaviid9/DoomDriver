@@ -284,6 +284,7 @@ MonoBehaviour:
   rightBranchOffset: {x: 27.086, y: 0, z: 45.456}
   turnTriggerWindow: 8
   branchExitDistance: 25.8
+  targetManeuver: 2
   leftForkExitPosition: {x: -27.086, y: 0, z: 45.456}
   leftForkExitRotation: {x: 0, y: -45, z: 0}
   rightForkExitPosition: {x: 27.086, y: 0, z: 45.456}
@@ -1202,7 +1203,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: b694aec4eb6f34c41bd485b2215d5776, type: 3}
       propertyPath: m_Name
-      value: Road_Barrier
+      value: Road_Barrier_Crash
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -39,8 +39,70 @@ public static class YForkPrefabBuilder
                 Debug.Log("<color=yellow>[YForkPrefabBuilder] Prefab missing or not loaded yet. Building now...</color>");
                 BuildExtendedYForkPrefab();
             }
+            EnsurePrefabBarrierCollider();
             ValidateExtendedYForkSetup();
         };
+    }
+
+    [MenuItem("DoomDriver/Environment/Setup Fork Barrier Collider")]
+    public static void EnsurePrefabBarrierCollider()
+    {
+        GameObject prefabRoot = PrefabUtility.LoadPrefabContents(TargetPrefabPath);
+        if (prefabRoot == null) return;
+
+        bool modified = false;
+        Transform barrier = prefabRoot.transform.Find("Props/Road_Barrier_Crash");
+        if (barrier == null)
+        {
+            barrier = FindChildRecursive(prefabRoot.transform, "Road_Barrier_Crash");
+        }
+
+        if (barrier != null)
+        {
+            BoxCollider box = barrier.GetComponent<BoxCollider>();
+            if (box == null)
+            {
+                box = barrier.gameObject.AddComponent<BoxCollider>();
+                modified = true;
+            }
+            if (!box.isTrigger)
+            {
+                box.isTrigger = true;
+                modified = true;
+            }
+            if (box.size != new Vector3(3.5f, 2.0f, 2.5f))
+            {
+                box.size = new Vector3(3.5f, 2.0f, 2.5f);
+                box.center = new Vector3(0f, 1.0f, 0f);
+                modified = true;
+            }
+
+            if (barrier.GetComponent<ForkCrashBarrier>() == null)
+            {
+                barrier.gameObject.AddComponent<ForkCrashBarrier>();
+                modified = true;
+            }
+        }
+
+        if (modified)
+        {
+            PrefabUtility.SaveAsPrefabAsset(prefabRoot, TargetPrefabPath);
+            Debug.Log("<color=green>[YForkPrefabBuilder] Successfully added BoxCollider & ForkCrashBarrier to Road_Barrier_Crash in RoadChunk_YFork.prefab!</color>");
+        }
+
+        PrefabUtility.UnloadPrefabContents(prefabRoot);
+    }
+
+    private static Transform FindChildRecursive(Transform parent, string name)
+    {
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child.name == name || child.name.Contains(name)) return child;
+            Transform found = FindChildRecursive(child, name);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     [MenuItem("DoomDriver/Environment/Build Extended Y-Fork Prefab (~85m)")]
