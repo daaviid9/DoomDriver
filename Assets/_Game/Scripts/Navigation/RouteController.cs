@@ -20,6 +20,13 @@ public class RouteController : MonoBehaviour
     [Tooltip("Duration in seconds the GPS displays the orange 'Recalculating...' status before resuming navigation cues.")]
     [SerializeField] private float recalculatingDuration = 2.5f;
 
+    [Header("World Turn Animation")]
+    [Tooltip("Default turn duration in seconds for Y-Fork (45-degree) turns. Lower = faster, higher = slower and smoother.")]
+    [SerializeField] private float forkTurnDuration = 0.95f;
+
+    [Tooltip("Default turn duration in seconds for standard 90-degree intersection turns. Lower = faster, higher = slower and smoother.")]
+    [SerializeField] private float sharpTurnDuration = 1.1f;
+
     [Header("Route State")]
     [SerializeField] private int completedTurnsCount = 0;
     [SerializeField] private int missedTurnsCount = 0;
@@ -29,6 +36,8 @@ public class RouteController : MonoBehaviour
     private DashboardNavigationSource navigationSource;
     private float recalculatingTimer = 0f;
 
+    public float ForkTurnDuration { get => forkTurnDuration; set => forkTurnDuration = Mathf.Max(0.05f, value); }
+    public float SharpTurnDuration { get => sharpTurnDuration; set => sharpTurnDuration = Mathf.Max(0.05f, value); }
     public int CompletedTurnsCount => completedTurnsCount;
     public int MissedTurnsCount => missedTurnsCount;
     public decimal TotalMissedTurnPenalty => (decimal)(missedTurnsCount * penaltyPerMissedTurn);
@@ -135,7 +144,10 @@ public class RouteController : MonoBehaviour
     {
         bool isFork = (intersectionChunk != null && intersectionChunk.ChunkType == RoadChunkType.YFork);
         float turnAngle = (intersectionChunk != null) ? intersectionChunk.TurnAngle : 90f;
-        float duration = isFork ? 0.42f : 0.55f;
+        float defaultDuration = isFork ? forkTurnDuration : sharpTurnDuration;
+        float duration = (intersectionChunk != null && intersectionChunk.TurnDuration > 0f)
+            ? intersectionChunk.TurnDuration
+            : defaultDuration;
         float targetAngle = (direction == DashboardNavigationSource.Maneuver.Left) ? turnAngle : -turnAngle;
 
         // 1. Notify EnvironmentSpawner that a world turn is in progress and prune chunks ahead
@@ -145,16 +157,16 @@ public class RouteController : MonoBehaviour
             EnvironmentSpawner.Instance.PruneChunksAheadOf(intersectionChunk.gameObject);
         }
 
-        // 2. Start vehicle drift animation (yaw, tilt, wheel rotation, tire screech)
+        // 2. Start smooth vehicle turn animation (gentle wheel steering, zero drift yaw)
         if (VehicleMovement.Instance != null)
         {
             VehicleMovement.Instance.StartTurnManeuver(direction, duration, isFork);
         }
 
-        // 3. Small camera bump/shake for turn apex feel
-        if (CameraShake.Instance != null)
+        // 3. Small camera bump for sharp 90-degree turns (skipped on forks for smooth cornering)
+        if (!isFork && CameraShake.Instance != null)
         {
-            CameraShake.Instance.Shake(duration * 0.5f, isFork ? 0.08f : 0.12f);
+            CameraShake.Instance.Shake(duration * 0.5f, 0.12f);
         }
 
         // 4. Smoothly rotate the intersection chunk around its intersection center.

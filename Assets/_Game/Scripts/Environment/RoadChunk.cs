@@ -57,6 +57,10 @@ public class RoadChunk : MonoBehaviour
     [Tooltip("Local rotation (Euler angles) of the right fork exit branch anchor.")]
     [SerializeField] private Vector3 rightForkExitRotation = new Vector3(0f, 45f, 0f);
 
+    [Header("Turn Animation Tuning")]
+    [Tooltip("Turn transition duration in seconds. Lower values = faster turn, higher values = slower and smoother turn. Default is 0.95s. If set to 0, RouteController defaults are used.")]
+    [SerializeField] private float turnDuration = 0.95f;
+
     public RoadChunkType ChunkType => chunkType;
     public float ChunkLength => chunkLength;
     public bool IsIntersection => chunkType != RoadChunkType.Straight;
@@ -72,6 +76,7 @@ public class RoadChunk : MonoBehaviour
     public Vector3 LeftForkExitRotation { get => leftForkExitRotation; set => leftForkExitRotation = value; }
     public Vector3 RightForkExitPosition { get => rightForkExitPosition; set => rightForkExitPosition = value; }
     public Vector3 RightForkExitRotation { get => rightForkExitRotation; set => rightForkExitRotation = value; }
+    public float TurnDuration { get => turnDuration; set => turnDuration = value; }
 
     // Attached preview road segments for side branches (visible before and during turn maneuver)
     private GameObject leftBranchChunk;

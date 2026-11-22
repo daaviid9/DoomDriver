@@ -106,6 +106,12 @@ public class GameUIController : MonoBehaviour
         switch (state)
         {
             case GameState.OrderSelection:
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                if (gameOverPanel != null) gameOverPanel.SetActive(false);
+                if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
+                break;
+
             case GameState.DeliveryActive:
                 if (gameOverPanel != null) gameOverPanel.SetActive(false);
                 if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
@@ -125,6 +131,10 @@ public class GameUIController : MonoBehaviour
                 {
                     gameOverPanel.SetActive(true);
                 }
+
+                // Restore cursor visibility and release lock so player can click Retry / Exit buttons
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
 
                 if (finalDistanceText != null)
                 {
@@ -188,7 +198,7 @@ public class GameUIController : MonoBehaviour
             {
                 pausePanel = t.gameObject;
             }
-            else if (gameOverPanel == null && string.Equals(t.name, "GameOverPanel", System.StringComparison.OrdinalIgnoreCase))
+            else if (gameOverPanel == null && (string.Equals(t.name, "GameOverPanel", System.StringComparison.OrdinalIgnoreCase) || string.Equals(t.name, "DeliveryFailedPanel", System.StringComparison.OrdinalIgnoreCase)))
             {
                 gameOverPanel = t.gameObject;
             }

@@ -70,21 +70,28 @@ The driver no longer travels on an endless straight highway. Instead, the game g
      * **Left Fork:** Exits at $X = -27.086\text{m}, Z = 45.456\text{m}$ (rotation $Y = -45.0^\circ$).
      * **Right Fork:** Exits at $X = +27.086\text{m}, Z = 45.456\text{m}$ (rotation $Y = +45.0^\circ$).
    * Span between branch centers at exit: $\Delta X = 54.172\text{m}$.
-2. **Analytical 45° World Turn Pivot (`RouteController`):**
+2. **Analytical 45° World Turn Pivot & Inspector Tuning (`RouteController` & `RoadChunk`):**
    * Rotation angle is dynamically configured via `intersectionChunk.TurnAngle` ($45^\circ$ for `YFork` vs $90^\circ$ for standard intersections).
    * Pivoting around analytical center $C_z = E_z - |E_x| = 45.456 - 27.086 = 18.37\text{m}$ ensures the chosen branch exit aligns **identically at $X = 0.0000\text{m}$ and $0.0^\circ$ world rotation**.
-   * `VehicleMovement.StartTurnManeuver` adapts with softer drift yaw ($-12^\circ / +12^\circ$) and faster duration (0.42s) for a natural high-speed highway fork feel.
-3. **Dual Exit Anchors & Preview Alignment (`EnvironmentSpawner`):**
+   * **Inspector Turn Tuning:**
+     * Per-prefab / chunk override: `RoadChunk.TurnDuration` (`turnDuration` on `RoadChunk_YFork.prefab`, default 0.95s).
+     * Global scene defaults: `RouteController.ForkTurnDuration` (0.95s) and `SharpTurnDuration` (1.1s) serialized on `GameManagers` in `EnviromentScene.unity`.
+   * `VehicleMovement.StartTurnManeuver` adapts with natural weight transfer (roll $\pm 0.5^\circ$), gentle wheel steering ($\approx 31^\circ$), zero drift yaw, and no tire screeching for smooth highway cornering.
+3. **Dual Exit Anchors & Forward Straight Chunk Elimination (`EnvironmentSpawner`):**
    * `RoadChunk.cs` defines `RoadChunkType.YFork` and dual exit anchors:
-     * `GetBranchExitLocalPosition(direction)` returns the exact local position ($\pm 27.086\text{m}$).
+     * `GetBranchExitLocalPosition(direction)` returns the exact local position ($\pm 27.086\text{m}, 0\text{m}, 45.456\text{m}$).
      * `GetBranchExitLocalRotation(direction)` returns the matching branch rotation ($\pm 45.0^\circ$).
    * When `EnvironmentSpawner` spawns a Y-fork, `AttachSideBranchPreviews()` attaches preview chunks to **both** left and right exits simultaneously.
+   * **No Straight Forward Chunks Behind Y-Fork:**
+     * `InitializeRoad()`, `SpawnNextChunkInSequence()`, and `ResumeGenerationAfterTurn()` stop forward spawning as soon as a Y-fork is encountered.
+     * `HasActiveForkAhead()` blocks forward spawning while a Y-fork is in front of the car, ensuring the road splits **exclusively into Left and Right** with no phantom straight road behind the barrier.
    * Promoted preview chunks seamlessly continue straight along the $+Z$ axis without gaps or stutter.
    * **Bifurcation Hazard Rule (Card 4.3 Update):**
      * On a Y-fork, there is no straight continuation path. The road splits exclusively into Left ($-45^\circ$) and Right ($+45^\circ$).
      * The player **only survives if steering into Left or Right**.
-     * If the player continues straight (or fails to steer into either fork branch, e.g. due to phone doomscrolling), they crash directly into the central divider barrier / crash attenuator wedge at $Z = 18.37\,\text{m}$, triggering fatal damage (100 HP loss), explosion VFX/SFX, heavy camera shake, and `DeliveryFailed`.
+     * If the player continues straight (or fails to steer into either fork branch, e.g. due to phone doomscrolling), they crash directly into the central divider barrier `Road_Barrier_Crash` (equipped with `BoxCollider` and `ForkCrashBarrier.cs`), triggering fatal damage (100 HP loss), explosion VFX/SFX, heavy camera shake, and `DeliveryFailed`.
      * Steering into the wrong branch (e.g. Right instead of GPS Left) still executes the smooth $45^\circ$ world turn to preserve motion, but triggers route recalculation (+150m road penalty) and financial deduction.
+     * **Game Over UI & Cursor Control:** Upon `DeliveryFailed`, `GameUIController` unlocks and shows the cursor (`Cursor.lockState = CursorLockMode.None`), and `DeliveryFailedPanel` presents a centered dark-themed summary with functional Retry and Exit buttons.
 
 ---
 

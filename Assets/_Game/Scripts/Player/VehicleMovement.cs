@@ -407,19 +407,24 @@ public class VehicleMovement : MonoBehaviour
     {
         isTurnManeuverActive = true;
         isManeuvering = true;
-        OnManeuveringStateChanged?.Invoke(true);
+
+        // Do not trigger screeching tire drift audio for smooth highway fork transitions
+        if (!isFork)
+        {
+            OnManeuveringStateChanged?.Invoke(true);
+        }
 
         float elapsed = 0f;
         float startX = transform.position.x;
-        float targetYaw = isFork
-            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? -12f : 12f)
-            : ((direction == DashboardNavigationSource.Maneuver.Left) ? -20f : 20f);
+
+        // Smooth turning parameters: zero drift yaw for forks, gentle wheel turn, no fishtailing
+        float targetYaw = isFork ? 0f : ((direction == DashboardNavigationSource.Maneuver.Left) ? -10f : 10f);
         float targetRoll = isFork
-            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? 2.0f : -2.0f)
-            : ((direction == DashboardNavigationSource.Maneuver.Left) ? 3.5f : -3.5f);
+            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? 0.5f : -0.5f)
+            : ((direction == DashboardNavigationSource.Maneuver.Left) ? 2.0f : -2.0f);
         float targetWheel = isFork
-            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle * 0.65f : maxSteeringAngle * 0.65f)
-            : ((direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle : maxSteeringAngle);
+            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle * 0.35f : maxSteeringAngle * 0.35f)
+            : ((direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle * 0.65f : maxSteeringAngle * 0.65f);
 
         while (elapsed < duration)
         {
@@ -431,13 +436,13 @@ public class VehicleMovement : MonoBehaviour
             float currentX = Mathf.Lerp(startX, 0f, smoothT);
             transform.position = new Vector3(currentX, transform.position.y, transform.position.z);
 
-            // Sine curve for dynamic yaw and roll: peaks at apex (t = 0.5), returns to 0
+            // Smooth sine curve for gentle steering wheel motion and natural weight transfer
             float apexWeight = Mathf.Sin(t * Mathf.PI);
             float yaw = targetYaw * apexWeight;
             float roll = targetRoll * apexWeight;
             transform.localRotation = Quaternion.Euler(0f, yaw, roll);
 
-            // Rotate steering wheel into the corner, then back to center
+            // Rotate steering wheel smoothly into the curve and back to center
             if (steeringWheel != null)
             {
                 steeringWheel.localRotation = Quaternion.Euler(0f, 0f, targetWheel * apexWeight);

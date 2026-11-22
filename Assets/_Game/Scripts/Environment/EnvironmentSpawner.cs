@@ -150,6 +150,13 @@ public class EnvironmentSpawner : MonoBehaviour
             if (chunk != null && chunk.TryGetComponent<RoadChunk>(out var roadChunk))
             {
                 length = roadChunk.ChunkLength;
+
+                // When a Y-fork is spawned, stop generating further forward chunks.
+                // The road splits into left and right branches only; no straight road continues ahead.
+                if (roadChunk.IsFork)
+                {
+                    break;
+                }
             }
 
             spawnZ += length;
@@ -372,10 +379,37 @@ public class EnvironmentSpawner : MonoBehaviour
             if (newChunk != null && newChunk.TryGetComponent<RoadChunk>(out var roadChunk))
             {
                 length = roadChunk.ChunkLength;
+                if (roadChunk.IsFork)
+                {
+                    break;
+                }
             }
 
             spawnZ += length;
         }
+    }
+
+    /// <summary>
+    /// Checks if there is currently an active Y-fork ahead of the vehicle in activeChunks
+    /// that has not yet been navigated or completed.
+    /// </summary>
+    public bool HasActiveForkAhead()
+    {
+        for (int i = 0; i < activeChunks.Count; i++)
+        {
+            if (activeChunks[i] != null && activeChunks[i].TryGetComponent<RoadChunk>(out var rc))
+            {
+                if (rc.IsFork)
+                {
+                    // Fork center is ahead of the car (Z > -5m)
+                    if (rc.transform.position.z + rc.IntersectionCenterZ > -5f)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     private void SpawnNextChunkInSequence()
@@ -386,14 +420,25 @@ public class EnvironmentSpawner : MonoBehaviour
             return;
         }
 
-        GameObject lastChunk = activeChunks[activeChunks.Count - 1];
-        float lastChunkZ = lastChunk.transform.position.z;
-        float lastChunkLength = defaultChunkLength;
-
-        if (lastChunk.TryGetComponent<RoadChunk>(out var roadChunk))
+        // If an active Y-fork is currently ahead of the vehicle, DO NOT spawn any straight chunk behind it.
+        // The road splits into left and right branches only.
+        if (HasActiveForkAhead())
         {
-            lastChunkLength = roadChunk.ChunkLength;
+            return;
         }
+
+        GameObject lastChunk = activeChunks[activeChunks.Count - 1];
+        RoadChunk lastRoadChunk = null;
+        if (lastChunk != null && lastChunk.TryGetComponent<RoadChunk>(out lastRoadChunk))
+        {
+            if (lastRoadChunk.IsFork)
+            {
+                return;
+            }
+        }
+
+        float lastChunkZ = (lastChunk != null) ? lastChunk.transform.position.z : 0f;
+        float lastChunkLength = (lastRoadChunk != null) ? lastRoadChunk.ChunkLength : defaultChunkLength;
 
         float spawnZ = lastChunkZ + lastChunkLength;
         RoadChunkType nextType = GetNextChunkTypeFromQueue();
