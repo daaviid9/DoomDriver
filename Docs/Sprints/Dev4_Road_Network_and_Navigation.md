@@ -80,6 +80,11 @@ The driver no longer travels on an endless straight highway. Instead, the game g
      * `GetBranchExitLocalRotation(direction)` returns the matching branch rotation ($\pm 45.0^\circ$).
    * When `EnvironmentSpawner` spawns a Y-fork, `AttachSideBranchPreviews()` attaches preview chunks to **both** left and right exits simultaneously.
    * Promoted preview chunks seamlessly continue straight along the $+Z$ axis without gaps or stutter.
+   * **Bifurcation Hazard Rule (Card 4.3 Update):**
+     * On a Y-fork, there is no straight continuation path. The road splits exclusively into Left ($-45^\circ$) and Right ($+45^\circ$).
+     * The player **only survives if steering into Left or Right**.
+     * If the player continues straight (or fails to steer into either fork branch, e.g. due to phone doomscrolling), they crash directly into the central divider barrier / crash attenuator wedge at $Z = 18.37\,\text{m}$, triggering fatal damage (100 HP loss), explosion VFX/SFX, heavy camera shake, and `DeliveryFailed`.
+     * Steering into the wrong branch (e.g. Right instead of GPS Left) still executes the smooth $45^\circ$ world turn to preserve motion, but triggers route recalculation (+150m road penalty) and financial deduction.
 
 ---
 
@@ -103,15 +108,18 @@ The driver no longer travels on an endless straight highway. Instead, the game g
 3. Select an order by clicking **"Prijať"** on the phone screen, OR press **`Enter`** / **`Keypad Enter`**.
 4. The car accelerates forward. Note the dashboard GPS displaying the next turn (e.g. *Turn Left in 200m*).
 5. Watch the GPS distance count down. At ~70m, verify the audio beep and direction announcement.
-6. **Test Successful Turn:**
-   * When reaching the intersection, steer into the requested direction (`A` or `D`).
-   * Verify the world smoothly rotates 90° with no empty gaps or stutter.
-   * Verify the car is aligned with the new road and generation continues seamlessly.
-7. **Test Missed Turn (Recalculating):**
-   * At the next intersection, continue driving straight without turning.
-   * Verify the GPS immediately switches to orange **Recalculating**.
-   * Verify the route is extended and a new turn is scheduled.
-8. Press **`C`** (or complete the route):
+6. **Test Successful Y-Fork Turn:**
+   * When reaching the Y-fork, steer into the requested branch (`A` for Left, `D` for Right).
+   * Verify the world smoothly rotates $45^\circ$ with no empty gaps or stutter.
+   * Verify the car is aligned with the chosen branch and generation continues seamlessly.
+7. **Test Wrong Branch Selection (Recalculating):**
+   * If the GPS asks for Left, steer Right instead into the other branch.
+   * Verify the car smoothly enters the right branch ($45^\circ$ turn), and GPS switches to orange **Recalculating** with penalty.
+8. **Test Fatal Central Crash (Going Straight into Y-Fork):**
+   * At the Y-fork, drive straight ahead without steering left or right (e.g. distracted by phone).
+   * Verify the car smashes directly into the central divider/attenuator at the fork center.
+   * Verify fatal damage (car destroyed, explosion/smoke VFX, heavy camera shake) and `DeliveryFailed` screen triggers immediately.
+9. Press **`C`** (or complete the route):
    * Verify `DeliverySummaryUI` opens and displays the **Missed-turn penalties** item corresponding to the misses made.
    * Press **Continue**: payout is credited to wallet and state returns to `OrderSelection`.
 
