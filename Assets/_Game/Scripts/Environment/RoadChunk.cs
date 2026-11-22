@@ -42,6 +42,9 @@ public class RoadChunk : MonoBehaviour
     [SerializeField] private float branchExitDistance = 25.8f;
 
     [Header("Y-Fork Branch Anchors")]
+    [Tooltip("Target or expected maneuver for this chunk (Left/Right). Primarily used for Y-Fork branches.")]
+    [SerializeField] private DashboardNavigationSource.Maneuver targetManeuver = DashboardNavigationSource.Maneuver.Straight;
+
     [Tooltip("Local position of the left fork exit branch anchor.")]
     [SerializeField] private Vector3 leftForkExitPosition = new Vector3(-27.086f, 0f, 45.456f);
 
@@ -59,6 +62,7 @@ public class RoadChunk : MonoBehaviour
     public bool IsIntersection => chunkType != RoadChunkType.Straight;
     public bool IsFork => chunkType == RoadChunkType.YFork;
     public float TurnAngle => (chunkType == RoadChunkType.YFork) ? 45.0f : 90.0f;
+    public DashboardNavigationSource.Maneuver TargetManeuver { get => targetManeuver; set => targetManeuver = value; }
     public float IntersectionCenterZ { get => intersectionCenterZ; set => intersectionCenterZ = value; }
     public Vector3 LeftBranchOffset => leftBranchOffset;
     public Vector3 RightBranchOffset => rightBranchOffset;

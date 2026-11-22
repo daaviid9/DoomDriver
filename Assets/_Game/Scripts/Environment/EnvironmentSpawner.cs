@@ -15,16 +15,7 @@ public class EnvironmentSpawner : MonoBehaviour
     [Tooltip("Prefabs for straight road segments with scenery variations.")]
     [SerializeField] private GameObject[] straightPrefabs;
 
-    [Tooltip("Prefabs for left-turn intersections.")]
-    [SerializeField] private GameObject[] turnLeftPrefabs;
-
-    [Tooltip("Prefabs for right-turn intersections.")]
-    [SerializeField] private GameObject[] turnRightPrefabs;
-
-    [Tooltip("Prefabs for 4-way crossroads.")]
-    [SerializeField] private GameObject[] crossroadsPrefabs;
-
-    [Tooltip("Prefabs for extended Y-fork road segments (~85m length).")]
+    [Tooltip("Prefabs for 45-degree Y-fork road segments.")]
     [SerializeField] private GameObject[] yForkPrefabs;
 
     [Header("Legacy / Fallback Prefabs")]
@@ -61,9 +52,7 @@ public class EnvironmentSpawner : MonoBehaviour
     [Tooltip("Sequence of turns generated sequentially in debug mode.")]
     [SerializeField] private RoadChunkType[] debugTurnSequence = new RoadChunkType[]
     {
-        RoadChunkType.TurnLeft,
-        RoadChunkType.TurnRight,
-        RoadChunkType.Crossroads
+        RoadChunkType.YFork
     };
 
     // Active spawned chunks tracked in world
@@ -465,6 +454,26 @@ public class EnvironmentSpawner : MonoBehaviour
             roadChunk = newChunk.AddComponent<RoadChunk>();
         }
 
+        // Configure target maneuver for intersection/fork chunks
+        if (roadChunk.IsFork || roadChunk.IsIntersection)
+        {
+            if (type == RoadChunkType.TurnLeft)
+            {
+                roadChunk.TargetManeuver = DashboardNavigationSource.Maneuver.Left;
+            }
+            else if (type == RoadChunkType.TurnRight)
+            {
+                roadChunk.TargetManeuver = DashboardNavigationSource.Maneuver.Right;
+            }
+            else if (type == RoadChunkType.YFork)
+            {
+                // In debug or neutral fork sequence, alternate between Left and Right
+                roadChunk.TargetManeuver = (debugTurnIndex % 2 == 0)
+                    ? DashboardNavigationSource.Maneuver.Left
+                    : DashboardNavigationSource.Maneuver.Right;
+            }
+        }
+
         // Ensure TurnTrigger component exists on intersection chunks for turn detection
         if (roadChunk.IsIntersection && newChunk.GetComponent<TurnTrigger>() == null)
         {
@@ -550,16 +559,10 @@ public class EnvironmentSpawner : MonoBehaviour
                 return PickRandomPrefab(straightPrefabs);
 
             case RoadChunkType.TurnLeft:
-                return PickRandomPrefab(turnLeftPrefabs) ?? PickRandomPrefab(crossroadsPrefabs);
-
             case RoadChunkType.TurnRight:
-                return PickRandomPrefab(turnRightPrefabs) ?? PickRandomPrefab(crossroadsPrefabs);
-
             case RoadChunkType.Crossroads:
-                return PickRandomPrefab(crossroadsPrefabs);
-
             case RoadChunkType.YFork:
-                return PickRandomPrefab(yForkPrefabs) ?? PickRandomPrefab(crossroadsPrefabs);
+                return PickRandomPrefab(yForkPrefabs);
 
             default:
                 return PickRandomPrefab(straightPrefabs);

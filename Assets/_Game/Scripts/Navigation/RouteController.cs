@@ -278,13 +278,15 @@ public class RouteController : MonoBehaviour
         {
             float remainingMeters = Mathf.Max(0f, nearestIntersection.GetDistanceToCenter());
 
-            currentManeuverDirection = nearestIntersection.ChunkType switch
-            {
-                RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
-                RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
-                RoadChunkType.YFork => currentManeuverDirection != DashboardNavigationSource.Maneuver.Straight ? currentManeuverDirection : DashboardNavigationSource.Maneuver.Left,
-                _ => DashboardNavigationSource.Maneuver.Straight
-            };
+            currentManeuverDirection = (nearestIntersection.TargetManeuver != DashboardNavigationSource.Maneuver.Straight)
+                ? nearestIntersection.TargetManeuver
+                : nearestIntersection.ChunkType switch
+                {
+                    RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
+                    RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
+                    RoadChunkType.YFork => DashboardNavigationSource.Maneuver.Left,
+                    _ => DashboardNavigationSource.Maneuver.Straight
+                };
 
             // Stable maneuver ID per unique intersection instance
             currentManeuverId = $"delivery-turn-{nearestIntersection.GetInstanceID()}";

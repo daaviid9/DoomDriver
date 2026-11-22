@@ -118,10 +118,27 @@ public class TurnTrigger : MonoBehaviour
                 VehicleMovement.Instance.EaseToCenter(1.2f);
             }
         }
+        else
+        {
+            // If the player took the wrong fork branch at a YFork (e.g. turned Right instead of Left),
+            // still execute the world turn down that branch while incurring the Recalculating penalty.
+            if (roadChunk != null && roadChunk.IsFork && (recordedManeuver == DashboardNavigationSource.Maneuver.Left || recordedManeuver == DashboardNavigationSource.Maneuver.Right))
+            {
+                if (RouteController.Instance != null)
+                {
+                    RouteController.Instance.ExecuteWorldTurn(roadChunk, recordedManeuver);
+                }
+            }
+        }
     }
 
     private DashboardNavigationSource.Maneuver GetExpectedManeuver()
     {
+        if (roadChunk != null && roadChunk.TargetManeuver != DashboardNavigationSource.Maneuver.Straight)
+        {
+            return roadChunk.TargetManeuver;
+        }
+
         if (RouteController.Instance != null && RouteController.Instance.HasActiveManeuver)
         {
             return RouteController.Instance.CurrentManeuverDirection;
