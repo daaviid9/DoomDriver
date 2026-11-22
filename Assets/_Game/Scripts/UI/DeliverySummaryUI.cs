@@ -10,17 +10,29 @@ using UnityEngine.UI;
 /// <summary>Presentation only: GameManager owns the immutable result and single settlement.</summary>
 public sealed class DeliverySummaryUI : MonoBehaviour
 {
+    [Header("UI References")]
     [SerializeField] private CanvasGroup panel;
     [SerializeField] private TMP_Text baseFeeText;
     [SerializeField] private TMP_Text timeTipText;
     [SerializeField] private TMP_Text damageText;
     [SerializeField] private TMP_Text missedTurnsText;
     [SerializeField] private TMP_Text netText;
-    [SerializeField] private TMP_Text detailText;
     [SerializeField] private TMP_Text elapsedTimeText;
     [SerializeField] private Button continueButton;
     [SerializeField, Min(0.01f)] private float fadeSeconds = 0.3f;
     [SerializeField, Min(0.01f)] private float tallySeconds = 1.1f;
+
+    [Header("Route & Header Bar (Optional)")]
+    [SerializeField] private TMP_Text restaurantText;
+    [SerializeField] private TMP_Text customerText;
+    [Tooltip("Badge pill showing just the timer mm:ss, e.g. '01:18'")]
+    [SerializeField] private TMP_Text pillTimeText;
+    [Tooltip("Rating pill text, e.g. '★ 5.0'")]
+    [SerializeField] private TMP_Text ratingText;
+
+    [Header("Customer Review Section (Optional)")]
+    [SerializeField] private TMP_Text customerQuoteText;
+    [SerializeField] private TMP_Text customerBylineText;
     private readonly Dictionary<TMP_Text, decimal> displayedAmounts = new Dictionary<TMP_Text, decimal>();
     private GameManager manager;
     private Coroutine tallyRoutine;
@@ -95,14 +107,52 @@ public sealed class DeliverySummaryUI : MonoBehaviour
         }
         var result = manager.CompletedDelivery;
         if (elapsedTimeText != null) elapsedTimeText.text = FormatElapsedTime(result.ElapsedSeconds);
-        bool capped = result.BaseFee + result.TimeTip < result.DamagePenalty + result.MissedTurnPenalty;
-        if (detailText != null)
+
+        if (pillTimeText != null)
         {
-            detailText.gameObject.SetActive(capped);
-            detailText.text = capped ? "Minimum earnings: €0.00" : string.Empty;
+            int total = (int)System.Math.Min(int.MaxValue, System.Math.Max(0d, System.Math.Floor(result.ElapsedSeconds)));
+            pillTimeText.text = string.Format(CultureInfo.InvariantCulture, "{0:00}:{1:00}", total / 60, total % 60);
         }
+
+        PopulateRouteAndReview(result);
         tallyRoutine = StartCoroutine(Animate(result));
     }
+    private void PopulateRouteAndReview(DeliveryResult result)
+    {
+        var selectedOrder = DoomDriver.Economy.OrderManager.Instance != null ? DoomDriver.Economy.OrderManager.Instance.SelectedOrder : null;
+        string restName = selectedOrder != null && !string.IsNullOrEmpty(selectedOrder.RestaurantName) ? selectedOrder.RestaurantName : "Pixel Donuts";
+        string custName = selectedOrder != null && !string.IsNullOrEmpty(selectedOrder.CustomerName) ? selectedOrder.CustomerName : "Adam B.";
+
+        if (restaurantText != null) restaurantText.text = restName;
+        if (customerText != null) customerText.text = custName;
+
+        float rating = 5.0f;
+        string quote = "Food arrived super fast and in pristine condition! Best driver in the city.";
+
+        if (result != null)
+        {
+            if (result.DamageHp > 40)
+            {
+                rating = 3.2f;
+                quote = "The bag was completely shaken up and the driver looked stressed. At least it arrived warm.";
+            }
+            else if (result.DamageHp > 15 || result.MissedTurnPenalty > 0)
+            {
+                rating = 4.1f;
+                quote = "Took a couple weird turns and heard tires screeching, but delivery was within reason.";
+            }
+            else if (result.TimeTip > 0)
+            {
+                rating = 5.0f;
+                quote = "Unbelievable speed! Literally felt like they flew here. 5 stars easily!";
+            }
+        }
+
+        if (ratingText != null) ratingText.text = $"{rating:F1}";
+        if (customerQuoteText != null) customerQuoteText.text = $"\"{quote}\"";
+        if (customerBylineText != null) customerBylineText.text = $"— {custName.ToUpperInvariant()}, VERIFIED CUSTOMER";
+    }
+
     public static string FormatElapsedTime(float seconds)
     {
         if (float.IsNaN(seconds) || float.IsInfinity(seconds)) seconds = 0;
