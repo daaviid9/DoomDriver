@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using DoomDriver.Economy;
 
 /// <summary>
 /// Core State Machine for the DoomDriver gameplay loop.
@@ -34,6 +35,8 @@ public class GameManager : MonoBehaviour
     public event System.Action OnDeliveryStarted;
     public event System.Action OnDeliveryCompleted;
     public event System.Action OnDeliveryFailed;
+    public event System.Action<FailureReason> OnDeliveryFailedWithReason;
+    public FailureReason LastFailureReason { get; private set; } = FailureReason.VehicleCrash;
 
     private void Awake()
     {
@@ -96,6 +99,7 @@ public class GameManager : MonoBehaviour
 
             case GameState.DeliveryFailed:
                 OnDeliveryFailed?.Invoke();
+                OnDeliveryFailedWithReason?.Invoke(LastFailureReason);
                 break;
         }
 
@@ -148,9 +152,16 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// Fails the active delivery (e.g. car destroyed or time expired).
     /// </summary>
-    public void FailDelivery()
+    public void FailDelivery(FailureReason reason = FailureReason.VehicleCrash)
     {
         if (currentState != GameState.DeliveryActive) return;
+
+        LastFailureReason = reason;
+
+        if (DeliveryPenaltyManager.Instance != null)
+        {
+            DeliveryPenaltyManager.Instance.ProcessFailure(reason);
+        }
 
         SetState(GameState.DeliveryFailed);
     }

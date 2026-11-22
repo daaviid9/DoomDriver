@@ -18,5 +18,29 @@ MonoBehaviour:
   BasePayoutRange: {x: 5, y: 15}
   MaxTipRange: {x: 2, y: 6}
   TurnCountRange: {x: 1, y: 2}
-  RestaurantNames: []
-  CustomerNames: []
+  RestaurantNames:
+  - Pixel Donuts
+  - Pizza Pronto
+  - Burger Bistro
+  - Crispy Chick
+  - Sub & Roll
+  - Taco Fiesta
+  - Roast Cafe
+  - Golden Bagel
+  CustomerNames:
+  - Adam B.
+  - David M.
+  - Elena K.
+  - Victor S.
+  - Clara T.
+  - Oliver N.
+  - Sophie R.
+  - Philip H.
+  - Matthew P.
+  - Nina V.
+  - Thomas D.
+  - Luke Z.
+  - Samuel C.
+  - Theresa L.
+  - Martin B.
+  - Peter K.

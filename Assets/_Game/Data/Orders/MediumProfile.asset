@@ -18,5 +18,29 @@ MonoBehaviour:
   BasePayoutRange: {x: 15, y: 25}
   MaxTipRange: {x: 6, y: 12}
   TurnCountRange: {x: 2, y: 3}
-  RestaurantNames: []
-  CustomerNames: []
+  RestaurantNames:
+  - Dragon Wok
+  - Smash Patty
+  - Golden Ramen
+  - Mama's Pasta
+  - Bao & Noodle
+  - Falafel King
+  - Curry Point
+  - Kebab Station
+  CustomerNames:
+  - Adam B.
+  - David M.
+  - Elena K.
+  - Victor S.
+  - Clara T.
+  - Oliver N.
+  - Sophie R.
+  - Philip H.
+  - Matthew P.
+  - Nina V.
+  - Thomas D.
+  - Luke Z.
+  - Samuel C.
+  - Theresa L.
+  - Martin B.
+  - Peter K.
