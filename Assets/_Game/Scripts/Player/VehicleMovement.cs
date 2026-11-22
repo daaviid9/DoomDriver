@@ -388,7 +388,7 @@ public class VehicleMovement : MonoBehaviour
     /// Initiates a dynamic cornering drift maneuver during a 90-degree world turn.
     /// Smoothly animates vehicle body yaw, roll, steering wheel rotation, and centers position.
     /// </summary>
-    public void StartTurnManeuver(DashboardNavigationSource.Maneuver direction, float duration)
+    public void StartTurnManeuver(DashboardNavigationSource.Maneuver direction, float duration, bool isFork = false)
     {
         if (turnManeuverCoroutine != null)
         {
@@ -400,10 +400,10 @@ public class VehicleMovement : MonoBehaviour
             easeToCenterCoroutine = null;
         }
 
-        turnManeuverCoroutine = StartCoroutine(TurnManeuverRoutine(direction, duration));
+        turnManeuverCoroutine = StartCoroutine(TurnManeuverRoutine(direction, duration, isFork));
     }
 
-    private System.Collections.IEnumerator TurnManeuverRoutine(DashboardNavigationSource.Maneuver direction, float duration)
+    private System.Collections.IEnumerator TurnManeuverRoutine(DashboardNavigationSource.Maneuver direction, float duration, bool isFork = false)
     {
         isTurnManeuverActive = true;
         isManeuvering = true;
@@ -411,9 +411,15 @@ public class VehicleMovement : MonoBehaviour
 
         float elapsed = 0f;
         float startX = transform.position.x;
-        float targetYaw = (direction == DashboardNavigationSource.Maneuver.Left) ? -20f : 20f;
-        float targetRoll = (direction == DashboardNavigationSource.Maneuver.Left) ? 3.5f : -3.5f;
-        float targetWheel = (direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle : maxSteeringAngle;
+        float targetYaw = isFork
+            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? -12f : 12f)
+            : ((direction == DashboardNavigationSource.Maneuver.Left) ? -20f : 20f);
+        float targetRoll = isFork
+            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? 2.0f : -2.0f)
+            : ((direction == DashboardNavigationSource.Maneuver.Left) ? 3.5f : -3.5f);
+        float targetWheel = isFork
+            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle * 0.65f : maxSteeringAngle * 0.65f)
+            : ((direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle : maxSteeringAngle);
 
         while (elapsed < duration)
         {

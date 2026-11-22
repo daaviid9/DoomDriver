@@ -21,12 +21,12 @@ public static class YForkPrefabBuilder
     private const string TemplateChunkPrefab = "Assets/_Game/Prefabs/Environment/RoadChunk_01.prefab";
     private const string ScenePath = "Assets/_Game/Scenes/EnviromentScene.unity";
 
-    public const float ForkLength = 85.0f;
-    public const float ForkCenterZ = 45.0f;
-    public static readonly Vector3 LeftExitPos = new Vector3(-8.0f, 0f, 85.0f);
-    public static readonly Vector3 LeftExitRot = new Vector3(0f, -12.0f, 0f);
-    public static readonly Vector3 RightExitPos = new Vector3(8.0f, 0f, 85.0f);
-    public static readonly Vector3 RightExitRot = new Vector3(0f, 12.0f, 0f);
+    public const float ForkLength = 45.456f;
+    public const float ForkCenterZ = 18.37f;
+    public static readonly Vector3 LeftExitPos = new Vector3(-27.086f, 0f, 45.456f);
+    public static readonly Vector3 LeftExitRot = new Vector3(0f, -45.0f, 0f);
+    public static readonly Vector3 RightExitPos = new Vector3(27.086f, 0f, 45.456f);
+    public static readonly Vector3 RightExitRot = new Vector3(0f, 45.0f, 0f);
 
     [InitializeOnLoadMethod]
     private static void AutoBuildOnCompile()

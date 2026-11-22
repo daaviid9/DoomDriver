@@ -133,8 +133,10 @@ public class RouteController : MonoBehaviour
 
     private System.Collections.IEnumerator WorldTurnRoutine(RoadChunk intersectionChunk, DashboardNavigationSource.Maneuver direction)
     {
-        float duration = 0.55f;
-        float targetAngle = (direction == DashboardNavigationSource.Maneuver.Left) ? 90f : -90f;
+        bool isFork = (intersectionChunk != null && intersectionChunk.ChunkType == RoadChunkType.YFork);
+        float turnAngle = (intersectionChunk != null) ? intersectionChunk.TurnAngle : 90f;
+        float duration = isFork ? 0.42f : 0.55f;
+        float targetAngle = (direction == DashboardNavigationSource.Maneuver.Left) ? turnAngle : -turnAngle;
 
         // 1. Notify EnvironmentSpawner that a world turn is in progress and prune chunks ahead
         if (EnvironmentSpawner.Instance != null)
@@ -146,13 +148,13 @@ public class RouteController : MonoBehaviour
         // 2. Start vehicle drift animation (yaw, tilt, wheel rotation, tire screech)
         if (VehicleMovement.Instance != null)
         {
-            VehicleMovement.Instance.StartTurnManeuver(direction, duration);
+            VehicleMovement.Instance.StartTurnManeuver(direction, duration, isFork);
         }
 
         // 3. Small camera bump/shake for turn apex feel
         if (CameraShake.Instance != null)
         {
-            CameraShake.Instance.Shake(duration * 0.5f, 0.12f);
+            CameraShake.Instance.Shake(duration * 0.5f, isFork ? 0.08f : 0.12f);
         }
 
         // 4. Smoothly rotate the intersection chunk around its intersection center.

@@ -64,22 +64,22 @@ The driver no longer travels on an endless straight highway. Instead, the game g
    * The GPS announces a new recalculated maneuver once the detour route is prepared.
 
 ### Card 4.3 – Extended Y-Fork Road Prefabs & Branch Geometry
-1. **High-Speed Split Geometry (~85m Length):**
-   * Replaces abrupt 44.75m 90° T-junctions with a smooth, extended Y-fork avenue segment (`chunkLength = 85.0m`, `intersectionCenterZ = 45.0m`).
-   * The avenue splits gradually from $Z = 32.5\text{m}$ into dual diverging paths:
-     * **Left Fork:** Exits at $X = -8.0\text{m}, Z = 85.0\text{m}$ (rotation $Y = -12^\circ$).
-     * **Right Fork:** Exits at $X = +8.0\text{m}, Z = 85.0\text{m}$ (rotation $Y = +12^\circ$).
-2. **Central Divider Island & Crash Attenuator:**
-   * Features a reinforced safety wedge at the fork apex ($Z = 38.5\text{m}$):
-     * Crash attenuator barrier (`Road_Barrier.prefab`) and warning chevron sign (`Road_Work_Sign_1.prefab`).
-     * Left and right inner metal guardrails (`RoadBarrierMetalSheet.prefab`) spanning $Z = 46\text{m}$ to $70\text{m}$.
-     * Central island greenery trees (`Tree_2.prefab`) and median streetlights (`Light.prefab`).
+1. **High-Speed 45° Split Geometry (`chunkLength = 45.456m`, `intersectionCenterZ = 18.37m`):**
+   * Replaces abrupt 90° T-junctions with a smooth, authentic $45^\circ$ Y-fork avenue segment.
+   * The avenue splits into dual diverging paths:
+     * **Left Fork:** Exits at $X = -27.086\text{m}, Z = 45.456\text{m}$ (rotation $Y = -45.0^\circ$).
+     * **Right Fork:** Exits at $X = +27.086\text{m}, Z = 45.456\text{m}$ (rotation $Y = +45.0^\circ$).
+   * Span between branch centers at exit: $\Delta X = 54.172\text{m}$.
+2. **Analytical 45° World Turn Pivot (`RouteController`):**
+   * Rotation angle is dynamically configured via `intersectionChunk.TurnAngle` ($45^\circ$ for `YFork` vs $90^\circ$ for standard intersections).
+   * Pivoting around analytical center $C_z = E_z - |E_x| = 45.456 - 27.086 = 18.37\text{m}$ ensures the chosen branch exit aligns **identically at $X = 0.0000\text{m}$ and $0.0^\circ$ world rotation**.
+   * `VehicleMovement.StartTurnManeuver` adapts with softer drift yaw ($-12^\circ / +12^\circ$) and faster duration (0.42s) for a natural high-speed highway fork feel.
 3. **Dual Exit Anchors & Preview Alignment (`EnvironmentSpawner`):**
    * `RoadChunk.cs` defines `RoadChunkType.YFork` and dual exit anchors:
-     * `GetBranchExitLocalPosition(direction)` returns the exact local position.
-     * `GetBranchExitLocalRotation(direction)` returns the matching branch rotation ($\pm 12^\circ$).
+     * `GetBranchExitLocalPosition(direction)` returns the exact local position ($\pm 27.086\text{m}$).
+     * `GetBranchExitLocalRotation(direction)` returns the matching branch rotation ($\pm 45.0^\circ$).
    * When `EnvironmentSpawner` spawns a Y-fork, `AttachSideBranchPreviews()` attaches preview chunks to **both** left and right exits simultaneously.
-   * The entire segment is framed with multi-story buildings and streetlights along both outer flanks without geometry holes or visual gaps.
+   * Promoted preview chunks seamlessly continue straight along the $+Z$ axis without gaps or stutter.
 
 ---
 

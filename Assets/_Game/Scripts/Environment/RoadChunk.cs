@@ -43,21 +43,22 @@ public class RoadChunk : MonoBehaviour
 
     [Header("Y-Fork Branch Anchors")]
     [Tooltip("Local position of the left fork exit branch anchor.")]
-    [SerializeField] private Vector3 leftForkExitPosition = new Vector3(-7f, 0f, 85f);
+    [SerializeField] private Vector3 leftForkExitPosition = new Vector3(-27.086f, 0f, 45.456f);
 
     [Tooltip("Local rotation (Euler angles) of the left fork exit branch anchor.")]
-    [SerializeField] private Vector3 leftForkExitRotation = new Vector3(0f, -12f, 0f);
+    [SerializeField] private Vector3 leftForkExitRotation = new Vector3(0f, -45f, 0f);
 
     [Tooltip("Local position of the right fork exit branch anchor.")]
-    [SerializeField] private Vector3 rightForkExitPosition = new Vector3(7f, 0f, 85f);
+    [SerializeField] private Vector3 rightForkExitPosition = new Vector3(27.086f, 0f, 45.456f);
 
     [Tooltip("Local rotation (Euler angles) of the right fork exit branch anchor.")]
-    [SerializeField] private Vector3 rightForkExitRotation = new Vector3(0f, 12f, 0f);
+    [SerializeField] private Vector3 rightForkExitRotation = new Vector3(0f, 45f, 0f);
 
     public RoadChunkType ChunkType => chunkType;
     public float ChunkLength => chunkLength;
     public bool IsIntersection => chunkType != RoadChunkType.Straight;
     public bool IsFork => chunkType == RoadChunkType.YFork;
+    public float TurnAngle => (chunkType == RoadChunkType.YFork) ? 45.0f : 90.0f;
     public float IntersectionCenterZ { get => intersectionCenterZ; set => intersectionCenterZ = value; }
     public Vector3 LeftBranchOffset => leftBranchOffset;
     public Vector3 RightBranchOffset => rightBranchOffset;
