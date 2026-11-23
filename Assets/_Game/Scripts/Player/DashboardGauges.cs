@@ -11,7 +11,7 @@ public class DashboardGauges : MonoBehaviour
     public static DashboardGauges Instance { get; private set; }
 
     [Header("Speedometer (Speed Gauge)")]
-    [Tooltip("Transform of the speedometer needle (or dial indicator)")]
+    [Tooltip("Transform of the speedometer needle")]
     [SerializeField] private Transform speedometerNeedle;
 
     [Tooltip("Maximum display speed in km/h representing the top of the gauge dial (typically 180 km/h)")]
@@ -23,11 +23,11 @@ public class DashboardGauges : MonoBehaviour
     [Tooltip("Needle angle (in degrees) when speed is maxDisplaySpeedKmh")]
     [SerializeField] private float speedMaxAngle = 135f;
 
-    [Tooltip("Local axis around which the speedometer needle rotates")]
-    [SerializeField] private Vector3 speedRotationAxis = Vector3.up;
+    [Tooltip("Local axis around which the speedometer needle rotates. Dial face normal is local (0, 1, 0)")]
+    [SerializeField] private Vector3 speedRotationAxis = new Vector3(0f, 1f, 0f);
 
     [Header("Tachometer (RPM Gauge)")]
-    [Tooltip("Transform of the tachometer / RPM needle (or dial indicator)")]
+    [Tooltip("Transform of the tachometer / RPM needle")]
     [SerializeField] private Transform tachometerNeedle;
 
     [Tooltip("Idle RPM value (gauge rest state)")]
@@ -42,16 +42,12 @@ public class DashboardGauges : MonoBehaviour
     [Tooltip("Needle angle (in degrees) when RPM is at max/redline")]
     [SerializeField] private float rpmMaxAngle = 135f;
 
-    [Tooltip("Local axis around which the tachometer needle rotates")]
-    [SerializeField] private Vector3 rpmRotationAxis = Vector3.up;
+    [Tooltip("Local axis around which the tachometer needle rotates. Dial face normal is local (0, 1, 0)")]
+    [SerializeField] private Vector3 rpmRotationAxis = new Vector3(0f, 1f, 0f);
 
     [Header("Dynamics & Smoothing")]
     [Tooltip("Smoothing speed for needle movement (higher = snappier, lower = smoother lag)")]
     [SerializeField] private float needleSmoothing = 14f;
-
-    [Tooltip("Elastic bounce / overshoot amount when accelerating quickly")]
-    [Range(0f, 0.5f)]
-    [SerializeField] private float needleElasticity = 0.05f;
 
     [Header("High-Speed Needle Vibration / Jitter")]
     [Tooltip("Speed in km/h above which the speedometer needle starts vibrating subtely")]
@@ -62,6 +58,18 @@ public class DashboardGauges : MonoBehaviour
 
     [Tooltip("Frequency of needle vibration")]
     [SerializeField] private float jitterFrequency = 32f;
+
+    [Header("Manual Calibration / Testing")]
+    [Tooltip("When enabled, overrides automatic speed/RPM with test values below")]
+    [SerializeField] private bool manualTestMode = false;
+
+    [Range(0f, 180f)]
+    [Tooltip("Manual speed in km/h for testing in Inspector")]
+    [SerializeField] private float testSpeedKmh = 0f;
+
+    [Range(0f, 7000f)]
+    [Tooltip("Manual RPM for testing in Inspector")]
+    [SerializeField] private float testRpm = 900f;
 
     // Runtime state
     private float currentDisplayedKmh = 0f;
@@ -98,10 +106,6 @@ public class DashboardGauges : MonoBehaviour
         FindEngineAudioSource();
     }
 
-    /// <summary>
-    /// Auto-locates Clock 2 (Speed) and Clock 1 (RPM) under Clocks hierarchy if not manually wired in Inspector.
-    /// Also supports custom spawned / needle child transforms.
-    /// </summary>
     public void LocateNeedlesIfUnassigned()
     {
         if (speedometerNeedle == null || tachometerNeedle == null)
@@ -118,10 +122,9 @@ public class DashboardGauges : MonoBehaviour
 
             if (clocksRoot != null)
             {
-                // Clock 2 is the Speedometer dial (-0.09, 0.02, -0.01) with 'Clock Backgound Speed'
                 if (speedometerNeedle == null)
                 {
-                    var needle = clocksRoot.Find("SpeedNeedle") ?? clocksRoot.Find("Clock 2/Needle") ?? clocksRoot.Find("Clock 2");
+                    var needle = clocksRoot.Find("Clock 2/SpeedNeedle") ?? clocksRoot.Find("SpeedNeedle") ?? clocksRoot.Find("Clock 2");
                     if (needle != null)
                     {
                         speedometerNeedle = needle;
@@ -129,10 +132,9 @@ public class DashboardGauges : MonoBehaviour
                     }
                 }
 
-                // Clock 1 is the Tachometer / RPM dial (0.09, 0.02, -0.01) with 'Clock Background Rounds'
                 if (tachometerNeedle == null)
                 {
-                    var needle = clocksRoot.Find("RpmNeedle") ?? clocksRoot.Find("Clock 1/Needle") ?? clocksRoot.Find("Clock 1");
+                    var needle = clocksRoot.Find("Clock 1/RpmNeedle") ?? clocksRoot.Find("RpmNeedle") ?? clocksRoot.Find("Clock 1");
                     if (needle != null)
                     {
                         tachometerNeedle = needle;
@@ -154,51 +156,48 @@ public class DashboardGauges : MonoBehaviour
 
     private void Update()
     {
-        float targetSpeedMps = 0f;
+        float targetKmh = 0f;
+        float targetRpm = idleRpm;
 
-        // Read forward speed from single source of truth (WorldSpeedController)
-        if (WorldSpeedController.Instance != null)
+        if (manualTestMode)
         {
-            targetSpeedMps = WorldSpeedController.Instance.CurrentSpeed;
+            targetKmh = testSpeedKmh;
+            targetRpm = testRpm;
         }
+        else
+        {
+            float targetSpeedMps = 0f;
+            if (WorldSpeedController.Instance != null)
+            {
+                targetSpeedMps = WorldSpeedController.Instance.CurrentSpeed;
+            }
 
-        // Convert m/s to km/h (1 m/s = 3.6 km/h)
-        float targetKmh = targetSpeedMps * 3.6f;
+            targetKmh = targetSpeedMps * 3.6f;
+            targetRpm = CalculateTargetRpm(targetSpeedMps);
+        }
 
         // Smooth speed needle transition
         currentDisplayedKmh = Mathf.Lerp(currentDisplayedKmh, targetKmh, Time.deltaTime * needleSmoothing);
-
-        // Compute RPM target based on engine audio pitch or speed ratio
-        float targetRpm = CalculateTargetRpm(targetSpeedMps);
         currentDisplayedRpm = Mathf.Lerp(currentDisplayedRpm, targetRpm, Time.deltaTime * needleSmoothing);
 
-        // Apply needle transformations
         UpdateSpeedometerNeedle();
         UpdateTachometerNeedle();
     }
 
-    /// <summary>
-    /// Computes engine RPM according to engine audio pitch and speed simulation.
-    /// Emulates simulated gear shifts / load for natural instrument gauge movement.
-    /// </summary>
     private float CalculateTargetRpm(float speedMps)
     {
-        // If parked in lobby or menu, rest at idle
         if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive)
         {
             return idleRpm;
         }
 
-        // If Engine AudioSource is available, derive directly from its runtime pitch
         if (cachedEngineAudio != null && cachedEngineAudio.isPlaying)
         {
             float pitchNorm = Mathf.InverseLerp(0.8f, 2.2f, cachedEngineAudio.pitch);
             return Mathf.Lerp(idleRpm, maxRpm, pitchNorm);
         }
 
-        // Fallback: 3-gear simulation based on speed
         float speedNorm = Mathf.Clamp01(speedMps / 28f);
-        // Multi-gear tooth profile (3 gears)
         float gearProgress = (speedNorm * 3f) % 1f;
         float rpm = Mathf.Lerp(idleRpm, maxRpm, Mathf.Pow(gearProgress, 0.85f));
         return Mathf.Clamp(rpm, idleRpm, maxRpm);
@@ -211,18 +210,16 @@ public class DashboardGauges : MonoBehaviour
         float speedFrac = Mathf.Clamp01(currentDisplayedKmh / maxDisplaySpeedKmh);
         float baseAngle = Mathf.Lerp(speedZeroAngle, speedMaxAngle, speedFrac);
 
-        // Add subtle high-speed jitter/vibration
         float jitter = 0f;
         if (currentDisplayedKmh > vibrationThresholdKmh)
         {
             float jitterIntensity = Mathf.InverseLerp(vibrationThresholdKmh, maxDisplaySpeedKmh, currentDisplayedKmh);
-            // Perlin noise or high-frequency sine vibration
             float noise = (Mathf.PerlinNoise(Time.time * jitterFrequency, 0.5f) - 0.5f) * 2f;
             jitter = noise * maxJitterAngle * jitterIntensity;
         }
 
         float finalAngle = baseAngle + jitter;
-        speedometerNeedle.localRotation = speedInitialLocalRot * Quaternion.AngleAxis(finalAngle, speedRotationAxis);
+        speedometerNeedle.localRotation = speedInitialLocalRot * Quaternion.AngleAxis(finalAngle, speedRotationAxis.normalized);
     }
 
     private void UpdateTachometerNeedle()
@@ -232,7 +229,6 @@ public class DashboardGauges : MonoBehaviour
         float rpmFrac = Mathf.Clamp01((currentDisplayedRpm - idleRpm) / (maxRpm - idleRpm));
         float baseAngle = Mathf.Lerp(rpmZeroAngle, rpmMaxAngle, rpmFrac);
 
-        // Slight natural engine pulsation jitter
         float rpmJitter = 0f;
         if (currentDisplayedRpm > idleRpm + 500f)
         {
@@ -241,21 +237,13 @@ public class DashboardGauges : MonoBehaviour
         }
 
         float finalAngle = baseAngle + rpmJitter;
-        tachometerNeedle.localRotation = rpmInitialLocalRot * Quaternion.AngleAxis(finalAngle, rpmRotationAxis);
+        tachometerNeedle.localRotation = rpmInitialLocalRot * Quaternion.AngleAxis(finalAngle, rpmRotationAxis.normalized);
     }
 
-    /// <summary>
-    /// Explicitly configure needle references and parameters.
-    /// </summary>
-    public void Configure(Transform speedNeedle, Transform rpmNeedle, float maxSpeed = 180f, float maxEngineRpm = 7000f)
+    public void SetManualTest(bool enable, float speedKmh = 60f, float rpm = 3000f)
     {
-        speedometerNeedle = speedNeedle;
-        if (speedNeedle != null) speedInitialLocalRot = speedNeedle.localRotation;
-
-        tachometerNeedle = rpmNeedle;
-        if (rpmNeedle != null) rpmInitialLocalRot = rpmNeedle.localRotation;
-
-        maxDisplaySpeedKmh = maxSpeed;
-        maxRpm = maxEngineRpm;
+        manualTestMode = enable;
+        testSpeedKmh = speedKmh;
+        testRpm = rpm;
     }
 }
