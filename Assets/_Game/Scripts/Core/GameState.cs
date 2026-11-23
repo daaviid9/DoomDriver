@@ -1,8 +1,18 @@
 /// <summary>
-/// Defines the high-level states of the courier delivery gameplay loop.
+/// Defines the high-level states of the courier delivery gameplay loop and daily shift lifecycle.
 /// </summary>
 public enum GameState
 {
+    /// <summary>
+    /// Morning briefing in parked car: vehicle is stationary, player reviews daily quota, dispatcher notes, and starts shift.
+    /// </summary>
+    DayBriefing,
+
+    /// <summary>
+    /// Macro state indicating an active working shift is in progress.
+    /// </summary>
+    ShiftActive,
+
     /// <summary>
     /// Lobby in parked car: vehicle is stationary, player selects a delivery order on the phone.
     /// </summary>
@@ -21,6 +31,11 @@ public enum GameState
     /// <summary>
     /// Delivery failed: vehicle destroyed (0 HP) or critical time expired.
     /// </summary>
-    DeliveryFailed
+    DeliveryFailed,
+
+    /// <summary>
+    /// End-of-day settlement: vehicle is stationary, shows total daily earnings, living expenses/bills deducted, and advances day.
+    /// </summary>
+    DaySummary
 }
 

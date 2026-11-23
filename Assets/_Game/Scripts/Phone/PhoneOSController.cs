@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using DoomDriver.Economy;
 
 namespace DoomDriver.Phone
 {
@@ -104,7 +105,7 @@ namespace DoomDriver.Phone
             SubscribeToEvents();
 
             // Set initial state: In lobby start on Home Screen, during delivery hide OS
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.OrderSelection)
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
             {
                 SetOSVisible(false);
             }
@@ -200,8 +201,14 @@ namespace DoomDriver.Phone
 
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDayBriefingStarted += HandleOrderSelectionStarted;
+
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
+
+                GameManager.Instance.OnDaySummaryStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted += HandleOrderSelectionStarted;
 
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
@@ -222,7 +229,9 @@ namespace DoomDriver.Phone
 
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
             }
         }
@@ -235,6 +244,20 @@ namespace DoomDriver.Phone
             if (CurrentScreen == PhoneScreen.Home && navigator != null && navigator.SelectedIndex >= 0)
             {
                 lastSelectedHomeIndex = navigator.SelectedIndex;
+            }
+
+            // Automatically start shift when opening CourierApp during DayBriefing
+            if (targetScreen == PhoneScreen.CourierApp && GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DayBriefing)
+            {
+                Debug.Log("<color=green>[PhoneOSController]</color> Opening Courier App during DayBriefing -> Starting Shift!");
+                if (ShiftManager.Instance != null)
+                {
+                    ShiftManager.Instance.StartShift();
+                }
+                else
+                {
+                    GameManager.Instance.TransitionFromBriefingToShift();
+                }
             }
 
             CurrentScreen = targetScreen;
@@ -300,6 +323,12 @@ namespace DoomDriver.Phone
         private void SetupCourierNavigation()
         {
             if (navigator == null || courierAppUI == null) return;
+
+            // Ensure offers are generated if OrderManager is empty
+            if (OrderManager.Instance != null && (OrderManager.Instance.CurrentOffers == null || OrderManager.Instance.CurrentOffers.Count == 0))
+            {
+                OrderManager.Instance.GenerateOffers();
+            }
 
             if (courierAppUI.CardViews != null && courierAppUI.CardViews.Count > 0)
             {

@@ -31,10 +31,12 @@ public class GameManager : MonoBehaviour
 
     // High-level C# events for decoupled observation by other systems
     public event System.Action<GameState> OnGameStateChanged;
+    public event System.Action OnDayBriefingStarted;
     public event System.Action OnOrderSelectionStarted;
     public event System.Action OnDeliveryStarted;
     public event System.Action OnDeliveryCompleted;
     public event System.Action OnDeliveryFailed;
+    public event System.Action OnDaySummaryStarted;
     public event System.Action<FailureReason> OnDeliveryFailedWithReason;
     public FailureReason LastFailureReason { get; private set; } = FailureReason.VehicleCrash;
 
@@ -63,8 +65,16 @@ public class GameManager : MonoBehaviour
     {
         ObstacleSpawner.ClearAllObstacles();
 
-        // Start in the parked car lobby
-        SetState(GameState.OrderSelection);
+        // If a shift was already in progress during session load, resume in OrderSelection.
+        // Otherwise, start the day in DayBriefing.
+        if (ShiftManager.Instance != null && ShiftManager.Instance.IsShiftActive)
+        {
+            SetState(GameState.OrderSelection);
+        }
+        else
+        {
+            SetState(GameState.DayBriefing);
+        }
     }
 
     private void Update()
@@ -85,6 +95,10 @@ public class GameManager : MonoBehaviour
 
         switch (currentState)
         {
+            case GameState.DayBriefing:
+                OnDayBriefingStarted?.Invoke();
+                break;
+
             case GameState.OrderSelection:
                 OnOrderSelectionStarted?.Invoke();
                 break;
@@ -100,6 +114,10 @@ public class GameManager : MonoBehaviour
             case GameState.DeliveryFailed:
                 OnDeliveryFailed?.Invoke();
                 OnDeliveryFailedWithReason?.Invoke(LastFailureReason);
+                break;
+
+            case GameState.DaySummary:
+                OnDaySummaryStarted?.Invoke();
                 break;
         }
 
@@ -167,7 +185,7 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Returns to the parked car lobby to select a new order.
+    /// Returns to the parked car lobby to select a new order, recording shift progress upon completion.
     /// </summary>
     public void ReturnToOrderSelection()
     {
@@ -186,13 +204,56 @@ public class GameManager : MonoBehaviour
                     // Set before notifying wallet listeners: reentrant Continue cannot pay twice.
                     rewardSettled = true;
                     WalletManager.Instance.AddFunds((float)CompletedDelivery.NetEarnings);
+
+                    // Record completed delivery in ShiftManager
+                    if (ShiftManager.Instance != null)
+                    {
+                        ShiftManager.Instance.RecordDeliveryCompleted(CompletedDelivery.NetEarnings);
+                    }
                 }
             }
             if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
             ObstacleSpawner.ClearAllObstacles();
+
+            // If auto-advance on quota met is active, transition straight to DaySummary
+            if (ShiftManager.Instance != null && ShiftManager.Instance.IsQuotaMet && ShiftManager.Instance.AutoAdvanceOnQuotaMet)
+            {
+                ShiftManager.Instance.EndShift();
+                return;
+            }
+
             SetState(GameState.OrderSelection);
         }
         finally { returningToLobby = false; }
+    }
+
+    /// <summary>
+    /// Transitions from morning briefing to the order selection lobby.
+    /// </summary>
+    public void TransitionFromBriefingToShift()
+    {
+        if (currentState != GameState.DayBriefing) return;
+        SetState(GameState.OrderSelection);
+    }
+
+    /// <summary>
+    /// Opens the end-of-day summary and settlement screen.
+    /// </summary>
+    public void OpenDaySummary()
+    {
+        if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
+        ObstacleSpawner.ClearAllObstacles();
+        SetState(GameState.DaySummary);
+    }
+
+    /// <summary>
+    /// Starts a new working day morning briefing.
+    /// </summary>
+    public void StartNewDayBriefing()
+    {
+        if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
+        ObstacleSpawner.ClearAllObstacles();
+        SetState(GameState.DayBriefing);
     }
     /// <summary>
     /// Restarts the current active scene.
@@ -264,6 +325,11 @@ public class GameManager : MonoBehaviour
         {
             gameObject.AddComponent<RouteController>();
         }
+
+        if (ShiftManager.Instance == null && GetComponent<ShiftManager>() == null)
+        {
+            gameObject.AddComponent<ShiftManager>();
+        }
     }
 
 #if UNITY_EDITOR
@@ -283,6 +349,35 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("<color=yellow>[DEBUG]</color> R pressed -> Returning to Order Selection Lobby!");
             ReturnToOrderSelection();
+        }
+        // Up Arrow / W / B: Start Shift from DayBriefing directly into Order Selection
+        else if ((UnityEngine.InputSystem.Keyboard.current.upArrowKey.wasPressedThisFrame ||
+                  UnityEngine.InputSystem.Keyboard.current.wKey.wasPressedThisFrame ||
+                  UnityEngine.InputSystem.Keyboard.current.bKey.wasPressedThisFrame) && currentState == GameState.DayBriefing)
+        {
+            Debug.Log("<color=green>[DEBUG]</color> Up Arrow / W / B pressed -> Starting Shift and opening Order Selection!");
+            if (ShiftManager.Instance != null) ShiftManager.Instance.StartShift();
+            else TransitionFromBriefingToShift();
+
+            if (DoomDriver.Phone.PhoneOSController.Instance != null)
+            {
+                DoomDriver.Phone.PhoneOSController.Instance.OpenScreen(DoomDriver.Phone.PhoneScreen.CourierApp);
+            }
+        }
+        // N: End Shift to DaySummary
+        else if (UnityEngine.InputSystem.Keyboard.current.nKey.wasPressedThisFrame && 
+                (currentState == GameState.OrderSelection || currentState == GameState.DeliveryCompleted))
+        {
+            Debug.Log("<color=yellow>[DEBUG]</color> N pressed -> Ending Shift to DaySummary!");
+            if (ShiftManager.Instance != null) ShiftManager.Instance.EndShift();
+            else OpenDaySummary();
+        }
+        // M: Advance to Next Day from DaySummary
+        else if (UnityEngine.InputSystem.Keyboard.current.mKey.wasPressedThisFrame && currentState == GameState.DaySummary)
+        {
+            Debug.Log("<color=cyan>[DEBUG]</color> M pressed -> Advancing to Next Day!");
+            if (ShiftManager.Instance != null) ShiftManager.Instance.AdvanceToNextDay();
+            else StartNewDayBriefing();
         }
     }
 #endif

@@ -25,18 +25,28 @@ namespace DoomDriver.Phone
         [Tooltip("Percentage completion text (e.g. '14% done')")]
         [SerializeField] private TMP_Text progressPercentageText;
 
+        [Tooltip("Optional text for displaying current day index (e.g. 'Day 1')")]
+        [SerializeField] private TMP_Text dayLabelText;
+
+        [Tooltip("Optional text for displaying orders quota progress (e.g. 'Orders: 1 / 3')")]
+        [SerializeField] private TMP_Text quotaRatioText;
+
         [Tooltip("Progress bar fill Image (must have Image Type = Filled)")]
         [SerializeField] private Image progressBarFill;
 
         private void OnEnable()
         {
             WalletManager.OnBalanceChanged += HandleBalanceChanged;
+            ShiftManager.OnDayAdvanced += HandleDayAdvanced;
+            ShiftManager.OnDeliveryCountChanged += HandleDeliveryCountChanged;
             Refresh();
         }
 
         private void OnDisable()
         {
             WalletManager.OnBalanceChanged -= HandleBalanceChanged;
+            ShiftManager.OnDayAdvanced -= HandleDayAdvanced;
+            ShiftManager.OnDeliveryCountChanged -= HandleDeliveryCountChanged;
         }
 
         private void Start()
@@ -51,11 +61,47 @@ namespace DoomDriver.Phone
         {
             float current = WalletManager.Instance != null ? WalletManager.Instance.Balance : 0f;
             UpdateUI(current);
+
+            if (ShiftManager.Instance != null)
+            {
+                UpdateShiftInfo(ShiftManager.Instance.CurrentDay, ShiftManager.Instance.DeliveriesCompletedToday, ShiftManager.Instance.DailyQuota);
+            }
         }
 
         private void HandleBalanceChanged(float currentBalance)
         {
             UpdateUI(currentBalance);
+        }
+
+        private void HandleDayAdvanced(int newDay)
+        {
+            if (ShiftManager.Instance != null)
+            {
+                UpdateShiftInfo(newDay, ShiftManager.Instance.DeliveriesCompletedToday, ShiftManager.Instance.DailyQuota);
+            }
+            else
+            {
+                UpdateShiftInfo(newDay, 0, 3);
+            }
+        }
+
+        private void HandleDeliveryCountChanged(int delivered, int quota)
+        {
+            int day = ShiftManager.Instance != null ? ShiftManager.Instance.CurrentDay : 1;
+            UpdateShiftInfo(day, delivered, quota);
+        }
+
+        private void UpdateShiftInfo(int day, int delivered, int quota)
+        {
+            if (dayLabelText != null)
+            {
+                dayLabelText.text = $"Day {day}";
+            }
+
+            if (quotaRatioText != null)
+            {
+                quotaRatioText.text = $"Orders: {delivered} / {quota}";
+            }
         }
 
         private void UpdateUI(float current)

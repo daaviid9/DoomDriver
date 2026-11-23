@@ -48,13 +48,13 @@ namespace DoomDriver.Phone
             SubscribeToGameManager();
 
             // Set initial screen material based on current game state
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.OrderSelection)
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
             {
-                ShowBlackScreen();
+                ShowReels();
             }
             else
             {
-                ShowReels();
+                ShowBlackScreen();
             }
         }
 
@@ -72,8 +72,14 @@ namespace DoomDriver.Phone
         {
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDayBriefingStarted += HandleOrderSelectionStarted;
+
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
+
+                GameManager.Instance.OnDaySummaryStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted += HandleOrderSelectionStarted;
 
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
@@ -84,7 +90,9 @@ namespace DoomDriver.Phone
         {
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
             }
         }

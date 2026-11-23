@@ -105,6 +105,8 @@ public class GameUIController : MonoBehaviour
     {
         switch (state)
         {
+            case GameState.DayBriefing:
+            case GameState.DaySummary:
             case GameState.OrderSelection:
             case GameState.DeliveryActive:
                 if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);

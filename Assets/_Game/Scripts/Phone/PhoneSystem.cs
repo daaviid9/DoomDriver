@@ -126,8 +126,11 @@ namespace DoomDriver.Phone
                 fomoSlider.value = fomoValue;
             }
 
-            // Initialise camera if we start directly in the lobby.
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.OrderSelection && mainCamera != null)
+            // Initialise camera if we start in a lobby/briefing state.
+            if (GameManager.Instance != null && 
+               (GameManager.Instance.CurrentState == GameState.DayBriefing ||
+                GameManager.Instance.CurrentState == GameState.OrderSelection ||
+                GameManager.Instance.CurrentState == GameState.DaySummary) && mainCamera != null)
             {
                 ApplyLobbyCameraInstant();
             }
@@ -137,8 +140,14 @@ namespace DoomDriver.Phone
         {
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= OnOrderSelectionStarted;
+                GameManager.Instance.OnDayBriefingStarted += OnOrderSelectionStarted;
+
                 GameManager.Instance.OnOrderSelectionStarted -= OnOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted += OnOrderSelectionStarted;
+
+                GameManager.Instance.OnDaySummaryStarted -= OnOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted += OnOrderSelectionStarted;
 
                 GameManager.Instance.OnDeliveryStarted -= OnDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += OnDeliveryStarted;
@@ -149,7 +158,9 @@ namespace DoomDriver.Phone
         {
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= OnOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted -= OnOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted -= OnOrderSelectionStarted;
                 GameManager.Instance.OnDeliveryStarted -= OnDeliveryStarted;
             }
         }
