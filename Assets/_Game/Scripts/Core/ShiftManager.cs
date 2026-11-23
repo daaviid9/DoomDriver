@@ -264,6 +264,7 @@ public class ShiftManager : MonoBehaviour
     /// <summary>
     /// Resets all career progress back to Day 1 defaults (useful for testing or New Game).
     /// </summary>
+    [ContextMenu("Reset Career (Day 1, 0 Orders)")]
     public void ResetCareer()
     {
         PlayerPrefs.DeleteKey(KEY_CURRENT_DAY);

@@ -379,6 +379,12 @@ public class GameManager : MonoBehaviour
             if (ShiftManager.Instance != null) ShiftManager.Instance.AdvanceToNextDay();
             else StartNewDayBriefing();
         }
+        // U: Reset Career back to Day 1 (0 orders)
+        else if (UnityEngine.InputSystem.Keyboard.current.uKey.wasPressedThisFrame)
+        {
+            Debug.Log("<color=red>[DEBUG]</color> U pressed -> Resetting Career to Day 1 (0 orders)!");
+            if (ShiftManager.Instance != null) ShiftManager.Instance.ResetCareer();
+        }
     }
 #endif
 }

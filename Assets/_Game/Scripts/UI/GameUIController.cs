@@ -46,11 +46,7 @@ public class GameUIController : MonoBehaviour
 
         // Initialize HUD elements
         HandleDistanceUpdated(0f);
-
-        if (DeliveryProgressTracker.Instance != null && highscoreText != null)
-        {
-            highscoreText.text = $"Highscore: {Mathf.FloorToInt(DeliveryProgressTracker.Instance.Highscore)}";
-        }
+        UpdateShiftHUD();
 
         // Apply initial panel visibility matching starting game state
         if (GameManager.Instance != null)
@@ -108,7 +104,13 @@ public class GameUIController : MonoBehaviour
             case GameState.DayBriefing:
             case GameState.DaySummary:
             case GameState.OrderSelection:
+                if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
+                if (deliveryFailedPanel != null) deliveryFailedPanel.SetActive(false);
+                if (deliveryExpiredPanel != null) deliveryExpiredPanel.SetActive(false);
+                break;
+
             case GameState.DeliveryActive:
+                UpdateShiftHUD();
                 if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
                 if (deliveryFailedPanel != null) deliveryFailedPanel.SetActive(false);
                 if (deliveryExpiredPanel != null) deliveryExpiredPanel.SetActive(false);
@@ -146,6 +148,26 @@ public class GameUIController : MonoBehaviour
         if (pausePanel != null)
         {
             pausePanel.SetActive(isPaused);
+        }
+    }
+
+    private void UpdateShiftHUD()
+    {
+        if (highscoreText != null)
+        {
+            int day = ShiftManager.Instance != null ? ShiftManager.Instance.CurrentDay : 1;
+            int delivered = ShiftManager.Instance != null ? ShiftManager.Instance.DeliveriesCompletedToday : 0;
+            int quota = ShiftManager.Instance != null ? ShiftManager.Instance.DailyQuota : 3;
+            bool isQuotaMet = ShiftManager.Instance != null && ShiftManager.Instance.IsQuotaMet;
+
+            if (isQuotaMet)
+            {
+                highscoreText.text = $"Day {day} • Overtime ({delivered}/{quota})";
+            }
+            else
+            {
+                highscoreText.text = $"Day {day} • Mission {delivered + 1}/{quota}";
+            }
         }
     }
 

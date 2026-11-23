@@ -104,7 +104,7 @@ namespace DoomDriver.Phone
         {
             SubscribeToEvents();
 
-            // Set initial state: In lobby start on Home Screen, during delivery hide OS
+            // Set initial state: In lobby start in Courier App so orders are immediately selectable, during delivery hide OS
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
             {
                 SetOSVisible(false);
@@ -112,7 +112,7 @@ namespace DoomDriver.Phone
             else
             {
                 SetOSVisible(true);
-                OpenScreen(PhoneScreen.Home);
+                OpenScreen(PhoneScreen.CourierApp);
             }
         }
 
@@ -213,6 +213,13 @@ namespace DoomDriver.Phone
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
             }
+
+            ShiftManager.OnDeliveryCountChanged -= HandleShiftChanged;
+            ShiftManager.OnDeliveryCountChanged += HandleShiftChanged;
+            ShiftManager.OnDayAdvanced -= HandleShiftDayAdvanced;
+            ShiftManager.OnDayAdvanced += HandleShiftDayAdvanced;
+            ShiftManager.OnShiftStarted -= HandleShiftStarted;
+            ShiftManager.OnShiftStarted += HandleShiftStarted;
         }
 
         private void UnsubscribeFromEvents()
@@ -233,6 +240,50 @@ namespace DoomDriver.Phone
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnDaySummaryStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
+            }
+
+            ShiftManager.OnDeliveryCountChanged -= HandleShiftChanged;
+            ShiftManager.OnDayAdvanced -= HandleShiftDayAdvanced;
+            ShiftManager.OnShiftStarted -= HandleShiftStarted;
+        }
+
+        private void HandleShiftChanged(int delivered, int quota)
+        {
+            RefreshHomeScreenShiftInfo();
+        }
+
+        private void HandleShiftDayAdvanced(int newDay)
+        {
+            RefreshHomeScreenShiftInfo();
+        }
+
+        private void HandleShiftStarted()
+        {
+            RefreshHomeScreenShiftInfo();
+        }
+
+        private void RefreshHomeScreenShiftInfo()
+        {
+            if (homeScreenPanel == null) return;
+
+            int day = ShiftManager.Instance != null ? ShiftManager.Instance.CurrentDay : 1;
+            int delivered = ShiftManager.Instance != null ? ShiftManager.Instance.DeliveriesCompletedToday : 0;
+            int quota = ShiftManager.Instance != null ? ShiftManager.Instance.DailyQuota : 3;
+            bool isQuotaMet = ShiftManager.Instance != null && ShiftManager.Instance.IsQuotaMet;
+
+            var texts = homeScreenPanel.GetComponentsInChildren<TMP_Text>(true);
+            foreach (var t in texts)
+            {
+                if (t.gameObject.name == "DateText" && t.transform.parent != null && t.transform.parent.name == "Date&WelcomeWidget")
+                {
+                    t.textWrappingMode = TextWrappingModes.NoWrap;
+                    t.text = isQuotaMet ? $"DAY {day}  •  {delivered}/{quota} ORDERS" : $"DAY {day}  •  GOAL: {delivered}/{quota} ORDERS";
+                }
+                else if (t.gameObject.name == "HeaderText" && t.transform.parent != null && t.transform.parent.name == "Date&WelcomeWidget")
+                {
+                    t.textWrappingMode = TextWrappingModes.NoWrap;
+                    t.text = isQuotaMet ? "Overtime Active" : "Ready to roll?";
+                }
             }
         }
 
@@ -273,6 +324,7 @@ namespace DoomDriver.Phone
             switch (targetScreen)
             {
                 case PhoneScreen.Home:
+                    RefreshHomeScreenShiftInfo();
                     SetupHomeNavigation();
                     break;
 
@@ -391,7 +443,7 @@ namespace DoomDriver.Phone
         private void HandleOrderSelectionStarted()
         {
             SetOSVisible(true);
-            OpenScreen(PhoneScreen.Home);
+            OpenScreen(PhoneScreen.CourierApp);
         }
 
         private void HandleDeliveryStarted()
