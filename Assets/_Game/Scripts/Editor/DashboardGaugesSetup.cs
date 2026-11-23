@@ -103,7 +103,7 @@ public static class DashboardGaugesSetup
                 var gauges = car.GetComponent<DashboardGauges>();
                 if (gauges != null)
                 {
-                    gauges.SetManualTest(true, 85f, 3800f);
+                    gauges.SetManualTest(true, 0f, 900f);
                 }
             }
 
@@ -147,8 +147,8 @@ public static class DashboardGaugesSetup
         if (propRpmNeedle != null && rpmNeedle != null) propRpmNeedle.objectReferenceValue = rpmNeedle;
 
         // Dial face normal in local space is (0, 1, 0)
-        if (propSpeedAxis != null) propSpeedAxis.vector3Value = new Vector3(0f, 1f, 0f);
-        if (propRpmAxis != null) propRpmAxis.vector3Value = new Vector3(0f, 1f, 0f);
+        if (propSpeedAxis != null) propSpeedAxis.vector3Value = new Vector3(0f, -1f, 0f);
+        if (propRpmAxis != null) propRpmAxis.vector3Value = new Vector3(0f, -1f, 0f);
 
         so.ApplyModifiedPropertiesWithoutUndo();
     }

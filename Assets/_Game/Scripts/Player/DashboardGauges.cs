@@ -17,14 +17,14 @@ public class DashboardGauges : MonoBehaviour
     [Tooltip("Maximum display speed in km/h representing the top of the gauge dial (typically 180 km/h)")]
     [SerializeField] private float maxDisplaySpeedKmh = 180f;
 
-    [Tooltip("Needle angle (in degrees) when speed is 0 km/h")]
+    [Tooltip("Needle angle (in degrees) when speed is 0 km/h (bottom-left at 7 o'clock)")]
     [SerializeField] private float speedZeroAngle = -135f;
 
-    [Tooltip("Needle angle (in degrees) when speed is maxDisplaySpeedKmh")]
+    [Tooltip("Needle angle (in degrees) when speed is maxDisplaySpeedKmh (bottom-right at 5 o'clock)")]
     [SerializeField] private float speedMaxAngle = 135f;
 
-    [Tooltip("Local axis around which the speedometer needle rotates. Dial face normal is local (0, 1, 0)")]
-    [SerializeField] private Vector3 speedRotationAxis = new Vector3(0f, 1f, 0f);
+    [Tooltip("Local axis around which the speedometer needle rotates. Face normal into dial = (0, -1, 0)")]
+    [SerializeField] private Vector3 speedRotationAxis = new Vector3(0f, -1f, 0f);
 
     [Header("Tachometer (RPM Gauge)")]
     [Tooltip("Transform of the tachometer / RPM needle")]
@@ -36,14 +36,14 @@ public class DashboardGauges : MonoBehaviour
     [Tooltip("Maximum redline RPM on the gauge dial (typically 7000 or 8000 RPM)")]
     [SerializeField] private float maxRpm = 7000f;
 
-    [Tooltip("Needle angle (in degrees) when RPM is 0 (or idle)")]
+    [Tooltip("Needle angle (in degrees) when RPM is 0 (bottom-left at 7 o'clock)")]
     [SerializeField] private float rpmZeroAngle = -135f;
 
-    [Tooltip("Needle angle (in degrees) when RPM is at max/redline")]
+    [Tooltip("Needle angle (in degrees) when RPM is at max/redline (bottom-right at 5 o'clock)")]
     [SerializeField] private float rpmMaxAngle = 135f;
 
-    [Tooltip("Local axis around which the tachometer needle rotates. Dial face normal is local (0, 1, 0)")]
-    [SerializeField] private Vector3 rpmRotationAxis = new Vector3(0f, 1f, 0f);
+    [Tooltip("Local axis around which the tachometer needle rotates. Face normal into dial = (0, -1, 0)")]
+    [SerializeField] private Vector3 rpmRotationAxis = new Vector3(0f, -1f, 0f);
 
     [Header("Dynamics & Smoothing")]
     [Tooltip("Smoothing speed for needle movement (higher = snappier, lower = smoother lag)")]
@@ -240,7 +240,7 @@ public class DashboardGauges : MonoBehaviour
         tachometerNeedle.localRotation = rpmInitialLocalRot * Quaternion.AngleAxis(finalAngle, rpmRotationAxis.normalized);
     }
 
-    public void SetManualTest(bool enable, float speedKmh = 60f, float rpm = 3000f)
+    public void SetManualTest(bool enable, float speedKmh = 0f, float rpm = 900f)
     {
         manualTestMode = enable;
         testSpeedKmh = speedKmh;

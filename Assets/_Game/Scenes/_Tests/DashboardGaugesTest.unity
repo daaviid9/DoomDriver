@@ -129,11 +129,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1201981085495397635, guid: 5a96d676a8a8c624abcc70a5e125bca8, type: 3}
       propertyPath: testRpm
-      value: 3800
+      value: 900
       objectReference: {fileID: 0}
     - target: {fileID: 1201981085495397635, guid: 5a96d676a8a8c624abcc70a5e125bca8, type: 3}
       propertyPath: testSpeedKmh
-      value: 85
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1201981085495397635, guid: 5a96d676a8a8c624abcc70a5e125bca8, type: 3}
       propertyPath: manualTestMode

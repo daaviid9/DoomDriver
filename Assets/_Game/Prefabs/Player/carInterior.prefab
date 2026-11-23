@@ -2079,13 +2079,13 @@ MonoBehaviour:
   maxDisplaySpeedKmh: 180
   speedZeroAngle: -135
   speedMaxAngle: 135
-  speedRotationAxis: {x: 0, y: 1, z: 0}
+  speedRotationAxis: {x: 0, y: -1, z: 0}
   tachometerNeedle: {fileID: 2754799157152701421}
   idleRpm: 900
   maxRpm: 7000
   rpmZeroAngle: -135
   rpmMaxAngle: 135
-  rpmRotationAxis: {x: 0, y: 1, z: 0}
+  rpmRotationAxis: {x: 0, y: -1, z: 0}
   needleSmoothing: 14
   vibrationThresholdKmh: 60
   maxJitterAngle: 1.25
