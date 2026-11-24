@@ -1,29 +1,30 @@
 # Dev 4 – Road Network, Procedural Intersections & Navigation System
 
-Branch: `feature/procedural-junction-spawner`
+Branches: `feature/procedural-junction-spawner`, `turning-fork`
 
 ## Overview
 
 Dev 4 delivers the procedural road network and dynamic navigation architecture for **DoomDriver**. It bridges the economy (`DeliveryOrder`), the procedural world generator (`EnvironmentSpawner`), the physical vehicle (`VehicleMovement`), and the dashboard GPS display (`DashboardNavigationSource`).
 
-The driver no longer travels on an endless straight highway. Instead, the game generates an authentic urban courier route featuring 90° turns (left, right, and 4-way intersections). The player must follow dashboard navigation cues while balancing road awareness with smartphone distraction.
+The driver no longer travels on an endless straight highway. Legacy abrupt 90° T-junctions have been completely replaced with extended 45° **Y-fork** highway splits (`RoadChunk_YFork.prefab`). The player must follow dashboard fork guidance ("Keep Left / Keep Right") while balancing road awareness with smartphone distraction.
 
 ---
 
 ## 1. Key Assets & Components
 
 ### A. Road Prefabs & Geometry
-* `Assets/_Game/Prefabs/Environment/RoadChunk_TurnLeft.prefab`: T-junction branching left (`chunkLength = 44.75m`, `intersectionCenterZ = 19.0m`, `branchExitDistance = 25.8m`).
-* `Assets/_Game/Prefabs/Environment/RoadChunk_TurnRight.prefab`: T-junction branching right (`chunkLength = 44.75m`, `intersectionCenterZ = 19.0m`, `branchExitDistance = 25.8m`).
-* `Assets/_Game/Prefabs/Environment/RoadChunk_Crossroads.prefab`: 4-way crossroad supporting both left and right maneuvers.
-* [`Assets/_Game/Prefabs/Environment/RoadChunk_YFork.prefab`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Prefabs/Environment/RoadChunk_YFork.prefab): Extended ~85m Y-junction / fork road segment splitting smoothly into two branching paths (left fork vs. right fork) with dual exit branch anchors at $X = \pm 8\text{m}, Z = 85\text{m}$ (rotation $\pm 12^\circ$). Includes central divider island, apex crash attenuator, inner guardrails, island props, and flanking city buildings.
+* [`Assets/_Game/Prefabs/Environment/RoadChunk_YFork.prefab`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Prefabs/Environment/RoadChunk_YFork.prefab): Active 45° Y-junction / fork road segment (`chunkLength = 45.456m`, `intersectionCenterZ = 18.37m`) splitting smoothly into Left ($X = -27.086\text{m}, Y = -45^\circ$) and Right ($X = +27.086\text{m}, Y = +45^\circ$) branches. Includes central divider island, apex crash attenuator (`Road_Barrier_Crash`), inner guardrails, island props, and flanking city buildings.
 * `Assets/_Game/Prefabs/Environment/RoadChunk_01.prefab`, `RoadChunk_02.prefab`, `RoadChunk_03.prefab`: Straight street variants with diverse buildings, street lights, and scenery.
+* *(Legacy / Removed from active spawning)*: `RoadChunk_TurnLeft.prefab`, `RoadChunk_TurnRight.prefab`, `RoadChunk_Crossroads.prefab` — replaced completely by `RoadChunk_YFork.prefab`.
 
 ### B. Scripts & Architecture
-* [`RoadChunk.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Environment/RoadChunk.cs): Identifies segment type (`Straight`, `TurnLeft`, `TurnRight`, `Crossroads`, `TJunction`), configures length, intersection pivot center, and holds pre-attached preview branch chunks.
-* [`EnvironmentSpawner.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Environment/EnvironmentSpawner.cs): Procedurally spawns, pools, and recycles chunks along the route. Synchronizes directly with the active `DeliveryOrder` and attaches preview chunks to branch exits to eliminate visual void during turns.
-* [`TurnTrigger.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Navigation/TurnTrigger.cs): Placed on intersection chunks. Evaluates vehicle lateral position (`transform.position.x`) and steering angle (`steeringWheel.localRotation`) when the car crosses the junction threshold.
-* [`RouteController.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Navigation/RouteController.cs): Singleton managing route execution, GPS cue broadcasting (`DashboardNavigationSource`), world 90° pivot rotations, missed-turn penalties, and dynamic route extensions (+134m / 3 chunks).
+* [`RoadChunk.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Environment/RoadChunk.cs): Identifies segment type (`Straight`, `YFork`, plus legacy enum values), configures `chunkLength`, `intersectionCenterZ`, per-chunk `turnDuration`, and holds dual pre-attached preview branch chunks.
+* [`EnvironmentSpawner.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Environment/EnvironmentSpawner.cs): Procedurally spawns, pools, and recycles straight and Y-fork chunks along the route. Attaches preview chunks to both Y-fork exits and stops forward straight spawning behind active Y-forks (`HasActiveForkAhead()`).
+* [`TurnTrigger.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Navigation/TurnTrigger.cs): Placed on Y-fork chunks with an elongated trigger corridor. Evaluates smooth lateral positioning (`transform.position.x`) as the divider island approaches to determine Left vs. Right branch selection.
+* [`ForkCrashBarrier.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Navigation/ForkCrashBarrier.cs): Mounted on the central apex crash barrier (`Road_Barrier_Crash`) to handle fatal head-on impacts when a distracted driver fails to steer into either fork branch.
+* [`RouteController.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Navigation/RouteController.cs): Singleton managing route execution, fork GPS cue broadcasting (`Maneuver.ForkLeft` / `Maneuver.ForkRight`), analytical 45° world pivot rotations with Inspector-configurable `forkTurnDuration`, missed-turn penalties, and dynamic route extensions (+134m / 3 chunks).
+* [`DashboardNavigationSource.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Navigation/DashboardNavigationSource.cs) & [`DashboardNavigationUI.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/UI/DashboardNavigationUI.cs): Supports `Maneuver.ForkLeft` and `Maneuver.ForkRight` with fork-specific arrows, `"Keep Left" / "Keep Right"` dashboard prompts, and early voice/beep cues.
+* [`YForkPrefabBuilder.cs`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Scripts/Editor/YForkPrefabBuilder.cs): Editor tool used to assemble and update `RoadChunk_YFork.prefab` with exact branch exit anchors, guardrails, crash barrier, and framing buildings.
 
 ---
 
@@ -91,7 +92,16 @@ The driver no longer travels on an endless straight highway. Instead, the game g
      * The player **only survives if steering into Left or Right**.
      * If the player continues straight (or fails to steer into either fork branch, e.g. due to phone doomscrolling), they crash directly into the central divider barrier `Road_Barrier_Crash` (equipped with `BoxCollider` and `ForkCrashBarrier.cs`), triggering fatal damage (100 HP loss), explosion VFX/SFX, heavy camera shake, and `DeliveryFailed`.
      * Steering into the wrong branch (e.g. Right instead of GPS Left) still executes the smooth $45^\circ$ world turn to preserve motion, but triggers route recalculation (+150m road penalty) and financial deduction.
-     * **Game Over UI & Cursor Control:** Upon `DeliveryFailed`, `GameUIController` unlocks and shows the cursor (`Cursor.lockState = CursorLockMode.None`), and `DeliveryFailedPanel` presents a centered dark-themed summary with functional Retry and Exit buttons.
+     * **Game Over UI & Cursor Control:** Upon `DeliveryFailed`, `GameUIController` unlocks and shows the cursor (`Cursor.lockState = CursorLockMode.None`), and `DeliveryFailedPanel` / `DeliveryExpiredPanel` present the failure summary with functional Retry and Exit buttons.
+
+### Card 4.4 – Fork Navigation, Steering Splitting & Recalculating (`turning-fork`)
+1. **Elongated Fork Corridor Evaluation (`TurnTrigger.cs`):**
+   * Supports an elongated trigger corridor along the Y-fork approach so lateral car position (`transform.position.x`) is continuously evaluated as the central divider island approaches.
+2. **Fork-Specific GPS Maneuvers (`DashboardNavigationSource.cs` & `DashboardNavigationUI.cs`):**
+   * Added `Maneuver.ForkLeft` and `Maneuver.ForkRight` with dedicated fork arrows, **"Keep Left" / "Keep Right"** dashboard labels, and audio cues approaching the split.
+3. **Y-Fork-Only Spawner Pipeline (`EnvironmentSpawner.cs` & `EnviromentScene.unity`):**
+   * Removed legacy 90° intersection prefab slots (`turnLeftPrefabs`, `turnRightPrefabs`, `crossroadsPrefabs`) from `EnvironmentSpawner`; all procedural junctions now spawn exclusively from `yForkPrefabs` (`RoadChunk_YFork.prefab`).
+   * Verified `EnviromentScene.unity` `EnvironmentSpawner` references `RoadChunk_YFork.prefab` with `debugTurnSequence` set strictly to `RoadChunkType.YFork`.
 
 ---
 

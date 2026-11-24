@@ -189,12 +189,12 @@ The original 44.75m 90° T-junctions feel too short and abrupt at courier drivin
 `Assets/_Game/Scripts/Environment/EnvironmentSpawner.cs`
 
 **Checklist:**
-- [ ] Model/assemble extended Y-fork road chunk (~85m length) with gradual lane separation
-- [ ] Add central divider barrier / crash attenuator between left and right branches
-- [ ] Update `RoadChunk.cs` to support `RoadChunkType.YFork` with dual exit anchors
-- [ ] Configure `EnvironmentSpawner.cs` to support seamlessly spawning and aligning preview chunks to both fork exits
-- [ ] Ensure building models and streetlights frame the fork naturally without visual gaps or pop-in
-- [ ] Verify chunk mesh colliders and road surface textures match the existing asphalt style
+- [x] Model/assemble extended Y-fork road chunk (~85m length) with gradual lane separation
+- [x] Add central divider barrier / crash attenuator between left and right branches
+- [x] Update `RoadChunk.cs` to support `RoadChunkType.YFork` with dual exit anchors
+- [x] Configure `EnvironmentSpawner.cs` to support seamlessly spawning and aligning preview chunks to both fork exits
+- [x] Ensure building models and streetlights frame the fork naturally without visual gaps or pop-in
+- [x] Verify chunk mesh colliders and road surface textures match the existing asphalt style
 
 **Definition of Done:**
 The spawner can place an 85m Y-fork chunk in the world; the road visually splits into two distinct paths with no geometry tears or missing textures.
@@ -211,12 +211,12 @@ Adapt `TurnTrigger` and `RouteController` to evaluate smooth lateral positioning
 `Assets/_Game/Scripts/Navigation/DashboardNavigationSource.cs`
 
 **Checklist:**
-- [ ] Update `TurnTrigger.cs` to support an elongated trigger zone along the fork corridor
-- [ ] Evaluate lane choice based on car X coordinate as the divider island approaches
-- [ ] Add `Maneuver.ForkLeft` and `Maneuver.ForkRight` to `DashboardNavigationSource`
-- [ ] Display fork arrows on the dashboard GPS and trigger voice cue ("Take the left fork")
-- [ ] If the player enters the wrong fork or hits the crash barrier, trigger **Recalculating** (+route extension and penalty)
-- [ ] Smoothly pivot and align the chosen fork branch into the main forward driving axis
+- [x] Update `TurnTrigger.cs` to support an elongated trigger zone along the fork corridor
+- [x] Evaluate lane choice based on car X coordinate as the divider island approaches
+- [x] Add `Maneuver.ForkLeft` and `Maneuver.ForkRight` to `DashboardNavigationSource`
+- [x] Display fork arrows on the dashboard GPS and trigger voice cue ("Take the left fork")
+- [x] If the player enters the wrong fork or hits the crash barrier, trigger **Recalculating** (+route extension and penalty)
+- [x] Smoothly pivot and align the chosen fork branch into the main forward driving axis
 
 **Definition of Done:**
 Approaching the Y-fork, the GPS announces which fork to take; steering into the correct fork continues the delivery seamlessly; entering the wrong fork triggers Recalculating and penalty.
@@ -280,6 +280,6 @@ Resolve accumulated edge-case bugs and UI interaction issues reported from Sprin
 These cards are unassigned and open to any team member who completes their primary sprint cards early:
 
 - **Polish Card A – Dashboard Speedometer & Fuel Gauge:** Add visual needle movement to the 3D car cockpit instrument cluster reflecting actual `WorldMover.moveSpeed`.
-- **Polish Card B – Weather Variation (Rain & Fog):** Add light rain particle effect and wet asphalt reflection preset to increase driving atmosphere.
+- **Polish Card B – Weather Variation (Rain & Fog):** ✅ Completed on `alternating-weather` — added exterior rain particles, rain-on-glass shader on car windshield & side windows, automatic windshield wipers, wet road reflections, and daily shift briefing fog density control (see [`Dynamic_Weather_and_Wipers.md`](./Dynamic_Weather_and_Wipers.md)).
 - **Polish Card C – Radio Station Switcher:** Add a clickable knob on the dashboard radio to switch between 2-3 funny city radio stations or car silence.
 
