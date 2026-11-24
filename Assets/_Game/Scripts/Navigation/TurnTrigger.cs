@@ -14,6 +14,7 @@ public class TurnTrigger : MonoBehaviour
     private bool isInEvaluationZone = false;
     private bool hasClearedObstacles = false;
     private DashboardNavigationSource.Maneuver recordedManeuver = DashboardNavigationSource.Maneuver.Straight;
+    private DashboardNavigationSource.Maneuver latchedManeuver = DashboardNavigationSource.Maneuver.Straight;
 
     [Header("Evaluation Settings")]
     [Tooltip("Lateral X boundary threshold defining a turn to the left (< -1.5m) or right (> 1.5m).")]
@@ -21,6 +22,9 @@ public class TurnTrigger : MonoBehaviour
 
     [Tooltip("Minimum steering analog input to register an intentional turn intent.")]
     [SerializeField] private float steeringInputThreshold = 0.3f;
+
+    [Tooltip("Elongated approach evaluation window for Y-fork corridors in meters.")]
+    [SerializeField] private float forkCorridorWindow = 35f;
 
     public bool HasTriggered => hasTriggered;
     public RoadChunk Chunk => roadChunk;
@@ -45,8 +49,9 @@ public class TurnTrigger : MonoBehaviour
             ObstacleSpawner.ClearObstaclesInZRange(transform.position.z - 10f, transform.position.z + roadChunk.ChunkLength + 10f);
         }
 
-        // 1. Check if vehicle is in the approach / evaluation window
-        float approachWindow = Mathf.Max(roadChunk.TurnTriggerWindow, 12f);
+        // 1. Check if vehicle is in the approach / evaluation window (elongated for Y-fork corridors)
+        float defaultWindow = (roadChunk != null && roadChunk.IsFork) ? forkCorridorWindow : 16f;
+        float approachWindow = Mathf.Max(roadChunk.TurnTriggerWindow, defaultWindow);
         if (distanceToCenter <= approachWindow && distanceToCenter >= -roadChunk.TurnTriggerWindow)
         {
             isInEvaluationZone = true;
@@ -71,18 +76,46 @@ public class TurnTrigger : MonoBehaviour
             steerX = VehicleMovement.Instance.MoveInput.x;
         }
 
+        bool isFork = (roadChunk != null && roadChunk.IsFork);
+
         // Determine player's active lane / steering intent
         if (carX < -lateralTurnThreshold || steerX < -steeringInputThreshold)
         {
-            recordedManeuver = DashboardNavigationSource.Maneuver.Left;
+            recordedManeuver = isFork ? DashboardNavigationSource.Maneuver.ForkLeft : DashboardNavigationSource.Maneuver.Left;
+            latchedManeuver = recordedManeuver;
         }
         else if (carX > lateralTurnThreshold || steerX > steeringInputThreshold)
         {
-            recordedManeuver = DashboardNavigationSource.Maneuver.Right;
+            recordedManeuver = isFork ? DashboardNavigationSource.Maneuver.ForkRight : DashboardNavigationSource.Maneuver.Right;
+            latchedManeuver = recordedManeuver;
         }
         else
         {
-            recordedManeuver = DashboardNavigationSource.Maneuver.Straight;
+            // Center zone (|carX| <= lateralTurnThreshold)
+            if (latchedManeuver == DashboardNavigationSource.Maneuver.Straight)
+            {
+                recordedManeuver = DashboardNavigationSource.Maneuver.Straight;
+            }
+            else
+            {
+                bool latchedIsLeft = (latchedManeuver == DashboardNavigationSource.Maneuver.Left || latchedManeuver == DashboardNavigationSource.Maneuver.ForkLeft);
+                bool latchedIsRight = (latchedManeuver == DashboardNavigationSource.Maneuver.Right || latchedManeuver == DashboardNavigationSource.Maneuver.ForkRight);
+
+                // If vehicle clearly moved toward left branch (carX < -0.6m) or right branch (carX > 0.6m),
+                // retain the latched maneuver intent so player isn't penalized if they release steer input just before apex
+                if (carX < -0.6f && latchedIsLeft)
+                {
+                    recordedManeuver = isFork ? DashboardNavigationSource.Maneuver.ForkLeft : DashboardNavigationSource.Maneuver.Left;
+                }
+                else if (carX > 0.6f && latchedIsRight)
+                {
+                    recordedManeuver = isFork ? DashboardNavigationSource.Maneuver.ForkRight : DashboardNavigationSource.Maneuver.Right;
+                }
+                else
+                {
+                    recordedManeuver = DashboardNavigationSource.Maneuver.Straight;
+                }
+            }
         }
     }
 
@@ -91,10 +124,28 @@ public class TurnTrigger : MonoBehaviour
         hasTriggered = true;
         isInEvaluationZone = false;
 
+        // Fatal crash check on Y-Fork:
+        // A Y-fork has no straight continuation path. Going straight means crashing into the central divider/wedge.
+        // The player only survives if they steer Left or Right into one of the fork branches.
+        if (roadChunk != null && roadChunk.IsFork && recordedManeuver == DashboardNavigationSource.Maneuver.Straight)
+        {
+            TriggerForkCentralCrash();
+            return;
+        }
+
         // Determine expected maneuver for this chunk
         DashboardNavigationSource.Maneuver expectedManeuver = GetExpectedManeuver();
 
-        bool isCorrect = (recordedManeuver == expectedManeuver);
+        bool isLeft = (recordedManeuver == DashboardNavigationSource.Maneuver.Left || recordedManeuver == DashboardNavigationSource.Maneuver.ForkLeft);
+        bool isRight = (recordedManeuver == DashboardNavigationSource.Maneuver.Right || recordedManeuver == DashboardNavigationSource.Maneuver.ForkRight);
+        bool expectedIsLeft = (expectedManeuver == DashboardNavigationSource.Maneuver.Left || expectedManeuver == DashboardNavigationSource.Maneuver.ForkLeft);
+        bool expectedIsRight = (expectedManeuver == DashboardNavigationSource.Maneuver.Right || expectedManeuver == DashboardNavigationSource.Maneuver.ForkRight);
+
+        // In free drive / debug mode when no specific maneuver is required, both Left and Right are valid
+        bool isFreeDrive = (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.DeliveryActive);
+        bool isCorrect = isFreeDrive
+            ? (isLeft || isRight)
+            : (expectedIsLeft ? isLeft : (expectedIsRight ? isRight : recordedManeuver == expectedManeuver));
 
         Debug.Log($"[TurnTrigger] Intersection at Z={transform.position.z + roadChunk.IntersectionCenterZ:F1}: " +
                   $"Player took '{recordedManeuver}', Expected '{expectedManeuver}'. Correct: {isCorrect}");
@@ -106,7 +157,7 @@ public class TurnTrigger : MonoBehaviour
 
         if (isCorrect)
         {
-            if (recordedManeuver == DashboardNavigationSource.Maneuver.Left || recordedManeuver == DashboardNavigationSource.Maneuver.Right)
+            if (isLeft || isRight)
             {
                 if (RouteController.Instance != null)
                 {
@@ -118,10 +169,76 @@ public class TurnTrigger : MonoBehaviour
                 VehicleMovement.Instance.EaseToCenter(1.2f);
             }
         }
+        else
+        {
+            // If the player took the wrong fork branch at a YFork (e.g. turned Right instead of Left),
+            // still execute the world turn down that branch while incurring the Recalculating penalty.
+            if (roadChunk != null && roadChunk.IsFork && (isLeft || isRight))
+            {
+                if (RouteController.Instance != null)
+                {
+                    RouteController.Instance.ExecuteWorldTurn(roadChunk, recordedManeuver);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Executes a violent, fatal crash when the player fails to steer left or right at a Y-fork
+    /// and plows straight into the central divider barrier / crash attenuator.
+    /// </summary>
+    private void TriggerForkCentralCrash()
+    {
+        Debug.LogWarning($"<color=red>[TurnTrigger] FATAL CRASH!</color> Player drove straight into the Y-Fork central divider at Z={transform.position.z + roadChunk.IntersectionCenterZ:F1}!");
+
+        // 1. Report missed turn to RouteController
+        if (RouteController.Instance != null)
+        {
+            DashboardNavigationSource.Maneuver expectedManeuver = GetExpectedManeuver();
+            RouteController.Instance.ReportTurnOutcome(this, DashboardNavigationSource.Maneuver.Straight, expectedManeuver, false);
+        }
+
+        // 2. Heavy impact camera shake
+        if (CameraShake.Instance != null)
+        {
+            CameraShake.Instance.Shake(1.2f, 0.9f);
+        }
+
+        // 3. Immediately halt world forward movement
+        if (WorldSpeedController.Instance != null)
+        {
+            WorldSpeedController.Instance.ApplySpeedPenalty(999f);
+        }
+
+        // 4. Deal fatal damage to VehicleHealth to destroy vehicle, trigger explosion VFX/SFX, and fail delivery
+        VehicleHealth health = (VehicleMovement.Instance != null)
+            ? VehicleMovement.Instance.GetComponent<VehicleHealth>()
+            : UnityEngine.Object.FindFirstObjectByType<VehicleHealth>();
+
+        if (health != null)
+        {
+            health.TakeDamage(health.MaxHealth);
+        }
+        else if (GameManager.Instance != null)
+        {
+            GameManager.Instance.FailDelivery();
+        }
     }
 
     private DashboardNavigationSource.Maneuver GetExpectedManeuver()
     {
+        if (roadChunk != null && roadChunk.TargetManeuver != DashboardNavigationSource.Maneuver.Straight)
+        {
+            if (roadChunk.IsFork)
+            {
+                return (roadChunk.TargetManeuver == DashboardNavigationSource.Maneuver.Right ||
+                        roadChunk.TargetManeuver == DashboardNavigationSource.Maneuver.ForkRight)
+                    ? DashboardNavigationSource.Maneuver.ForkRight
+                    : DashboardNavigationSource.Maneuver.ForkLeft;
+            }
+            return roadChunk.TargetManeuver;
+        }
+
         if (RouteController.Instance != null && RouteController.Instance.HasActiveManeuver)
         {
             return RouteController.Instance.CurrentManeuverDirection;
@@ -132,6 +249,7 @@ public class TurnTrigger : MonoBehaviour
         {
             RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
             RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
+            RoadChunkType.YFork => DashboardNavigationSource.Maneuver.ForkLeft,
             _ => DashboardNavigationSource.Maneuver.Straight
         };
     }

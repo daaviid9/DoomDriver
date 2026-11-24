@@ -387,6 +387,7 @@ GameObject:
   - component: {fileID: 194867911}
   - component: {fileID: 194867916}
   - component: {fileID: 194867915}
+  - component: {fileID: 194867917}
   m_Layer: 0
   m_Name: GameManagers
   m_TagString: Untagged
@@ -559,6 +560,27 @@ MonoBehaviour:
   timeoutUnfulfilledOrderFee: 3
   timeoutCustomerDelayFee: 2
   timeoutPlatformCancellationFee: 1
+--- !u!114 &194867917
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194867906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c231a0e1d2d445e899d4c326a22717de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RouteController
+  penaltyPerMissedTurn: 5
+  recalculationChunks: 3
+  recalculatingDuration: 2.5
+  forkTurnDuration: 0.5
+  sharpTurnDuration: 0.5
+  completedTurnsCount: 0
+  missedTurnsCount: 0
+  currentManeuverId: 
+  currentManeuverDirection: 0
 --- !u!4 &242284266 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1d89bf9ea7166ae4db34d88b7f49c77d, type: 3}
