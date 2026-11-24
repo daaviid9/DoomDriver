@@ -141,7 +141,7 @@ public class DeliveryProgressTracker : MonoBehaviour
         {
             Debug.LogWarning($"<color=red>[DeliveryProgressTracker]</color> Overtime penalties (-{currentPenalty:F2}€) exhausted full base payout ({maxAllowedPenalty:F2}€)! Order cancelled -> Delivery Failed.");
             isMissionActive = false;
-            GameManager.Instance.FailDelivery();
+            GameManager.Instance.FailDelivery(FailureReason.TimeExpired);
             return;
         }
 
@@ -150,7 +150,7 @@ public class DeliveryProgressTracker : MonoBehaviour
         {
             Debug.LogWarning($"<color=red>[DeliveryProgressTracker]</color> Critical overtime exceeded ({overtimeSeconds:F1}s >= {maxOvertimeDuration:F1}s)! Order cancelled -> Delivery Failed.");
             isMissionActive = false;
-            GameManager.Instance.FailDelivery();
+            GameManager.Instance.FailDelivery(FailureReason.TimeExpired);
             return;
         }
 

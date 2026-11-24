@@ -1,4 +1,5 @@
 using UnityEngine;
+using DoomDriver.Economy;
 
 /// <summary>
 /// Manages player vehicle health points (HP), damage, and destruction events.
@@ -69,7 +70,7 @@ public class VehicleHealth : MonoBehaviour
             OnVehicleDestroyed?.Invoke();
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.FailDelivery();
+                GameManager.Instance.FailDelivery(FailureReason.VehicleCrash);
             }
         }
 

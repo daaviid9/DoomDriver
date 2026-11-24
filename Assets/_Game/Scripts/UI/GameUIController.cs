@@ -11,8 +11,9 @@ public class GameUIController : MonoBehaviour
     public static GameUIController Instance { get; private set; }
 
     [Header("UI Panels")]
-    [SerializeField] private GameObject gameOverPanel;
     [SerializeField] private GameObject deliveryCompletedPanel;
+    [SerializeField] private GameObject deliveryFailedPanel;
+    [SerializeField] private GameObject deliveryExpiredPanel;
     [SerializeField] private GameObject pausePanel;
 
     [Header("Delivery Timer")]
@@ -21,7 +22,6 @@ public class GameUIController : MonoBehaviour
     [Header("Distance & Score Display")]
     [SerializeField] private TMP_Text scoreText;
     [SerializeField] private TMP_Text highscoreText;
-    [SerializeField] private TMP_Text finalDistanceText;
 
     private int lastDisplayedMeters = -1;
 
@@ -108,17 +108,20 @@ public class GameUIController : MonoBehaviour
             case GameState.OrderSelection:
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
-                if (gameOverPanel != null) gameOverPanel.SetActive(false);
+                if (deliveryFailedPanel != null) deliveryFailedPanel.SetActive(false);
+                if (deliveryExpiredPanel != null) deliveryExpiredPanel.SetActive(false);
                 if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
                 break;
 
             case GameState.DeliveryActive:
-                if (gameOverPanel != null) gameOverPanel.SetActive(false);
                 if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
+                if (deliveryFailedPanel != null) deliveryFailedPanel.SetActive(false);
+                if (deliveryExpiredPanel != null) deliveryExpiredPanel.SetActive(false);
                 break;
 
             case GameState.DeliveryCompleted:
-                if (gameOverPanel != null) gameOverPanel.SetActive(false);
+                if (deliveryFailedPanel != null) deliveryFailedPanel.SetActive(false);
+                if (deliveryExpiredPanel != null) deliveryExpiredPanel.SetActive(false);
                 if (deliveryCompletedPanel != null)
                 {
                     deliveryCompletedPanel.SetActive(true);
@@ -127,23 +130,22 @@ public class GameUIController : MonoBehaviour
 
             case GameState.DeliveryFailed:
                 if (deliveryCompletedPanel != null) deliveryCompletedPanel.SetActive(false);
-                if (gameOverPanel != null)
+                var reason = GameManager.Instance != null ? GameManager.Instance.LastFailureReason : DoomDriver.Economy.FailureReason.VehicleCrash;
+
+                if (reason == DoomDriver.Economy.FailureReason.VehicleCrash)
                 {
-                    gameOverPanel.SetActive(true);
+                    if (deliveryExpiredPanel != null) deliveryExpiredPanel.SetActive(false);
+                    if (deliveryFailedPanel != null) deliveryFailedPanel.SetActive(true);
+                }
+                else if (reason == DoomDriver.Economy.FailureReason.TimeExpired)
+                {
+                    if (deliveryFailedPanel != null) deliveryFailedPanel.SetActive(false);
+                    if (deliveryExpiredPanel != null) deliveryExpiredPanel.SetActive(true);
                 }
 
                 // Restore cursor visibility and release lock so player can click Retry / Exit buttons
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
-
-                if (finalDistanceText != null)
-                {
-                    int finalMeters = DeliveryProgressTracker.Instance != null 
-                        ? Mathf.FloorToInt(DeliveryProgressTracker.Instance.CurrentDistance) 
-                        : (lastDisplayedMeters > 0 ? lastDisplayedMeters : 0);
-
-                    finalDistanceText.text = $"You managed to scroll for {finalMeters} meters";
-                }
                 break;
         }
     }
@@ -198,10 +200,6 @@ public class GameUIController : MonoBehaviour
             {
                 pausePanel = t.gameObject;
             }
-            else if (gameOverPanel == null && (string.Equals(t.name, "GameOverPanel", System.StringComparison.OrdinalIgnoreCase) || string.Equals(t.name, "DeliveryFailedPanel", System.StringComparison.OrdinalIgnoreCase)))
-            {
-                gameOverPanel = t.gameObject;
-            }
             else if (scoreText == null && string.Equals(t.name, "Score", System.StringComparison.OrdinalIgnoreCase))
             {
                 scoreText = t.GetComponent<TMP_Text>();
@@ -210,14 +208,24 @@ public class GameUIController : MonoBehaviour
             {
                 highscoreText = t.GetComponent<TMP_Text>();
             }
-            else if (finalDistanceText == null && string.Equals(t.name, "FinalDistanceText", System.StringComparison.OrdinalIgnoreCase))
-            {
-                finalDistanceText = t.GetComponent<TMP_Text>();
-            }
-            else if (deliveryCompletedPanel == null && (t.GetComponent<DeliverySummaryUI>() != null || string.Equals(t.name, "DeliverySummaryPanel", System.StringComparison.OrdinalIgnoreCase) || string.Equals(t.name, "DeliverySummaryCanvas", System.StringComparison.OrdinalIgnoreCase)))
-            {
-                deliveryCompletedPanel = t.gameObject;
-            }
+        }
+
+        if (deliveryCompletedPanel == null)
+        {
+            var summaryUI = canvas.GetComponentInChildren<DeliverySummaryUI>(true);
+            if (summaryUI != null) deliveryCompletedPanel = summaryUI.gameObject;
+        }
+
+        if (deliveryFailedPanel == null)
+        {
+            var failedUI = canvas.GetComponentInChildren<DoomDriver.UI.DeliveryFailedUI>(true);
+            if (failedUI != null) deliveryFailedPanel = failedUI.gameObject;
+        }
+
+        if (deliveryExpiredPanel == null)
+        {
+            var expiredUI = canvas.GetComponentInChildren<DoomDriver.UI.DeliveryExpiredUI>(true);
+            if (expiredUI != null) deliveryExpiredPanel = expiredUI.gameObject;
         }
 
         if (deliveryTimer == null)

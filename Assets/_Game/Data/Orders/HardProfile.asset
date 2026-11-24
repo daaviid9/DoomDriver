@@ -18,5 +18,29 @@ MonoBehaviour:
   BasePayoutRange: {x: 25, y: 40}
   MaxTipRange: {x: 12, y: 20}
   TurnCountRange: {x: 3, y: 5}
-  RestaurantNames: []
-  CustomerNames: []
+  RestaurantNames:
+  - Neon Sushi
+  - Night Steak
+  - Black Truffle
+  - Lobster Roll
+  - Tokyo BBQ
+  - Hell Wings
+  - Gourmet Bar
+  - Prime Ribs
+  CustomerNames:
+  - Adam B.
+  - David M.
+  - Elena K.
+  - Victor S.
+  - Clara T.
+  - Oliver N.
+  - Sophie R.
+  - Philip H.
+  - Matthew P.
+  - Nina V.
+  - Thomas D.
+  - Luke Z.
+  - Samuel C.
+  - Theresa L.
+  - Martin B.
+  - Peter K.
