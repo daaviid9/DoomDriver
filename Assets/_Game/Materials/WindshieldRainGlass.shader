@@ -12,6 +12,17 @@ Shader "DoomDriver/WindshieldRainGlass"
         _SideBackTime ("Side Window Backward Wind Time", Float) = 0.0
         _SpeedFactor ("Normalized Vehicle Speed (0-1)", Range(0, 1)) = 0.0
         _StaticDropDensity ("Static Mist Density", Range(0, 1)) = 0.85
+
+        [Header(Windshield Wipers)]
+        _WiperActive ("Wiper Active (0-1)", Range(0, 1)) = 0.0
+        _WiperAngle ("Wiper Current Angle (rad)", Float) = -1.38
+        _WiperDir ("Wiper Sweep Direction (+1/-1)", Float) = 1.0
+        _WiperMinAngle ("Wiper Park Angle (rad)", Float) = -1.38
+        _WiperMaxAngle ("Wiper Max Sweep Angle (rad)", Float) = 1.05
+        _WiperPivot1 ("Left Wiper Pivot (XY)", Vector) = (0.28, 0.88, 0, 0)
+        _WiperPivot2 ("Right Wiper Pivot (XY)", Vector) = (-0.28, 0.88, 0, 0)
+        _WiperLength ("Wiper Blade Length", Float) = 0.62
+        _WiperColor ("Wiper Blade Color", Color) = (0.06, 0.06, 0.07, 0.96)
     }
 
     SubShader
@@ -62,13 +73,23 @@ Shader "DoomDriver/WindshieldRainGlass"
                 float _SideBackTime;
                 float _SpeedFactor;
                 float _StaticDropDensity;
+
+                float _WiperActive;
+                float _WiperAngle;
+                float _WiperDir;
+                float _WiperMinAngle;
+                float _WiperMaxAngle;
+                float4 _WiperPivot1;
+                float4 _WiperPivot2;
+                float _WiperLength;
+                float4 _WiperColor;
             CBUFFER_END
 
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
-                // Keep coordinates in pure object space so droplets stay rigidly glued to the glass
+                // Pure object space so droplets & wipers stay rigidly glued to the glass
                 // and tilt/roll identically with the car body during steering and bumps.
                 OUT.positionOS = IN.positionOS.xyz;
                 OUT.normalOS = normalize(IN.normalOS);
@@ -139,69 +160,149 @@ Shader "DoomDriver/WindshieldRainGlass"
                 return smoothstep(radius, radius * 0.4, d) * fade;
             }
 
-            half4 frag(Varyings IN) : SV_Target
+            // Evaluates a single wiper blade + wiped-clean rain mask.
+            // Returns float2(bladeAlpha, rainMultiplier) where rainMultiplier=0 means freshly wiped clean.
+            float2 EvaluateWiper(float2 posXY, float2 pivot, float angle, float dir, float len)
             {
-                float rain = saturate(_RainIntensity);
-                if (rain <= 0.001)
+                float2 p = posXY - pivot;
+                float r = length(p);
+
+                // Blade unit direction (angle=0 is straight up +Y, +angle is left +X_os, -angle is right -X_os)
+                float2 bladeDir = float2(sin(angle), cos(angle));
+                float2 bladePerp = float2(bladeDir.y, -bladeDir.x);
+
+                float along = dot(p, bladeDir);
+                float perp = abs(dot(p, bladePerp));
+
+                // 1. Visual wiper blade (rubber blade + thinner arm)
+                float inBladeSpan = step(len * 0.20, along) * step(along, len);
+                float bladeMask = (1.0 - smoothstep(0.008, 0.015, perp)) * inBladeSpan;
+
+                float inArmSpan = step(0.0, along) * step(along, len * 0.60);
+                float armMask = (1.0 - smoothstep(0.004, 0.009, perp)) * inArmSpan;
+
+                float visualBlade = saturate(max(bladeMask, armMask));
+
+                // 2. Wiped-clean rain arc strictly along the rubber blade path (len*0.20 .. len*1.00, minAngle .. maxAngle)
+                float rainMult = 1.0;
+                float arcRange = max(_WiperMaxAngle - _WiperMinAngle, 0.1);
+
+                // Crisp radial bounds matching the exact rubber blade span
+                float inArcRadius = smoothstep(len * 0.19, len * 0.21, r) * (1.0 - smoothstep(len * 0.99, len * 1.01, r));
+
+                if (inArcRadius > 0.001 && _WiperActive > 0.01)
                 {
-                    return half4(_GlassTint.rgb, _GlassTint.a);
+                    float pixAngle = atan2(p.x, p.y);
+                    // Crisp angular bounds matching the exact wiper sweep limits
+                    float inSweep = smoothstep(_WiperMinAngle - 0.015, _WiperMinAngle + 0.015, pixAngle)
+                                  * (1.0 - smoothstep(_WiperMaxAngle - 0.015, _WiperMaxAngle + 0.015, pixAngle));
+
+                    if (inSweep > 0.001)
+                    {
+                        // Exact continuous angular distance traveled by the blade since it last wiped pixAngle
+                        // (100% continuous at both turnaround points, zero popping on reversal)
+                        float distSinceWipe;
+                        if (dir >= 0.0)
+                        {
+                            distSinceWipe = (pixAngle <= angle)
+                                ? (angle - pixAngle)
+                                : ((angle - _WiperMinAngle) + (pixAngle - _WiperMinAngle));
+                        }
+                        else
+                        {
+                            distSinceWipe = (pixAngle >= angle)
+                                ? (pixAngle - angle)
+                                : ((_WiperMaxAngle - angle) + (_WiperMaxAngle - pixAngle));
+                        }
+
+                        // Normalize across a full round-trip (0 = just wiped clean, 1 = longest since wipe)
+                        float normAge = saturate(distSinceWipe / (arcRange * 2.0));
+
+                        // Completely clean (0.0) right behind the blade, smoothly reforming droplets over time
+                        float clearedMult = smoothstep(0.06, 0.95, normAge) * 0.85;
+                        rainMult = lerp(1.0, clearedMult, inArcRadius * inSweep * _WiperActive);
+                    }
                 }
 
+                return float2(visualBlade, rainMult);
+            }
+
+            half4 frag(Varyings IN) : SV_Target
+            {
                 float3 absN = abs(IN.normalOS);
                 bool isFrontGlass = (absN.z >= absN.x);
 
-                float staticT = _Time.y * max(_DropSpeed, 0.35);
-                float2 layer1;
-                float2 layer2;
-                float staticMask;
+                // Evaluate wipers on front windshield only
+                float wiperBladeAlpha = 0.0;
+                float wiperRainMask = 1.0;
 
-                if (isFrontGlass)
+                if (isFrontGlass && _WiperLength > 0.01)
                 {
-                    // Front windshield: XY plane in object space (tilts rigidly with car frame)
-                    float2 frontUV = float2(IN.positionOS.x, IN.positionOS.y) * _DropScale;
-                    layer1 = RainLayer(frontUV, _FlowTime);
-                    layer2 = RainLayer(frontUV * 1.65 + float2(7.3, 2.1), _FlowTime * 1.25);
-                    staticMask = StaticDrops(frontUV, staticT) * _StaticDropDensity;
-                }
-                else
-                {
-                    // Side windows in object space (carInterior is rotated 180 deg on Y, so +Z_os = backward):
-                    // - When parked/slow (_SpeedFactor ~ 0): droplets trickle vertically DOWN (-Y)
-                    // - When accelerating (_SpeedFactor -> 1): droplets stream HORIZONTALLY BACKWARD (+Z_os = -Z_ws)
-                    //   (left on left window, right on right window from driver's view)
-                    float windBlend = smoothstep(0.12, 0.65, _SpeedFactor);
-
-                    // Downward gravity layer (uv.y = positionOS.y -> moves along -Y)
-                    float2 sideDownUV = float2(-IN.positionOS.z, IN.positionOS.y) * _DropScale;
-                    float2 down1 = RainLayer(sideDownUV, _SideDownTime);
-                    float2 down2 = RainLayer(sideDownUV * 1.65 + float2(5.1, 3.7), _SideDownTime * 1.2);
-
-                    // Horizontal backward airflow layer (uv.y = -positionOS.z -> moves along +Z_os = backward!)
-                    float2 sideBackUV = float2(IN.positionOS.y, -IN.positionOS.z) * _DropScale;
-                    float2 back1 = RainLayer(sideBackUV, _SideBackTime);
-                    float2 back2 = RainLayer(sideBackUV * 1.65 + float2(9.2, 1.4), _SideBackTime * 1.25);
-
-                    layer1 = lerp(down1, back1, windBlend);
-                    layer2 = lerp(down2, back2, windBlend);
-                    staticMask = StaticDrops(sideDownUV, staticT) * _StaticDropDensity;
+                    float2 w1 = EvaluateWiper(IN.positionOS.xy, _WiperPivot1.xy, _WiperAngle, _WiperDir, _WiperLength);
+                    float2 w2 = EvaluateWiper(IN.positionOS.xy, _WiperPivot2.xy, _WiperAngle, _WiperDir, _WiperLength);
+                    wiperBladeAlpha = saturate(max(w1.x, w2.x)) * _WiperActive;
+                    wiperRainMask = min(w1.y, w2.y);
                 }
 
-                float dropHeight = saturate(max(max(layer1.x, layer2.x * 0.85), staticMask * 0.75));
-                float trailStreak = saturate(layer1.y + layer2.y * 0.7);
+                float rain = saturate(_RainIntensity);
+                half4 glassResult = half4(_GlassTint.rgb, _GlassTint.a);
 
-                // Screen-space derivative highlight so droplets look glossy and 3D on glass
-                float dx = ddx(dropHeight);
-                float dy = ddy(dropHeight);
-                float specHighlight = saturate((-dx + dy) * 3.5);
-                float darkRim = saturate((dx - dy) * 2.5);
+                if (rain > 0.001)
+                {
+                    float staticT = _Time.y * max(_DropSpeed, 0.35);
+                    float2 layer1;
+                    float2 layer2;
+                    float staticMask;
 
-                float3 dropCol = _DropletColor.rgb * (0.72 + specHighlight * 0.85 - darkRim * 0.35);
-                float dropAlpha = saturate((dropHeight * 0.88 + trailStreak * 0.25) * rain * _DropletColor.a);
+                    if (isFrontGlass)
+                    {
+                        float2 frontUV = float2(IN.positionOS.x, IN.positionOS.y) * _DropScale;
+                        layer1 = RainLayer(frontUV, _FlowTime);
+                        layer2 = RainLayer(frontUV * 1.65 + float2(7.3, 2.1), _FlowTime * 1.25);
+                        staticMask = StaticDrops(frontUV, staticT) * _StaticDropDensity;
+                    }
+                    else
+                    {
+                        float windBlend = smoothstep(0.12, 0.65, _SpeedFactor);
 
-                float finalAlpha = saturate(_GlassTint.a + dropAlpha);
-                float3 finalRgb = lerp(_GlassTint.rgb, dropCol, saturate(dropAlpha / max(finalAlpha, 0.001)));
+                        float2 sideDownUV = float2(-IN.positionOS.z, IN.positionOS.y) * _DropScale;
+                        float2 down1 = RainLayer(sideDownUV, _SideDownTime);
+                        float2 down2 = RainLayer(sideDownUV * 1.65 + float2(5.1, 3.7), _SideDownTime * 1.2);
 
-                return half4(finalRgb, finalAlpha);
+                        float2 sideBackUV = float2(IN.positionOS.y, -IN.positionOS.z) * _DropScale;
+                        float2 back1 = RainLayer(sideBackUV, _SideBackTime);
+                        float2 back2 = RainLayer(sideBackUV * 1.65 + float2(9.2, 1.4), _SideBackTime * 1.25);
+
+                        layer1 = lerp(down1, back1, windBlend);
+                        layer2 = lerp(down2, back2, windBlend);
+                        staticMask = StaticDrops(sideDownUV, staticT) * _StaticDropDensity;
+                    }
+
+                    float dropHeight = saturate(max(max(layer1.x, layer2.x * 0.85), staticMask * 0.75)) * wiperRainMask;
+                    float trailStreak = saturate(layer1.y + layer2.y * 0.7) * wiperRainMask;
+
+                    float dx = ddx(dropHeight);
+                    float dy = ddy(dropHeight);
+                    float specHighlight = saturate((-dx + dy) * 3.5);
+                    float darkRim = saturate((dx - dy) * 2.5);
+
+                    float3 dropCol = _DropletColor.rgb * (0.72 + specHighlight * 0.85 - darkRim * 0.35);
+                    float dropAlpha = saturate((dropHeight * 0.88 + trailStreak * 0.25) * rain * _DropletColor.a);
+
+                    float finalAlpha = saturate(_GlassTint.a + dropAlpha);
+                    float3 finalRgb = lerp(_GlassTint.rgb, dropCol, saturate(dropAlpha / max(finalAlpha, 0.001)));
+                    glassResult = half4(finalRgb, finalAlpha);
+                }
+
+                // Composite wiper blades over the windshield glass
+                if (wiperBladeAlpha > 0.001)
+                {
+                    float bladeA = wiperBladeAlpha * _WiperColor.a;
+                    glassResult.rgb = lerp(glassResult.rgb, _WiperColor.rgb, bladeA);
+                    glassResult.a = saturate(max(glassResult.a, bladeA));
+                }
+
+                return glassResult;
             }
             ENDHLSL
         }

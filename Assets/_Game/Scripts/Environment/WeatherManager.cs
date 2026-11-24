@@ -51,6 +51,8 @@ namespace DoomDriver.Environment
         [SerializeField] private int carGlassMaterialIndex = 5;
         [Tooltip("Fallback reference to WindshieldRainGlass material if needed.")]
         [SerializeField] private Material windshieldGlassMaterial;
+        [Tooltip("Optional WindshieldWiperController (auto-resolved or added on GameManagers if empty).")]
+        [SerializeField] private WindshieldWiperController wiperController;
 
         [Header("Debug")]
         [Tooltip("Allows cycling weather presets with F7 during playtesting.")]
@@ -364,10 +366,15 @@ namespace DoomDriver.Environment
             }
 
             // 2b. Car windshield & side window raindrop glass shader (CarConstruction Element 5)
+            float normalizedRain = Mathf.Clamp01(currentRainEmission / 220f);
             if (runtimeGlassMaterial != null)
             {
-                float normalizedRain = Mathf.Clamp01(currentRainEmission / 220f);
                 runtimeGlassMaterial.SetFloat(RainIntensityPropId, normalizedRain);
+            }
+
+            if (wiperController != null)
+            {
+                wiperController.SetRainIntensity(normalizedRain);
             }
 
             // 3. Wet road reflections
@@ -594,6 +601,24 @@ namespace DoomDriver.Environment
                         carConstructionRenderer.materials = mats;
                     }
                 }
+            }
+
+            if (wiperController == null)
+            {
+                wiperController = GetComponent<WindshieldWiperController>();
+                if (wiperController == null)
+                {
+                    wiperController = FindFirstObjectByType<WindshieldWiperController>();
+                }
+                if (wiperController == null)
+                {
+                    wiperController = gameObject.AddComponent<WindshieldWiperController>();
+                }
+            }
+
+            if (wiperController != null && runtimeGlassMaterial != null && carConstructionRenderer != null)
+            {
+                wiperController.BindGlassMaterial(runtimeGlassMaterial, carConstructionRenderer.transform);
             }
         }
 
