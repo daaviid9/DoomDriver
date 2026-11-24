@@ -6436,12 +6436,8 @@ MonoBehaviour:
   - {fileID: 4535990458550586430, guid: b752f55d41a4f0d43800086e1ab86500, type: 3}
   - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
   - {fileID: 7591798394180682832, guid: a320f61d3469f70488f3300e6fcbad6a, type: 3}
-  turnLeftPrefabs:
-  - {fileID: 9180165884780382515, guid: a47c1fc509f1f294694684c3c5cf6b10, type: 3}
-  turnRightPrefabs:
-  - {fileID: 7591798394180682832, guid: 45e211619cb70fd47b13c71f0aaa32f2, type: 3}
-  crossroadsPrefabs:
-  - {fileID: 2369663547445153715, guid: 9f4a7159720dee94583160ce8503f217, type: 3}
+  yForkPrefabs:
+  - {fileID: 1100000000000000001, guid: 8e4c7b2a91f5404588df173641b6cde2, type: 3}
   chunkPrefabs:
   - {fileID: 4535990458550586430, guid: b752f55d41a4f0d43800086e1ab86500, type: 3}
   - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
@@ -6453,8 +6449,8 @@ MonoBehaviour:
   defaultBranchExitDistance: 25.8
   branchExitDistanceOffset: 0
   useDebugSequence: 1
-  debugStraightsBetweenTurns: 3
-  debugTurnSequence: 010000000200000003000000
+  debugStraightsBetweenTurns: 1
+  debugTurnSequence: 04000000
 --- !u!4 &1650050935
 Transform:
   m_ObjectHideFlags: 0
