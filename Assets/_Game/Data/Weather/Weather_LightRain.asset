@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab01, type: 3}
+  m_Name: Weather_LightRain
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WeatherPreset
+  condition: 2
+  displayName: Light Rain
+  briefingHeadline: Rainy Shift: Pizza orders are up 40%! Roads are slick and wet—watch those forks!
+  enableFog: 1
+  fogMode: 3
+  fogColor: {r: 0.42, g: 0.47, b: 0.54, a: 1}
+  fogDensity: 0.014
+  enableRain: 1
+  rainEmissionRate: 150
+  rainSpeedMultiplier: 1.15
+  rainTint: {r: 0.75, g: 0.85, b: 0.96, a: 0.45}
+  wetRoad: 1
+  roadSmoothness: 0.88
+  roadMetallic: 0.32
+  roadTintMultiplier: {r: 0.62, g: 0.65, b: 0.7, a: 1}
+  directionalLightMultiplier: 0.72
+  skyBackgroundTint: {r: 0.35, g: 0.4, b: 0.47, a: 1}

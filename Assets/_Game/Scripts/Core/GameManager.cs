@@ -264,6 +264,16 @@ public class GameManager : MonoBehaviour
         {
             gameObject.AddComponent<RouteController>();
         }
+
+        if (DoomDriver.Environment.WeatherManager.Instance == null && GetComponent<DoomDriver.Environment.WeatherManager>() == null)
+        {
+            gameObject.AddComponent<DoomDriver.Environment.WeatherManager>();
+        }
+
+        if (DoomDriver.Core.DailyShiftBriefing.Instance == null && GetComponent<DoomDriver.Core.DailyShiftBriefing>() == null)
+        {
+            gameObject.AddComponent<DoomDriver.Core.DailyShiftBriefing>();
+        }
     }
 
 #if UNITY_EDITOR

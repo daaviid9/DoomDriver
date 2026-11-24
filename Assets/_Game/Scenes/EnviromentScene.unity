@@ -388,6 +388,9 @@ GameObject:
   - component: {fileID: 194867916}
   - component: {fileID: 194867915}
   - component: {fileID: 194867917}
+  - component: {fileID: 194867918}
+  - component: {fileID: 194867919}
+  - component: {fileID: 194867920}
   m_Layer: 0
   m_Name: GameManagers
   m_TagString: Untagged
@@ -581,6 +584,72 @@ MonoBehaviour:
   missedTurnsCount: 0
   currentManeuverId: 
   currentManeuverDirection: 0
+--- !u!114 &194867918
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194867906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab03, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WeatherManager
+  presets:
+  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab21, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab22, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab23, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab24, type: 2}
+  defaultCondition: 2
+  randomizeOnStart: 0
+  alternateWeatherPerShift: 1
+  transitionDuration: 2
+  windshieldRain: {fileID: 330585562}
+  directionalLight: {fileID: 0}
+  mainCamera: {fileID: 330585545}
+  dryRoadMaterial: {fileID: 2100000, guid: c5148690b7f04114cbac64f48dcebc9c, type: 2}
+  wetRoadMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab10, type: 2}
+  sceneRoadRenderer: {fileID: 372252488}
+  carConstructionRenderer: {fileID: 0}
+  carGlassMaterialIndex: 5
+  windshieldGlassMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab41, type: 2}
+  wiperController: {fileID: 194867920}
+  enableDebugCycleKey: 1
+--- !u!114 &194867919
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194867906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Core.DailyShiftBriefing
+  currentDay: 1
+  advanceWeatherOnLobbyReturn: 1
+--- !u!114 &194867920
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194867906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WindshieldWiperController
+  lightRainSweepSpeed: 0.75
+  heavyRainSweepSpeed: 1.25
+  parkAngleDeg: -78
+  maxSweepAngleDeg: 58
+  autoCalibratePivots: 1
+  pivotOffsetTuning: {x: 0, y: -0.34}
+  wiperSpacing: 0.62
+  wiperLength: 0.7
 --- !u!4 &242284266 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1d89bf9ea7166ae4db34d88b7f49c77d, type: 3}
@@ -884,8 +953,65 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 679730007}
+  - {fileID: 330585561}
   m_Father: {fileID: 432921396}
   m_LocalEulerAnglesHint: {x: -3.65, y: 0, z: 0}
+--- !u!1 &330585560
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 330585561}
+  - component: {fileID: 330585562}
+  m_Layer: 0
+  m_Name: WindshieldRainParticles
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &330585561
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585560}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 5, z: 15.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 330585546}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &330585562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585560}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WindshieldRainEffect
+  rainParticles: {fileID: 0}
+  rainMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab11, type: 2}
+  localEmitterOffset: {x: 0, y: 5, z: 15.5}
+  emitterBoxSize: {x: 22, y: 1.5, z: 18}
+  exteriorMinZ: 4.2
+  enableWindshieldDroplets: 0
+  windshieldLocalOffset: {x: 0, y: 0.1, z: 1.15}
+  windshieldAreaSize: {x: 1.55, y: 0.72}
+  dropletEmissionMultiplier: 0.28
+  dropletSizeRange: {x: 0.018, y: 0.045}
+  baseFallSpeed: 15
+  forwardSpeedSlantFactor: 0.45
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6310,12 +6436,8 @@ MonoBehaviour:
   - {fileID: 4535990458550586430, guid: b752f55d41a4f0d43800086e1ab86500, type: 3}
   - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
   - {fileID: 7591798394180682832, guid: a320f61d3469f70488f3300e6fcbad6a, type: 3}
-  turnLeftPrefabs:
-  - {fileID: 9180165884780382515, guid: a47c1fc509f1f294694684c3c5cf6b10, type: 3}
-  turnRightPrefabs:
-  - {fileID: 7591798394180682832, guid: 45e211619cb70fd47b13c71f0aaa32f2, type: 3}
-  crossroadsPrefabs:
-  - {fileID: 2369663547445153715, guid: 9f4a7159720dee94583160ce8503f217, type: 3}
+  yForkPrefabs:
+  - {fileID: 1100000000000000001, guid: 8e4c7b2a91f5404588df173641b6cde2, type: 3}
   chunkPrefabs:
   - {fileID: 4535990458550586430, guid: b752f55d41a4f0d43800086e1ab86500, type: 3}
   - {fileID: 9180165884780382515, guid: 3e4ed02f7e7295447881ccc56b7c1097, type: 3}
@@ -6327,8 +6449,8 @@ MonoBehaviour:
   defaultBranchExitDistance: 25.8
   branchExitDistanceOffset: 0
   useDebugSequence: 1
-  debugStraightsBetweenTurns: 3
-  debugTurnSequence: 010000000200000003000000
+  debugStraightsBetweenTurns: 1
+  debugTurnSequence: 04000000
 --- !u!4 &1650050935
 Transform:
   m_ObjectHideFlags: 0
