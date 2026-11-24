@@ -23,6 +23,9 @@ public class TurnTrigger : MonoBehaviour
     [Tooltip("Minimum steering analog input to register an intentional turn intent.")]
     [SerializeField] private float steeringInputThreshold = 0.3f;
 
+    [Tooltip("Elongated approach evaluation window for Y-fork corridors in meters.")]
+    [SerializeField] private float forkCorridorWindow = 35f;
+
     public bool HasTriggered => hasTriggered;
     public RoadChunk Chunk => roadChunk;
 
@@ -46,8 +49,9 @@ public class TurnTrigger : MonoBehaviour
             ObstacleSpawner.ClearObstaclesInZRange(transform.position.z - 10f, transform.position.z + roadChunk.ChunkLength + 10f);
         }
 
-        // 1. Check if vehicle is in the approach / evaluation window
-        float approachWindow = Mathf.Max(roadChunk.TurnTriggerWindow, 16f);
+        // 1. Check if vehicle is in the approach / evaluation window (elongated for Y-fork corridors)
+        float defaultWindow = (roadChunk != null && roadChunk.IsFork) ? forkCorridorWindow : 16f;
+        float approachWindow = Mathf.Max(roadChunk.TurnTriggerWindow, defaultWindow);
         if (distanceToCenter <= approachWindow && distanceToCenter >= -roadChunk.TurnTriggerWindow)
         {
             isInEvaluationZone = true;
@@ -72,16 +76,18 @@ public class TurnTrigger : MonoBehaviour
             steerX = VehicleMovement.Instance.MoveInput.x;
         }
 
+        bool isFork = (roadChunk != null && roadChunk.IsFork);
+
         // Determine player's active lane / steering intent
         if (carX < -lateralTurnThreshold || steerX < -steeringInputThreshold)
         {
-            recordedManeuver = DashboardNavigationSource.Maneuver.Left;
-            latchedManeuver = DashboardNavigationSource.Maneuver.Left;
+            recordedManeuver = isFork ? DashboardNavigationSource.Maneuver.ForkLeft : DashboardNavigationSource.Maneuver.Left;
+            latchedManeuver = recordedManeuver;
         }
         else if (carX > lateralTurnThreshold || steerX > steeringInputThreshold)
         {
-            recordedManeuver = DashboardNavigationSource.Maneuver.Right;
-            latchedManeuver = DashboardNavigationSource.Maneuver.Right;
+            recordedManeuver = isFork ? DashboardNavigationSource.Maneuver.ForkRight : DashboardNavigationSource.Maneuver.Right;
+            latchedManeuver = recordedManeuver;
         }
         else
         {
@@ -92,15 +98,18 @@ public class TurnTrigger : MonoBehaviour
             }
             else
             {
+                bool latchedIsLeft = (latchedManeuver == DashboardNavigationSource.Maneuver.Left || latchedManeuver == DashboardNavigationSource.Maneuver.ForkLeft);
+                bool latchedIsRight = (latchedManeuver == DashboardNavigationSource.Maneuver.Right || latchedManeuver == DashboardNavigationSource.Maneuver.ForkRight);
+
                 // If vehicle clearly moved toward left branch (carX < -0.6m) or right branch (carX > 0.6m),
                 // retain the latched maneuver intent so player isn't penalized if they release steer input just before apex
-                if (carX < -0.6f && latchedManeuver == DashboardNavigationSource.Maneuver.Left)
+                if (carX < -0.6f && latchedIsLeft)
                 {
-                    recordedManeuver = DashboardNavigationSource.Maneuver.Left;
+                    recordedManeuver = isFork ? DashboardNavigationSource.Maneuver.ForkLeft : DashboardNavigationSource.Maneuver.Left;
                 }
-                else if (carX > 0.6f && latchedManeuver == DashboardNavigationSource.Maneuver.Right)
+                else if (carX > 0.6f && latchedIsRight)
                 {
-                    recordedManeuver = DashboardNavigationSource.Maneuver.Right;
+                    recordedManeuver = isFork ? DashboardNavigationSource.Maneuver.ForkRight : DashboardNavigationSource.Maneuver.Right;
                 }
                 else
                 {
@@ -127,11 +136,16 @@ public class TurnTrigger : MonoBehaviour
         // Determine expected maneuver for this chunk
         DashboardNavigationSource.Maneuver expectedManeuver = GetExpectedManeuver();
 
+        bool isLeft = (recordedManeuver == DashboardNavigationSource.Maneuver.Left || recordedManeuver == DashboardNavigationSource.Maneuver.ForkLeft);
+        bool isRight = (recordedManeuver == DashboardNavigationSource.Maneuver.Right || recordedManeuver == DashboardNavigationSource.Maneuver.ForkRight);
+        bool expectedIsLeft = (expectedManeuver == DashboardNavigationSource.Maneuver.Left || expectedManeuver == DashboardNavigationSource.Maneuver.ForkLeft);
+        bool expectedIsRight = (expectedManeuver == DashboardNavigationSource.Maneuver.Right || expectedManeuver == DashboardNavigationSource.Maneuver.ForkRight);
+
         // In free drive / debug mode when no specific maneuver is required, both Left and Right are valid
         bool isFreeDrive = (GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.DeliveryActive);
         bool isCorrect = isFreeDrive
-            ? (recordedManeuver == DashboardNavigationSource.Maneuver.Left || recordedManeuver == DashboardNavigationSource.Maneuver.Right)
-            : (recordedManeuver == expectedManeuver);
+            ? (isLeft || isRight)
+            : (expectedIsLeft ? isLeft : (expectedIsRight ? isRight : recordedManeuver == expectedManeuver));
 
         Debug.Log($"[TurnTrigger] Intersection at Z={transform.position.z + roadChunk.IntersectionCenterZ:F1}: " +
                   $"Player took '{recordedManeuver}', Expected '{expectedManeuver}'. Correct: {isCorrect}");
@@ -143,7 +157,7 @@ public class TurnTrigger : MonoBehaviour
 
         if (isCorrect)
         {
-            if (recordedManeuver == DashboardNavigationSource.Maneuver.Left || recordedManeuver == DashboardNavigationSource.Maneuver.Right)
+            if (isLeft || isRight)
             {
                 if (RouteController.Instance != null)
                 {
@@ -159,7 +173,7 @@ public class TurnTrigger : MonoBehaviour
         {
             // If the player took the wrong fork branch at a YFork (e.g. turned Right instead of Left),
             // still execute the world turn down that branch while incurring the Recalculating penalty.
-            if (roadChunk != null && roadChunk.IsFork && (recordedManeuver == DashboardNavigationSource.Maneuver.Left || recordedManeuver == DashboardNavigationSource.Maneuver.Right))
+            if (roadChunk != null && roadChunk.IsFork && (isLeft || isRight))
             {
                 if (RouteController.Instance != null)
                 {
@@ -215,6 +229,13 @@ public class TurnTrigger : MonoBehaviour
     {
         if (roadChunk != null && roadChunk.TargetManeuver != DashboardNavigationSource.Maneuver.Straight)
         {
+            if (roadChunk.IsFork)
+            {
+                return (roadChunk.TargetManeuver == DashboardNavigationSource.Maneuver.Right ||
+                        roadChunk.TargetManeuver == DashboardNavigationSource.Maneuver.ForkRight)
+                    ? DashboardNavigationSource.Maneuver.ForkRight
+                    : DashboardNavigationSource.Maneuver.ForkLeft;
+            }
             return roadChunk.TargetManeuver;
         }
 
@@ -228,7 +249,7 @@ public class TurnTrigger : MonoBehaviour
         {
             RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
             RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
-            RoadChunkType.YFork => DashboardNavigationSource.Maneuver.Left,
+            RoadChunkType.YFork => DashboardNavigationSource.Maneuver.ForkLeft,
             _ => DashboardNavigationSource.Maneuver.Straight
         };
     }

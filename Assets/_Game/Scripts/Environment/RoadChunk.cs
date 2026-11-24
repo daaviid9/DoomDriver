@@ -87,11 +87,11 @@ public class RoadChunk : MonoBehaviour
 
     public void SetBranchChunk(DashboardNavigationSource.Maneuver direction, GameObject chunk)
     {
-        if (direction == DashboardNavigationSource.Maneuver.Left)
+        if (direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft)
         {
             leftBranchChunk = chunk;
         }
-        else if (direction == DashboardNavigationSource.Maneuver.Right)
+        else if (direction == DashboardNavigationSource.Maneuver.Right || direction == DashboardNavigationSource.Maneuver.ForkRight)
         {
             rightBranchChunk = chunk;
         }
@@ -100,12 +100,12 @@ public class RoadChunk : MonoBehaviour
     public GameObject DetachBranchChunk(DashboardNavigationSource.Maneuver direction)
     {
         GameObject chunk = null;
-        if (direction == DashboardNavigationSource.Maneuver.Left)
+        if (direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft)
         {
             chunk = leftBranchChunk;
             leftBranchChunk = null;
         }
-        else if (direction == DashboardNavigationSource.Maneuver.Right)
+        else if (direction == DashboardNavigationSource.Maneuver.Right || direction == DashboardNavigationSource.Maneuver.ForkRight)
         {
             chunk = rightBranchChunk;
             rightBranchChunk = null;
@@ -197,16 +197,15 @@ public class RoadChunk : MonoBehaviour
     /// </summary>
     public Vector3 GetBranchExitLocalPosition(DashboardNavigationSource.Maneuver direction)
     {
+        bool isLeft = (direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft);
         if (chunkType == RoadChunkType.YFork)
         {
-            return (direction == DashboardNavigationSource.Maneuver.Left)
-                ? leftForkExitPosition
-                : rightForkExitPosition;
+            return isLeft ? leftForkExitPosition : rightForkExitPosition;
         }
 
         float exitDistance = (branchExitDistance > 0.1f) ? branchExitDistance : 25.8f;
 
-        return (direction == DashboardNavigationSource.Maneuver.Left)
+        return isLeft
             ? new Vector3(-exitDistance, 0f, intersectionCenterZ)
             : new Vector3(exitDistance, 0f, intersectionCenterZ);
     }
@@ -217,15 +216,14 @@ public class RoadChunk : MonoBehaviour
     /// </summary>
     public Quaternion GetBranchExitLocalRotation(DashboardNavigationSource.Maneuver direction)
     {
+        bool isLeft = (direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft);
         if (chunkType == RoadChunkType.YFork)
         {
-            Vector3 euler = (direction == DashboardNavigationSource.Maneuver.Left)
-                ? leftForkExitRotation
-                : rightForkExitRotation;
+            Vector3 euler = isLeft ? leftForkExitRotation : rightForkExitRotation;
             return Quaternion.Euler(euler);
         }
 
-        return (direction == DashboardNavigationSource.Maneuver.Left)
+        return isLeft
             ? Quaternion.Euler(0f, -90f, 0f)
             : Quaternion.Euler(0f, 90f, 0f);
     }

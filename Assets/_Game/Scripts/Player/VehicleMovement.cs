@@ -418,13 +418,14 @@ public class VehicleMovement : MonoBehaviour
         float startX = transform.position.x;
 
         // Smooth turning parameters: zero drift yaw for forks, gentle wheel turn, no fishtailing
-        float targetYaw = isFork ? 0f : ((direction == DashboardNavigationSource.Maneuver.Left) ? -10f : 10f);
+        bool isLeft = (direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft);
+        float targetYaw = isFork ? 0f : (isLeft ? -10f : 10f);
         float targetRoll = isFork
-            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? 0.5f : -0.5f)
-            : ((direction == DashboardNavigationSource.Maneuver.Left) ? 2.0f : -2.0f);
+            ? (isLeft ? 0.5f : -0.5f)
+            : (isLeft ? 2.0f : -2.0f);
         float targetWheel = isFork
-            ? ((direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle * 0.35f : maxSteeringAngle * 0.35f)
-            : ((direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle * 0.65f : maxSteeringAngle * 0.65f);
+            ? (isLeft ? -maxSteeringAngle * 0.35f : maxSteeringAngle * 0.35f)
+            : (isLeft ? -maxSteeringAngle * 0.65f : maxSteeringAngle * 0.65f);
 
         while (elapsed < duration)
         {

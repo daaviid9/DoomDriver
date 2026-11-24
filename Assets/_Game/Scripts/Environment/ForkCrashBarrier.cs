@@ -61,7 +61,11 @@ public class ForkCrashBarrier : MonoBehaviour
         TurnTrigger turnTrigger = GetComponentInParent<TurnTrigger>();
         if (turnTrigger != null && RouteController.Instance != null)
         {
-            RouteController.Instance.ReportTurnOutcome(turnTrigger, DashboardNavigationSource.Maneuver.Straight, DashboardNavigationSource.Maneuver.Left, false);
+            DashboardNavigationSource.Maneuver expectedManeuver = (turnTrigger.Chunk != null && 
+                (turnTrigger.Chunk.TargetManeuver == DashboardNavigationSource.Maneuver.Right || turnTrigger.Chunk.TargetManeuver == DashboardNavigationSource.Maneuver.ForkRight))
+                ? DashboardNavigationSource.Maneuver.ForkRight
+                : DashboardNavigationSource.Maneuver.ForkLeft;
+            RouteController.Instance.ReportTurnOutcome(turnTrigger, DashboardNavigationSource.Maneuver.Straight, expectedManeuver, false);
         }
 
         // 2. Violent camera shake

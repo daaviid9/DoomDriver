@@ -285,7 +285,7 @@ public class EnvironmentSpawner : MonoBehaviour
             {
                 RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
                 RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
-                RoadChunkType.YFork => DashboardNavigationSource.Maneuver.Left,
+                RoadChunkType.YFork => DashboardNavigationSource.Maneuver.ForkLeft,
                 _ => DashboardNavigationSource.Maneuver.Straight
             };
 
@@ -512,10 +512,10 @@ public class EnvironmentSpawner : MonoBehaviour
             }
             else if (type == RoadChunkType.YFork)
             {
-                // In debug or neutral fork sequence, alternate between Left and Right
+                // In debug or neutral fork sequence, alternate between ForkLeft and ForkRight
                 roadChunk.TargetManeuver = (debugTurnIndex % 2 == 0)
-                    ? DashboardNavigationSource.Maneuver.Left
-                    : DashboardNavigationSource.Maneuver.Right;
+                    ? DashboardNavigationSource.Maneuver.ForkLeft
+                    : DashboardNavigationSource.Maneuver.ForkRight;
             }
         }
 

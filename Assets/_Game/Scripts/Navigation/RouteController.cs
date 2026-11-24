@@ -148,7 +148,8 @@ public class RouteController : MonoBehaviour
         float duration = (intersectionChunk != null && intersectionChunk.TurnDuration > 0f)
             ? intersectionChunk.TurnDuration
             : defaultDuration;
-        float targetAngle = (direction == DashboardNavigationSource.Maneuver.Left) ? turnAngle : -turnAngle;
+        bool isLeft = (direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft);
+        float targetAngle = isLeft ? turnAngle : -turnAngle;
 
         // 1. Notify EnvironmentSpawner that a world turn is in progress and prune chunks ahead
         if (EnvironmentSpawner.Instance != null)
@@ -290,15 +291,25 @@ public class RouteController : MonoBehaviour
         {
             float remainingMeters = Mathf.Max(0f, nearestIntersection.GetDistanceToCenter());
 
-            currentManeuverDirection = (nearestIntersection.TargetManeuver != DashboardNavigationSource.Maneuver.Straight)
-                ? nearestIntersection.TargetManeuver
-                : nearestIntersection.ChunkType switch
-                {
-                    RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
-                    RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
-                    RoadChunkType.YFork => DashboardNavigationSource.Maneuver.Left,
-                    _ => DashboardNavigationSource.Maneuver.Straight
-                };
+            if (nearestIntersection.ChunkType == RoadChunkType.YFork)
+            {
+                bool targetRight = (nearestIntersection.TargetManeuver == DashboardNavigationSource.Maneuver.Right ||
+                                    nearestIntersection.TargetManeuver == DashboardNavigationSource.Maneuver.ForkRight);
+                currentManeuverDirection = targetRight
+                    ? DashboardNavigationSource.Maneuver.ForkRight
+                    : DashboardNavigationSource.Maneuver.ForkLeft;
+            }
+            else
+            {
+                currentManeuverDirection = (nearestIntersection.TargetManeuver != DashboardNavigationSource.Maneuver.Straight)
+                    ? nearestIntersection.TargetManeuver
+                    : nearestIntersection.ChunkType switch
+                    {
+                        RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
+                        RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
+                        _ => DashboardNavigationSource.Maneuver.Straight
+                    };
+            }
 
             // Stable maneuver ID per unique intersection instance
             currentManeuverId = $"delivery-turn-{nearestIntersection.GetInstanceID()}";

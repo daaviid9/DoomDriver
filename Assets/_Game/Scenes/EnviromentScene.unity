@@ -556,8 +556,8 @@ MonoBehaviour:
   penaltyPerMissedTurn: 5
   recalculationChunks: 3
   recalculatingDuration: 2.5
-  forkTurnDuration: 0.95
-  sharpTurnDuration: 1.1
+  forkTurnDuration: 0.5
+  sharpTurnDuration: 0.5
   completedTurnsCount: 0
   missedTurnsCount: 0
   currentManeuverId: 
