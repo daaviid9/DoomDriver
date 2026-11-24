@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab01, type: 3}
+  m_Name: Weather_RainAndFog
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WeatherPreset
+  condition: 3
+  displayName: Rain & Dense Fog
+  briefingHeadline: Stormy Briefing: Rain and thick road fog reducing visibility. Stay alert and don't doomscroll!
+  enableFog: 1
+  fogMode: 3
+  fogColor: {r: 0.36, g: 0.41, b: 0.47, a: 1}
+  fogDensity: 0.032
+  enableRain: 1
+  rainEmissionRate: 260
+  rainSpeedMultiplier: 1.4
+  rainTint: {r: 0.72, g: 0.82, b: 0.94, a: 0.55}
+  wetRoad: 1
+  roadSmoothness: 0.92
+  roadMetallic: 0.38
+  roadTintMultiplier: {r: 0.55, g: 0.58, b: 0.64, a: 1}
+  directionalLightMultiplier: 0.6
+  skyBackgroundTint: {r: 0.3, g: 0.35, b: 0.41, a: 1}
