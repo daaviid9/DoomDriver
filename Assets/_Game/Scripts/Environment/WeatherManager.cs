@@ -44,6 +44,14 @@ namespace DoomDriver.Environment
         [Tooltip("Optional scene ground/road MeshRenderer to swap or tint.")]
         [SerializeField] private MeshRenderer sceneRoadRenderer;
 
+        [Header("Car Windshield Glass Rain Shader")]
+        [Tooltip("Optional MeshRenderer for CarConstruction (auto-found by name 'CarConstruction' if empty).")]
+        [SerializeField] private MeshRenderer carConstructionRenderer;
+        [Tooltip("Material slot index for the car glass on CarConstruction (Element 5).")]
+        [SerializeField] private int carGlassMaterialIndex = 5;
+        [Tooltip("Fallback reference to WindshieldRainGlass material if needed.")]
+        [SerializeField] private Material windshieldGlassMaterial;
+
         [Header("Debug")]
         [Tooltip("Allows cycling weather presets with F7 during playtesting.")]
         [SerializeField] private bool enableDebugCycleKey = true;
@@ -63,6 +71,10 @@ namespace DoomDriver.Environment
         private readonly Dictionary<WeatherCondition, WeatherPreset> presetLookup = new Dictionary<WeatherCondition, WeatherPreset>();
         private readonly List<Renderer> trackedRoadRenderers = new List<Renderer>(64);
         private MaterialPropertyBlock roadPropertyBlock;
+        private Material runtimeGlassMaterial;
+        private float accumulatedGlassFlowTime = 0f;
+        private float accumulatedSideDownTime = 0f;
+        private float accumulatedSideBackTime = 0f;
 
         private float baseDirectionalIntensity = 1f;
         private Color baseCameraBackgroundColor = new Color(0.1415f, 0.1415f, 0.1415f, 1f);
@@ -110,6 +122,12 @@ namespace DoomDriver.Environment
         private static readonly int MetallicPropId = Shader.PropertyToID("_Metallic");
         private static readonly int BaseColorPropId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorPropId = Shader.PropertyToID("_Color");
+        private static readonly int RainIntensityPropId = Shader.PropertyToID("_RainIntensity");
+        private static readonly int DropSpeedPropId = Shader.PropertyToID("_DropSpeed");
+        private static readonly int FlowTimePropId = Shader.PropertyToID("_FlowTime");
+        private static readonly int SideDownTimePropId = Shader.PropertyToID("_SideDownTime");
+        private static readonly int SideBackTimePropId = Shader.PropertyToID("_SideBackTime");
+        private static readonly int SpeedFactorPropId = Shader.PropertyToID("_SpeedFactor");
 
         private void Awake()
         {
@@ -151,6 +169,28 @@ namespace DoomDriver.Environment
             if (enableDebugCycleKey && Keyboard.current != null && Keyboard.current.f7Key.wasPressedThisFrame)
             {
                 CycleWeather();
+            }
+
+            // Accumulate windshield & side-window raindrop flow smoothly:
+            // - Front windshield: parked/braking -> down (+), accelerating -> up/back (-)
+            // - Side windows: parked/braking -> down (-Y), accelerating -> horizontally backward (-Z)
+            if (runtimeGlassMaterial != null && currentRainEmission > 0.5f)
+            {
+                float speed = WorldSpeedController.Instance != null ? WorldSpeedController.Instance.CurrentSpeed : 0f;
+                float speedNorm = Mathf.Clamp01(speed / 26f);
+
+                // Front windshield flow
+                float frontFlowVelocity = Mathf.Lerp(0.85f, -1.45f, speedNorm) * currentRainSpeed;
+                accumulatedGlassFlowTime += Time.deltaTime * frontFlowVelocity;
+
+                // Side windows: downward when slow, horizontal backward (-Z) when accelerating
+                accumulatedSideDownTime += Time.deltaTime * Mathf.Lerp(0.85f, 0.25f, speedNorm) * currentRainSpeed;
+                accumulatedSideBackTime += Time.deltaTime * Mathf.Lerp(0.25f, 2.20f, speedNorm) * currentRainSpeed;
+
+                runtimeGlassMaterial.SetFloat(FlowTimePropId, accumulatedGlassFlowTime);
+                runtimeGlassMaterial.SetFloat(SideDownTimePropId, accumulatedSideDownTime);
+                runtimeGlassMaterial.SetFloat(SideBackTimePropId, accumulatedSideBackTime);
+                runtimeGlassMaterial.SetFloat(SpeedFactorPropId, speedNorm);
             }
 
             if (!isTransitioning) return;
@@ -321,6 +361,13 @@ namespace DoomDriver.Environment
             if (windshieldRain != null)
             {
                 windshieldRain.SetRainParameters(currentRainEmission, currentRainSpeed, currentRainTint);
+            }
+
+            // 2b. Car windshield & side window raindrop glass shader (CarConstruction Element 5)
+            if (runtimeGlassMaterial != null)
+            {
+                float normalizedRain = Mathf.Clamp01(currentRainEmission / 220f);
+                runtimeGlassMaterial.SetFloat(RainIntensityPropId, normalizedRain);
             }
 
             // 3. Wet road reflections
@@ -512,6 +559,39 @@ namespace DoomDriver.Environment
                     if (dryRoadMaterial == null && sceneRoadRenderer != null)
                     {
                         dryRoadMaterial = sceneRoadRenderer.sharedMaterial;
+                    }
+                }
+            }
+
+            ResolveCarWindshieldGlass();
+        }
+
+        private void ResolveCarWindshieldGlass()
+        {
+            if (carConstructionRenderer == null)
+            {
+                GameObject carConstruction = GameObject.Find("CarConstruction");
+                if (carConstruction != null)
+                {
+                    carConstructionRenderer = carConstruction.GetComponent<MeshRenderer>();
+                }
+            }
+
+            if (carConstructionRenderer != null)
+            {
+                Material[] mats = carConstructionRenderer.materials; // creates clean runtime instances
+                if (mats != null && carGlassMaterialIndex >= 0 && carGlassMaterialIndex < mats.Length)
+                {
+                    Material slotMat = mats[carGlassMaterialIndex];
+                    if (slotMat != null && slotMat.HasProperty(RainIntensityPropId))
+                    {
+                        runtimeGlassMaterial = slotMat;
+                    }
+                    else if (windshieldGlassMaterial != null)
+                    {
+                        runtimeGlassMaterial = new Material(windshieldGlassMaterial);
+                        mats[carGlassMaterialIndex] = runtimeGlassMaterial;
+                        carConstructionRenderer.materials = mats;
                     }
                 }
             }

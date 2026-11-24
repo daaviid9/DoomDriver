@@ -610,6 +610,9 @@ MonoBehaviour:
   dryRoadMaterial: {fileID: 2100000, guid: c5148690b7f04114cbac64f48dcebc9c, type: 2}
   wetRoadMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab10, type: 2}
   sceneRoadRenderer: {fileID: 372252488}
+  carConstructionRenderer: {fileID: 0}
+  carGlassMaterialIndex: 5
+  windshieldGlassMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab41, type: 2}
   enableDebugCycleKey: 1
 --- !u!114 &194867919
 MonoBehaviour:
@@ -957,7 +960,7 @@ Transform:
   m_GameObject: {fileID: 330585560}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2.4, z: 5.5}
+  m_LocalPosition: {x: 0, y: 5, z: 15.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -977,10 +980,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WindshieldRainEffect
   rainParticles: {fileID: 0}
   rainMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab11, type: 2}
-  localEmitterOffset: {x: 0, y: 2.4, z: 5.5}
-  emitterBoxSize: {x: 11, y: 1.5, z: 10}
-  baseFallSpeed: 14
-  forwardSpeedSlantFactor: 0.65
+  localEmitterOffset: {x: 0, y: 5, z: 15.5}
+  emitterBoxSize: {x: 22, y: 1.5, z: 18}
+  exteriorMinZ: 4.2
+  enableWindshieldDroplets: 0
+  windshieldLocalOffset: {x: 0, y: 0.1, z: 1.15}
+  windshieldAreaSize: {x: 1.55, y: 0.72}
+  dropletEmissionMultiplier: 0.28
+  dropletSizeRange: {x: 0.018, y: 0.045}
+  baseFallSpeed: 15
+  forwardSpeedSlantFactor: 0.45
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
