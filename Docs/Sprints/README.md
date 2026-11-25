@@ -7,6 +7,7 @@ This folder contains the project documentation for each development sprint, task
   - Transition from an endless runner with fixed lanes to a mission‑based courier loop, introducing a state machine, procedural orders, smooth vehicle handling, intersections, and a dashboard GPS.
 
 ### Feature & Developer Documentation:
+- **Architecture:** **[Workday & Shift Lifecycle Architecture Guide](../WORKDAY_LIFECYCLE_GUIDE.md)** (Sprint 02 Handover)
 - **DEV 4:** **[Road Network, Procedural Intersections & Navigation System](./Dev4_Road_Network_and_Navigation.md)** (Cards 4.1 & 4.2)
 - **DEV 5.1:** **[Dashboard GPS Display & Early Warning](./Dev5_1_Dashboard_GPS.md)** (Card 5.1)
 - **DEV 5.2:** **[Delivery Summary & Accounting](./Dev5_2_Delivery_Summary.md)** (Card 5.2)
