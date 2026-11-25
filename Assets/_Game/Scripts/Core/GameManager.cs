@@ -91,7 +91,10 @@ public class GameManager : MonoBehaviour
     private void SetState(GameState newState)
     {
         currentState = newState;
-        Debug.Log($"[GameManager] Game state changed to: {currentState}");
+        string shiftInfo = ShiftManager.Instance != null 
+            ? $" (Day {ShiftManager.Instance.CurrentDay} • {ShiftManager.Instance.DeliveriesCompletedToday}/{ShiftManager.Instance.DailyQuota} orders • ShiftActive: {ShiftManager.Instance.IsShiftActive})"
+            : "";
+        Debug.Log($"<color=#60A5FA>[GameManager]</color> 🔄 Game state changed to: <b>{currentState}</b>{shiftInfo}");
 
         switch (currentState)
         {
@@ -204,6 +207,7 @@ public class GameManager : MonoBehaviour
                     // Set before notifying wallet listeners: reentrant Continue cannot pay twice.
                     rewardSettled = true;
                     WalletManager.Instance.AddFunds((float)CompletedDelivery.NetEarnings);
+                    Debug.Log($"<color=#10B981>[GameManager]</color> 💰 Delivery payout settled: +€{CompletedDelivery.NetEarnings:F2}. New Wallet Balance: €{WalletManager.Instance.Balance:F2}");
 
                     // Record completed delivery in ShiftManager
                     if (ShiftManager.Instance != null)

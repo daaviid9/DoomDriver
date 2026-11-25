@@ -104,10 +104,15 @@ namespace DoomDriver.Phone
         {
             SubscribeToEvents();
 
-            // Set initial state: In lobby start in Courier App so orders are immediately selectable, during delivery hide OS
+            // Set initial state: In lobby start in Home during DayBriefing, in Courier App during OrderSelection, during delivery hide OS
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
             {
                 SetOSVisible(false);
+            }
+            else if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DayBriefing)
+            {
+                SetOSVisible(true);
+                OpenScreen(PhoneScreen.Home);
             }
             else
             {
@@ -201,14 +206,14 @@ namespace DoomDriver.Phone
 
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.OnDayBriefingStarted -= HandleOrderSelectionStarted;
-                GameManager.Instance.OnDayBriefingStarted += HandleOrderSelectionStarted;
+                GameManager.Instance.OnDayBriefingStarted -= HandleDayBriefingStarted;
+                GameManager.Instance.OnDayBriefingStarted += HandleDayBriefingStarted;
 
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
 
-                GameManager.Instance.OnDaySummaryStarted -= HandleOrderSelectionStarted;
-                GameManager.Instance.OnDaySummaryStarted += HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted -= HandleDaySummaryStarted;
+                GameManager.Instance.OnDaySummaryStarted += HandleDaySummaryStarted;
 
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
@@ -236,9 +241,9 @@ namespace DoomDriver.Phone
 
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.OnDayBriefingStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDayBriefingStarted -= HandleDayBriefingStarted;
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
-                GameManager.Instance.OnDaySummaryStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted -= HandleDaySummaryStarted;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
             }
 
@@ -352,6 +357,7 @@ namespace DoomDriver.Phone
         {
             if (CurrentScreen == PhoneScreen.Home) return;
 
+            Debug.Log("<color=#94A3B8>[PhoneOSController]</color> 🔙 Returning to Home Screen");
             PlayAudio(backHomeClip);
             OpenScreen(PhoneScreen.Home);
         }
@@ -440,10 +446,25 @@ namespace DoomDriver.Phone
             }
         }
 
+        private void HandleDayBriefingStarted()
+        {
+            Debug.Log("<color=#38BDF8>[PhoneOSController]</color> 🌅 DayBriefing started -> Showing Phone Home Screen");
+            SetOSVisible(true);
+            OpenScreen(PhoneScreen.Home);
+        }
+
         private void HandleOrderSelectionStarted()
         {
+            Debug.Log("<color=#34D399>[PhoneOSController]</color> 📋 OrderSelection started -> Showing Courier App with orders");
             SetOSVisible(true);
             OpenScreen(PhoneScreen.CourierApp);
+        }
+
+        private void HandleDaySummaryStarted()
+        {
+            Debug.Log("<color=#A78BFA>[PhoneOSController]</color> 🌙 DaySummary started -> Showing Phone Home Screen");
+            SetOSVisible(true);
+            OpenScreen(PhoneScreen.Home);
         }
 
         private void HandleDeliveryStarted()

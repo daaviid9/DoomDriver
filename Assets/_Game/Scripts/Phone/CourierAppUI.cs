@@ -304,6 +304,8 @@ namespace DoomDriver.Phone
                 headerTitleText.text = $"Day {day} • Deliveries";
             }
 
+            Debug.Log($"<color=magenta>[CourierAppUI]</color> 📋 Refreshed Header -> Day {day} • Orders: {delivered}/{quota} (QuotaMet: {isQuotaMet})");
+
             if (shiftQuotaText != null)
             {
                 if (isQuotaMet)

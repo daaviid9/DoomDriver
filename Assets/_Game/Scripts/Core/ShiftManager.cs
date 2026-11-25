@@ -107,6 +107,7 @@ public class ShiftManager : MonoBehaviour
         }
 
         LoadProgress();
+        Debug.Log($"<color=#38BDF8>[ShiftManager]</color> 🚀 Loaded Progress -> Day {currentDay} | Quota: {dailyQuota} | Delivered Today: {deliveriesCompletedToday} | Career Deliveries: {careerTotalDeliveries} | Shift Active: {isShiftActive} | Earnings: €{shiftEarnings:F2}");
     }
 
     private void OnDestroy()
@@ -138,7 +139,7 @@ public class ShiftManager : MonoBehaviour
         quotaCompletionEventFired = IsQuotaMet;
         SaveProgress();
 
-        Debug.Log($"[ShiftManager] Shift started for Day {currentDay}. Quota: {dailyQuota} orders.");
+        Debug.Log($"<color=#34D399>[ShiftManager]</color> ⏰ SHIFT STARTED for Day {currentDay}! Target Quota: {dailyQuota} deliveries. Clocked In.");
         OnShiftStarted?.Invoke();
         OnDeliveryCountChanged?.Invoke(deliveriesCompletedToday, dailyQuota);
 
@@ -159,7 +160,8 @@ public class ShiftManager : MonoBehaviour
         careerTotalDeliveries++;
         shiftEarnings += (float)earnings;
 
-        Debug.Log($"[ShiftManager] Delivery completed. Today: {deliveriesCompletedToday}/{dailyQuota}. Shift Earnings: €{shiftEarnings:F2}");
+        string quotaStatus = IsQuotaMet ? "🏆 <color=#FBBF24>QUOTA MET - OVERTIME ACTIVE (+25% Speed Tip)</color>" : $"({dailyQuota - deliveriesCompletedToday} more needed)";
+        Debug.Log($"<color=#34D399>[ShiftManager]</color> 📦 DELIVERY COMPLETED! Today: {deliveriesCompletedToday}/{dailyQuota} {quotaStatus} | Payout: +€{(float)earnings:F2} | Shift Total: €{shiftEarnings:F2}");
 
         SaveProgress();
 
@@ -169,7 +171,7 @@ public class ShiftManager : MonoBehaviour
         if (IsQuotaMet && !quotaCompletionEventFired)
         {
             quotaCompletionEventFired = true;
-            Debug.Log($"[ShiftManager] Daily quota reached ({deliveriesCompletedToday}/{dailyQuota})!");
+            Debug.Log($"<color=#FBBF24>[ShiftManager]</color> 🏆 DAILY QUOTA ACHIEVED ({deliveriesCompletedToday}/{dailyQuota})! Overtime mode unlocked (+25% tip). Player can continue delivering or End Shift.");
             OnShiftCompleted?.Invoke();
         }
     }
@@ -180,7 +182,7 @@ public class ShiftManager : MonoBehaviour
     /// </summary>
     public void EndShift()
     {
-        Debug.Log($"[ShiftManager] Ending shift for Day {currentDay}. Total orders today: {deliveriesCompletedToday}, Earnings: €{shiftEarnings:F2}");
+        Debug.Log($"<color=#F87171>[ShiftManager]</color> 🏁 SHIFT ENDED for Day {currentDay}. Finished {deliveriesCompletedToday} orders today with €{shiftEarnings:F2} earned. Proceeding to DaySummary settlement.");
         isShiftActive = false;
         SaveProgress();
 
@@ -205,7 +207,7 @@ public class ShiftManager : MonoBehaviour
 
         SaveProgress();
 
-        Debug.Log($"[ShiftManager] Advanced to Day {currentDay}. New target quota: {dailyQuota}.");
+        Debug.Log($"<color=#A78BFA>[ShiftManager]</color> ☀️ ADVANCED TO NEXT DAY: Day {currentDay}. New target quota: {dailyQuota} orders. Daily counters reset to 0.");
 
         OnDayAdvanced?.Invoke(currentDay);
         OnDeliveryCountChanged?.Invoke(deliveriesCompletedToday, dailyQuota);
@@ -283,7 +285,7 @@ public class ShiftManager : MonoBehaviour
         isShiftActive = false;
         quotaCompletionEventFired = false;
 
-        Debug.Log("[ShiftManager] Career progress reset to Day 1 defaults.");
+        Debug.Log("<color=#EF4444>[ShiftManager]</color> ⚠️ Career progress reset to Day 1 defaults (Quota: 3, 0 orders, €0.00).");
 
         OnDayAdvanced?.Invoke(currentDay);
         OnDeliveryCountChanged?.Invoke(deliveriesCompletedToday, dailyQuota);
