@@ -388,7 +388,7 @@ public class VehicleMovement : MonoBehaviour
     /// Initiates a dynamic cornering drift maneuver during a 90-degree world turn.
     /// Smoothly animates vehicle body yaw, roll, steering wheel rotation, and centers position.
     /// </summary>
-    public void StartTurnManeuver(DashboardNavigationSource.Maneuver direction, float duration)
+    public void StartTurnManeuver(DashboardNavigationSource.Maneuver direction, float duration, bool isFork = false)
     {
         if (turnManeuverCoroutine != null)
         {
@@ -400,20 +400,32 @@ public class VehicleMovement : MonoBehaviour
             easeToCenterCoroutine = null;
         }
 
-        turnManeuverCoroutine = StartCoroutine(TurnManeuverRoutine(direction, duration));
+        turnManeuverCoroutine = StartCoroutine(TurnManeuverRoutine(direction, duration, isFork));
     }
 
-    private System.Collections.IEnumerator TurnManeuverRoutine(DashboardNavigationSource.Maneuver direction, float duration)
+    private System.Collections.IEnumerator TurnManeuverRoutine(DashboardNavigationSource.Maneuver direction, float duration, bool isFork = false)
     {
         isTurnManeuverActive = true;
         isManeuvering = true;
-        OnManeuveringStateChanged?.Invoke(true);
+
+        // Do not trigger screeching tire drift audio for smooth highway fork transitions
+        if (!isFork)
+        {
+            OnManeuveringStateChanged?.Invoke(true);
+        }
 
         float elapsed = 0f;
         float startX = transform.position.x;
-        float targetYaw = (direction == DashboardNavigationSource.Maneuver.Left) ? -20f : 20f;
-        float targetRoll = (direction == DashboardNavigationSource.Maneuver.Left) ? 3.5f : -3.5f;
-        float targetWheel = (direction == DashboardNavigationSource.Maneuver.Left) ? -maxSteeringAngle : maxSteeringAngle;
+
+        // Smooth turning parameters: zero drift yaw for forks, gentle wheel turn, no fishtailing
+        bool isLeft = (direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft);
+        float targetYaw = isFork ? 0f : (isLeft ? -10f : 10f);
+        float targetRoll = isFork
+            ? (isLeft ? 0.5f : -0.5f)
+            : (isLeft ? 2.0f : -2.0f);
+        float targetWheel = isFork
+            ? (isLeft ? -maxSteeringAngle * 0.35f : maxSteeringAngle * 0.35f)
+            : (isLeft ? -maxSteeringAngle * 0.65f : maxSteeringAngle * 0.65f);
 
         while (elapsed < duration)
         {
@@ -425,13 +437,13 @@ public class VehicleMovement : MonoBehaviour
             float currentX = Mathf.Lerp(startX, 0f, smoothT);
             transform.position = new Vector3(currentX, transform.position.y, transform.position.z);
 
-            // Sine curve for dynamic yaw and roll: peaks at apex (t = 0.5), returns to 0
+            // Smooth sine curve for gentle steering wheel motion and natural weight transfer
             float apexWeight = Mathf.Sin(t * Mathf.PI);
             float yaw = targetYaw * apexWeight;
             float roll = targetRoll * apexWeight;
             transform.localRotation = Quaternion.Euler(0f, yaw, roll);
 
-            // Rotate steering wheel into the corner, then back to center
+            // Rotate steering wheel smoothly into the curve and back to center
             if (steeringWheel != null)
             {
                 steeringWheel.localRotation = Quaternion.Euler(0f, 0f, targetWheel * apexWeight);

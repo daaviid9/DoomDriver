@@ -16,6 +16,7 @@ The driver no longer travels on an endless straight highway. Instead, the game g
 * `Assets/_Game/Prefabs/Environment/RoadChunk_TurnLeft.prefab`: T-junction branching left (`chunkLength = 44.75m`, `intersectionCenterZ = 19.0m`, `branchExitDistance = 25.8m`).
 * `Assets/_Game/Prefabs/Environment/RoadChunk_TurnRight.prefab`: T-junction branching right (`chunkLength = 44.75m`, `intersectionCenterZ = 19.0m`, `branchExitDistance = 25.8m`).
 * `Assets/_Game/Prefabs/Environment/RoadChunk_Crossroads.prefab`: 4-way crossroad supporting both left and right maneuvers.
+* [`Assets/_Game/Prefabs/Environment/RoadChunk_YFork.prefab`](file:///c:/Users/kikom/Skola/3/gamedev/game-jam/Assets/_Game/Prefabs/Environment/RoadChunk_YFork.prefab): Extended ~85m Y-junction / fork road segment splitting smoothly into two branching paths (left fork vs. right fork) with dual exit branch anchors at $X = \pm 8\text{m}, Z = 85\text{m}$ (rotation $\pm 12^\circ$). Includes central divider island, apex crash attenuator, inner guardrails, island props, and flanking city buildings.
 * `Assets/_Game/Prefabs/Environment/RoadChunk_01.prefab`, `RoadChunk_02.prefab`, `RoadChunk_03.prefab`: Straight street variants with diverse buildings, street lights, and scenery.
 
 ### B. Scripts & Architecture
@@ -62,6 +63,36 @@ The driver no longer travels on an endless straight highway. Instead, the game g
    * The route is dynamically extended: 3 additional straight chunks (~134m) are injected before another compensatory turn is scheduled.
    * The GPS announces a new recalculated maneuver once the detour route is prepared.
 
+### Card 4.3 – Extended Y-Fork Road Prefabs & Branch Geometry
+1. **High-Speed 45° Split Geometry (`chunkLength = 45.456m`, `intersectionCenterZ = 18.37m`):**
+   * Replaces abrupt 90° T-junctions with a smooth, authentic $45^\circ$ Y-fork avenue segment.
+   * The avenue splits into dual diverging paths:
+     * **Left Fork:** Exits at $X = -27.086\text{m}, Z = 45.456\text{m}$ (rotation $Y = -45.0^\circ$).
+     * **Right Fork:** Exits at $X = +27.086\text{m}, Z = 45.456\text{m}$ (rotation $Y = +45.0^\circ$).
+   * Span between branch centers at exit: $\Delta X = 54.172\text{m}$.
+2. **Analytical 45° World Turn Pivot & Inspector Tuning (`RouteController` & `RoadChunk`):**
+   * Rotation angle is dynamically configured via `intersectionChunk.TurnAngle` ($45^\circ$ for `YFork` vs $90^\circ$ for standard intersections).
+   * Pivoting around analytical center $C_z = E_z - |E_x| = 45.456 - 27.086 = 18.37\text{m}$ ensures the chosen branch exit aligns **identically at $X = 0.0000\text{m}$ and $0.0^\circ$ world rotation**.
+   * **Inspector Turn Tuning:**
+     * Per-prefab / chunk override: `RoadChunk.TurnDuration` (`turnDuration` on `RoadChunk_YFork.prefab`, default 0.95s).
+     * Global scene defaults: `RouteController.ForkTurnDuration` (0.95s) and `SharpTurnDuration` (1.1s) serialized on `GameManagers` in `EnviromentScene.unity`.
+   * `VehicleMovement.StartTurnManeuver` adapts with natural weight transfer (roll $\pm 0.5^\circ$), gentle wheel steering ($\approx 31^\circ$), zero drift yaw, and no tire screeching for smooth highway cornering.
+3. **Dual Exit Anchors & Forward Straight Chunk Elimination (`EnvironmentSpawner`):**
+   * `RoadChunk.cs` defines `RoadChunkType.YFork` and dual exit anchors:
+     * `GetBranchExitLocalPosition(direction)` returns the exact local position ($\pm 27.086\text{m}, 0\text{m}, 45.456\text{m}$).
+     * `GetBranchExitLocalRotation(direction)` returns the matching branch rotation ($\pm 45.0^\circ$).
+   * When `EnvironmentSpawner` spawns a Y-fork, `AttachSideBranchPreviews()` attaches preview chunks to **both** left and right exits simultaneously.
+   * **No Straight Forward Chunks Behind Y-Fork:**
+     * `InitializeRoad()`, `SpawnNextChunkInSequence()`, and `ResumeGenerationAfterTurn()` stop forward spawning as soon as a Y-fork is encountered.
+     * `HasActiveForkAhead()` blocks forward spawning while a Y-fork is in front of the car, ensuring the road splits **exclusively into Left and Right** with no phantom straight road behind the barrier.
+   * Promoted preview chunks seamlessly continue straight along the $+Z$ axis without gaps or stutter.
+   * **Bifurcation Hazard Rule (Card 4.3 Update):**
+     * On a Y-fork, there is no straight continuation path. The road splits exclusively into Left ($-45^\circ$) and Right ($+45^\circ$).
+     * The player **only survives if steering into Left or Right**.
+     * If the player continues straight (or fails to steer into either fork branch, e.g. due to phone doomscrolling), they crash directly into the central divider barrier `Road_Barrier_Crash` (equipped with `BoxCollider` and `ForkCrashBarrier.cs`), triggering fatal damage (100 HP loss), explosion VFX/SFX, heavy camera shake, and `DeliveryFailed`.
+     * Steering into the wrong branch (e.g. Right instead of GPS Left) still executes the smooth $45^\circ$ world turn to preserve motion, but triggers route recalculation (+150m road penalty) and financial deduction.
+     * **Game Over UI & Cursor Control:** Upon `DeliveryFailed`, `GameUIController` unlocks and shows the cursor (`Cursor.lockState = CursorLockMode.None`), and `DeliveryFailedPanel` presents a centered dark-themed summary with functional Retry and Exit buttons.
+
 ---
 
 ## 3. Integration Contracts
@@ -84,15 +115,18 @@ The driver no longer travels on an endless straight highway. Instead, the game g
 3. Select an order by clicking **"Prijať"** on the phone screen, OR press **`Enter`** / **`Keypad Enter`**.
 4. The car accelerates forward. Note the dashboard GPS displaying the next turn (e.g. *Turn Left in 200m*).
 5. Watch the GPS distance count down. At ~70m, verify the audio beep and direction announcement.
-6. **Test Successful Turn:**
-   * When reaching the intersection, steer into the requested direction (`A` or `D`).
-   * Verify the world smoothly rotates 90° with no empty gaps or stutter.
-   * Verify the car is aligned with the new road and generation continues seamlessly.
-7. **Test Missed Turn (Recalculating):**
-   * At the next intersection, continue driving straight without turning.
-   * Verify the GPS immediately switches to orange **Recalculating**.
-   * Verify the route is extended and a new turn is scheduled.
-8. Press **`C`** (or complete the route):
+6. **Test Successful Y-Fork Turn:**
+   * When reaching the Y-fork, steer into the requested branch (`A` for Left, `D` for Right).
+   * Verify the world smoothly rotates $45^\circ$ with no empty gaps or stutter.
+   * Verify the car is aligned with the chosen branch and generation continues seamlessly.
+7. **Test Wrong Branch Selection (Recalculating):**
+   * If the GPS asks for Left, steer Right instead into the other branch.
+   * Verify the car smoothly enters the right branch ($45^\circ$ turn), and GPS switches to orange **Recalculating** with penalty.
+8. **Test Fatal Central Crash (Going Straight into Y-Fork):**
+   * At the Y-fork, drive straight ahead without steering left or right (e.g. distracted by phone).
+   * Verify the car smashes directly into the central divider/attenuator at the fork center.
+   * Verify fatal damage (car destroyed, explosion/smoke VFX, heavy camera shake) and `DeliveryFailed` screen triggers immediately.
+9. Press **`C`** (or complete the route):
    * Verify `DeliverySummaryUI` opens and displays the **Missed-turn penalties** item corresponding to the misses made.
    * Press **Continue**: payout is credited to wallet and state returns to `OrderSelection`.
 

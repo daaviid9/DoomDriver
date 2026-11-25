@@ -5,6 +5,8 @@ This folder contains the project documentation for each development sprint, task
 ## Overview of Sprints:
 - **[Sprint 01: Pivot – Courier Mission Loop (Bolt Food Style)](./Sprint_01_Pivot_Courier_Loop.md)**
   - Transition from an endless runner with fixed lanes to a mission‑based courier loop, introducing a state machine, procedural orders, smooth vehicle handling, intersections, and a dashboard GPS.
+- **[Sprint 02: Daily Shift Loop, Y-Junctions & Courier Life System](./Sprint_02_Daily_Shift_and_Road_Evolution.md)**
+  - Introduction of working days/shifts, phone Home Screen with funny mandatory bills and upgrade shop, full keyboard navigation for the phone, extended Y-fork road chunks, lose screen overhaul, and stability bugfixes.
 
 ### Feature & Developer Documentation:
 - **Architecture:** **[Workday & Shift Lifecycle Architecture Guide](../WORKDAY_LIFECYCLE_GUIDE.md)** (Sprint 02 Handover)

@@ -15,6 +15,8 @@ public sealed class DashboardNavigationUI : MonoBehaviour
     [SerializeField] private AudioClip turnLeftVoice;
     [SerializeField] private AudioClip turnRightVoice;
     [SerializeField] private AudioClip straightVoice;
+    [SerializeField] private AudioClip forkLeftVoice;
+    [SerializeField] private AudioClip forkRightVoice;
     [SerializeField] private AudioClip recalculatingVoice;
     [SerializeField, Min(0f)] private float warningDistance = 70f;
     [SerializeField] private Color normalColor = new Color(0.87f, 0.9f, 0.82f);
@@ -135,8 +137,14 @@ public sealed class DashboardNavigationUI : MonoBehaviour
             UpdateArrowVisibility(0f);
             if (navigating)
             {
-                float angle = source.Direction == DashboardNavigationSource.Maneuver.Left ? 90f
-                    : source.Direction == DashboardNavigationSource.Maneuver.Right ? -90f : 0f;
+                float angle = source.Direction switch
+                {
+                    DashboardNavigationSource.Maneuver.Left => 90f,
+                    DashboardNavigationSource.Maneuver.Right => -90f,
+                    DashboardNavigationSource.Maneuver.ForkLeft => 45f,
+                    DashboardNavigationSource.Maneuver.ForkRight => -45f,
+                    _ => 0f
+                };
                 arrow.localRotation = Quaternion.Euler(0f, 0f, angle);
             }
         }
@@ -144,6 +152,8 @@ public sealed class DashboardNavigationUI : MonoBehaviour
         if (statusText != null)
         {
             string label = recalculating ? "Recalculating..." : !navigating ? "Waiting for route"
+                : source.Direction == DashboardNavigationSource.Maneuver.ForkLeft ? "Take left fork"
+                : source.Direction == DashboardNavigationSource.Maneuver.ForkRight ? "Take right fork"
                 : source.Direction == DashboardNavigationSource.Maneuver.Left ? "Turn left"
                 : source.Direction == DashboardNavigationSource.Maneuver.Right ? "Turn right" : "Continue straight";
             if (statusText.text != label) statusText.text = label;
@@ -199,8 +209,14 @@ public sealed class DashboardNavigationUI : MonoBehaviour
     public AudioClip GetManeuverClip(DashboardNavigationSource.Maneuver direction)
     {
         if (!useVoiceGuidance) return warningClip;
-        AudioClip voice = direction == DashboardNavigationSource.Maneuver.Left ? turnLeftVoice
-            : direction == DashboardNavigationSource.Maneuver.Right ? turnRightVoice : straightVoice;
+        AudioClip voice = direction switch
+        {
+            DashboardNavigationSource.Maneuver.ForkLeft => (forkLeftVoice != null ? forkLeftVoice : turnLeftVoice),
+            DashboardNavigationSource.Maneuver.ForkRight => (forkRightVoice != null ? forkRightVoice : turnRightVoice),
+            DashboardNavigationSource.Maneuver.Left => turnLeftVoice,
+            DashboardNavigationSource.Maneuver.Right => turnRightVoice,
+            _ => straightVoice
+        };
         return voice != null ? voice : warningClip;
     }
 }
