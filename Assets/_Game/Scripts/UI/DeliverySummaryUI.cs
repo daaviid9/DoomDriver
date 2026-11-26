@@ -150,7 +150,14 @@ public sealed class DeliverySummaryUI : MonoBehaviour
 
         if (ratingText != null) ratingText.text = $"{rating:F1}";
         if (customerQuoteText != null) customerQuoteText.text = $"\"{quote}\"";
-        if (customerBylineText != null) customerBylineText.text = $"— {custName.ToUpperInvariant()}, VERIFIED CUSTOMER";
+
+        if (customerBylineText != null)
+        {
+            int day = ShiftManager.Instance != null ? ShiftManager.Instance.CurrentDay : 1;
+            int delivered = ShiftManager.Instance != null ? ShiftManager.Instance.DeliveriesCompletedToday : 1;
+            int quota = ShiftManager.Instance != null ? ShiftManager.Instance.DailyQuota : 3;
+            customerBylineText.text = $"— {custName.ToUpperInvariant()} • DAY {day} (ORDER {delivered}/{quota})";
+        }
     }
 
     public static string FormatElapsedTime(float seconds)

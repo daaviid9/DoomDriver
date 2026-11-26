@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>Presentation boundary for Dev 4: publish route snapshots here, not directly to UI.</summary>
 public sealed class DashboardNavigationSource : MonoBehaviour
 {
-    public enum Maneuver { Left, Right, Straight }
+    public enum Maneuver { Left, Right, Straight, ForkLeft, ForkRight }
     public enum NavigationState { NoRoute, Navigating, Recalculating }
 
     public NavigationState State { get; private set; }
@@ -38,9 +38,20 @@ public sealed class DashboardNavigationSource : MonoBehaviour
     {
         if (State != NavigationState.Navigating || string.IsNullOrEmpty(maneuverId) || maneuverId != ManeuverId)
             return false;
-        if (actualDirection != Maneuver.Left && actualDirection != Maneuver.Right && actualDirection != Maneuver.Straight)
+
+        bool isLeft = (actualDirection == Maneuver.Left || actualDirection == Maneuver.ForkLeft);
+        bool isRight = (actualDirection == Maneuver.Right || actualDirection == Maneuver.ForkRight);
+        bool isStraight = (actualDirection == Maneuver.Straight);
+
+        if (!isLeft && !isRight && !isStraight)
             return false;
-        if (actualDirection == Direction) ClearRoute();
+
+        bool expectedIsLeft = (Direction == Maneuver.Left || Direction == Maneuver.ForkLeft);
+        bool expectedIsRight = (Direction == Maneuver.Right || Direction == Maneuver.ForkRight);
+
+        bool isMatch = (actualDirection == Direction) || (expectedIsLeft && isLeft) || (expectedIsRight && isRight);
+
+        if (isMatch) ClearRoute();
         else SetRecalculating();
         return true;
     }

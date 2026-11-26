@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DoomDriver - Workday & Shift Lifecycle UI Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    /* Inlined index.css styles */
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Fredoka', sans-serif;
+      background: linear-gradient(145deg, #a7f3d0 0%, #34d399 100%);
+      color: #1e1b4b;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .game-stage {
+      padding: 30px 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+    .phone {
+      width: 410px;
+      padding: 10px;
+      border: 4px solid #1e1b4b;
+      border-radius: 48px;
+      background: #312e81;
+      box-shadow: 0 10px 0 #1e1b4b, 0 30px 60px rgba(30, 27, 75, 0.35);
+    }
+    .phone-screen {
+      position: relative;
+      overflow: hidden;
+      height: 780px;
+      border-radius: 38px;
+      background: #fef7ed;
+      display: flex;
+      flex-direction: column;
+    }
+    .status-bar {
+      height: 38px;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #1e1b4b;
+    }
+    .home-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 18px 80px;
+    }
+    .hello-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .kicker {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: #ea580c;
+    }
+    .hello-row h1 {
+      margin: 2px 0 0;
+      font-size: 21px;
+      font-weight: 700;
+      color: #1e1b4b;
+    }
+    .profile-cluster {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      border: 2px solid #1e1b4b;
+      background: #fef3c7;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      box-shadow: 0 3px 0 #1e1b4b;
+    }
+    .profile-cluster > div {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+    }
+    .rating-pill {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 2px 6px;
+      border-radius: 99px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .wallet-badge {
+      background: #1e1b4b;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 99px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    
+    /* SHIFT CARD */
+    .shift-card {
+      position: relative;
+      overflow: hidden;
+      padding: 16px 16px 14px;
+      border: 2px solid #1e1b4b;
+      border-radius: 22px;
+      background: #ffffff;
+      box-shadow: 0 6px 0 #fbbf24, 0 10px 20px rgba(30, 27, 75, 0.08);
+      margin-bottom: 16px;
+      transition: all 0.25s ease;
+    }
+    .shift-card.shift-active {
+      box-shadow: 0 6px 0 #34d399, 0 10px 20px rgba(52, 211, 153, 0.15);
+    }
+    .shift-card.shift-active.is-overtime {
+      box-shadow: 0 6px 0 #f59e0b, 0 10px 20px rgba(245, 158, 11, 0.2);
+    }
+    .shift-card.shift-summary {
+      box-shadow: 0 6px 0 #6366f1, 0 10px 20px rgba(99, 102, 241, 0.2);
+    }
+    .shift-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .shift-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 99px;
+      border: 1.5px solid #1e1b4b;
+    }
+    .pill-offduty { background: #f1f5f9; color: #475569; }
+    .pill-active { background: #d1fae5; color: #065f46; }
+    .pill-overtime { background: #fef3c7; color: #92400e; }
+    .pill-summary { background: #e0e7ff; color: #3730a3; }
+    .status-dot { width: 7px; height: 7px; border-radius: 99px; }
+    .dot-offduty { background: #94a3b8; }
+    .dot-active { background: #10b981; animation: pulse 1.2s infinite; }
+    .dot-overtime { background: #f59e0b; animation: pulse 0.8s infinite; }
+    .dot-summary { background: #6366f1; }
+    @keyframes pulse { 0% { transform: scale(0.9); } 50% { transform: scale(1.3); } 100% { transform: scale(0.9); } }
+    .shift-day-tag { font-size: 10px; font-weight: 700; color: #1e1b4b; background: #f8fafc; border: 1.5px solid #e2e8f0; padding: 2px 7px; border-radius: 6px; }
+    .shift-hero { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .shift-hero-text span { color: #f97316; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; }
+    .shift-hero-text h2 { font-size: 20px; font-weight: 700; color: #1e1b4b; margin: 2px 0 0; }
+    .shift-hero-icon { width: 40px; height: 40px; border-radius: 12px; border: 2px solid #1e1b4b; background: #fef3c7; color: #f59e0b; display: grid; place-items: center; font-size: 18px; box-shadow: 0 3px 0 #1e1b4b; }
+    .shift-earnings-badge { text-align: right; }
+    .shift-earnings-badge span { font-size: 8px; font-weight: 700; color: #64748b; }
+    .shift-earnings-badge strong { font-size: 13px; font-weight: 700; color: #065f46; background: #d1fae5; border: 1.5px solid #065f46; padding: 2px 6px; border-radius: 99px; display: block; margin-top: 1px; }
+    .shift-pills-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+    .shift-mini-pill { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 6px 6px; display: flex; flex-direction: column; align-items: center; }
+    .shift-mini-pill span { font-size: 8px; font-weight: 700; color: #64748b; }
+    .shift-mini-pill strong { font-size: 11px; font-weight: 700; color: #1e1b4b; margin-top: 2px; }
+    .text-mint { color: #059669 !important; }
+    .text-coral { color: #e11d48 !important; }
+    .shift-progress-track { height: 12px; border-radius: 99px; background: #f1f5f9; border: 2px solid #1e1b4b; overflow: hidden; margin-bottom: 6px; }
+    .shift-progress-track i { display: block; height: 100%; border-radius: 99px; transition: width 0.35s ease; }
+    .track-fill-normal { background: linear-gradient(90deg, #34d399, #10b981); }
+    .track-fill-overtime { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+    .shift-meta-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 10px; font-weight: 600; color: #64748b; }
+    .overtime-callout { display: flex; align-items: center; gap: 6px; background: #fef3c7; border: 1.5px solid #f59e0b; border-radius: 10px; padding: 6px 9px; font-size: 10px; font-weight: 600; color: #92400e; margin-bottom: 10px; }
+    .shift-actions-row { display: flex; gap: 8px; }
+    .tactile-btn { flex: 1; padding: 10px 14px; border: 2px solid #1e1b4b; border-radius: 14px; font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 5px; transition: transform 0.1s, box-shadow 0.1s; }
+    .tactile-btn:active { transform: translateY(2px); }
+    .start-shift-btn, .shift-action-btn { background: #34d399; color: #1e1b4b; box-shadow: 0 4px 0 #059669; }
+    .start-shift-btn:active, .shift-action-btn:active { box-shadow: 0 1px 0 #059669; }
+    .clockout-btn { background: #fee2e2; color: #991b1b; box-shadow: 0 4px 0 #b91c1c; }
+    .clockout-btn:active { box-shadow: 0 1px 0 #b91c1c; }
+    .advance-day-btn { width: 100%; background: #6366f1; color: white; box-shadow: 0 4px 0 #4338ca; justify-content: space-between; }
+    .advance-day-btn:active { box-shadow: 0 1px 0 #4338ca; }
+    .summary-receipt { background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 12px; padding: 8px 10px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+    .summary-line { display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; color: #475569; }
+
+    /* APPS GRID */
+    .section-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 10px; font-weight: 700; color: #f97316; }
+    .apps-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .app-launcher { border: 2px solid #1e1b4b; border-radius: 18px; padding: 12px 10px; background: white; box-shadow: 0 4px 0 #1e1b4b; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; cursor: pointer; }
+    .app-icon { width: 52px; height: 52px; border-radius: 14px; border: 2px solid #1e1b4b; display: grid; place-items: center; font-size: 26px; position: relative; margin-bottom: 2px; }
+    .icon-food { background: #a7f3d0; }
+    .icon-garage { background: #fde68a; }
+    .icon-bank { background: #fecdd3; }
+    .icon-tok { background: #e0e7ff; }
+    .app-badge { position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border: 1.5px solid #1e1b4b; border-radius: 99px; padding: 1px 5px; font-size: 9px; font-weight: 700; }
+    .badge-overtime { background: #f59e0b !important; }
+    .badge-ready { background: #10b981 !important; }
+    .app-launcher strong { font-size: 12px; color: #1e1b4b; }
+    .app-launcher small { font-size: 9px; color: #64748b; }
+
+    /* DOCK */
+    .dock { position: absolute; bottom: 12px; left: 18px; right: 18px; height: 54px; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 2px solid #1e1b4b; border-radius: 20px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 4px 0 #1e1b4b; }
+    .dock-btn { width: 38px; height: 38px; border-radius: 12px; border: 1.5px solid #1e1b4b; background: #f8fafc; display: grid; place-items: center; font-size: 16px; cursor: pointer; }
+
+    /* SIMULATOR TOOLBAR */
+    .sim-bar { background: #1e1b4b; color: white; padding: 10px 16px; border-radius: 14px; width: 410px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .sim-bar span { font-size: 11px; font-weight: 700; color: #fbbf24; }
+    .sim-bar div { display: flex; gap: 6px; }
+    .sim-btn { background: #3730a3; color: white; border: 1px solid #6366f1; border-radius: 6px; padding: 4px 8px; font-size: 10px; font-weight: 700; cursor: pointer; }
+    .sim-btn:hover { background: #4f46e5; }
+    .sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    function App() {
+      const [day, setDay] = useState(1);
+      const [shiftStatus, setShiftStatus] = useState("briefing"); // "briefing" | "active" | "summary"
+      const [dailyQuota, setDailyQuota] = useState(3);
+      const [completedOrders, setCompletedOrders] = useState(0);
+      const [shiftEarnings, setShiftEarnings] = useState(0);
+      const [dailyBills, setDailyBills] = useState(25.0);
+      const [wallet, setWallet] = useState(142.5);
+      const [notice, setNotice] = useState(null);
+
+      const isOvertime = completedOrders >= dailyQuota;
+      const quotaPercent = Math.min(100, Math.round((completedOrders / dailyQuota) * 100));
+
+      const showNotice = (msg) => {
+        setNotice(msg);
+        setTimeout(() => setNotice(null), 2500);
+      };
+
+      const startShift = () => {
+        setShiftStatus("active");
+        showNotice(`🚀 Day ${day} Shift Started! Head to Quick-Bite for orders.`);
+      };
+
+      const simulateDelivery = () => {
+        const isOt = completedOrders >= dailyQuota;
+        const payout = isOt ? 12.5 : 9.0;
+        setWallet(w => w + payout);
+        setShiftEarnings(s => s + payout);
+        const next = completedOrders + 1;
+        setCompletedOrders(next);
+        if (next === dailyQuota) {
+          showNotice(`🎉 Quota Met (${next}/${dailyQuota})! Overtime Unlocked (+25% tip)!`);
+        } else if (next > dailyQuota) {
+          showNotice(`🔥 Overtime Delivery Done! + € ${payout.toFixed(2)}`);
+        } else {
+          showNotice(`📦 Delivery Complete! + € ${payout.toFixed(2)}`);
+        }
+      };
+
+      const endShift = () => {
+        setShiftStatus("summary");
+        showNotice(`Shift ended! Reviewing Day ${day} settlement.`);
+      };
+
+      const advanceDay = () => {
+        setWallet(w => Math.max(0, w - dailyBills));
+        setDay(d => d + 1);
+        setCompletedOrders(0);
+        setShiftEarnings(0);
+        setShiftStatus("briefing");
+        showNotice(`🌙 Welcome to Day ${day + 1}! Daily living bills € ${dailyBills.toFixed(2)} paid.`);
+      };
+
+      return (
+        <div className="game-stage">
+          {/* SIMULATOR TOOLBAR */}
+          <div className="sim-bar">
+            <span>🕹️ WORKDAY SIMULATOR:</span>
+            <div>
+              <button className="sim-btn" disabled={shiftStatus !== "active"} onClick={simulateDelivery}>+1 Delivery</button>
+              <button className="sim-btn" disabled={shiftStatus !== "active"} onClick={endShift}>Clock Out</button>
+              <button className="sim-btn" onClick={advanceDay}>Next Day</button>
+            </div>
+          </div>
+
+          {/* SMARTPHONE */}
+          <div className="phone">
+            <div className="phone-screen">
+              {/* STATUS BAR */}
+              <div className="status-bar">
+                <span>08:15</span>
+                <span>📶 5G &nbsp; 🔋 100%</span>
+              </div>
+
+              {/* HOME SCREEN CONTENT */}
+              <div className="home-scroll">
+                <div className="hello-row">
+                  <div>
+                    <span className="kicker">
+                      {shiftStatus === "briefing" && `DAY ${day} • MORNING DISPATCH`}
+                      {shiftStatus === "active" && `DAY ${day} • ON DUTY`}
+                      {shiftStatus === "summary" && `DAY ${day} • SHIFT FINISHED`}
+                    </span>
+                    <h1>Ready to roll, Max?</h1>
+                  </div>
+                  <div className="profile-cluster">
+                    <div className="avatar">🚗</div>
+                    <div>
+                      <span className="rating-pill">★ 4.9</span>
+                      <strong className="wallet-badge">€ {wallet.toFixed(2)}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WORKDAY & SHIFT DISPATCHER CARD */}
+                <section className={`shift-card shift-${shiftStatus} ${isOvertime ? "is-overtime" : ""}`}>
+                  {/* STATE 1: MORNING BRIEFING (PRED ZMENOU) */}
+                  {shiftStatus === "briefing" && (
+                    <div>
+                      <div className="shift-card-top">
+                        <span className="shift-status-pill pill-offduty">
+                          <i className="status-dot dot-offduty" /> OFF-DUTY • MORNING
+                        </span>
+                        <span className="shift-day-tag">DAY {day}</span>
+                      </div>
+                      <div className="shift-hero">
+                        <div className="shift-hero-text">
+                          <span>TODAY'S SHIFT QUOTA</span>
+                          <h2>{dailyQuota} DELIVERIES</h2>
+                        </div>
+                        <div className="shift-hero-icon">⚡</div>
+                      </div>
+                      <div className="shift-pills-row">
+                        <div className="shift-mini-pill">
+                          <span>MIN QUOTA</span>
+                          <strong>{dailyQuota} Orders</strong>
+                        </div>
+                        <div className="shift-mini-pill">
+                          <span>DAILY BILLS</span>
+                          <strong className="text-coral">€ {dailyBills.toFixed(2)}</strong>
+                        </div>
+                        <div className="shift-mini-pill">
+                          <span>OVERTIME</span>
+                          <strong className="text-mint">+25% Tip</strong>
+                        </div>
+                      </div>
+                      <button className="tactile-btn start-shift-btn" onClick={startShift}>
+                        <span>START SHIFT & CLOCK IN</span>
+                        <span>→</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* STATE 2: ACTIVE SHIFT (POČAS ZMENY) */}
+                  {shiftStatus === "active" && (
+                    <div>
+                      <div className="shift-card-top">
+                        <span className={`shift-status-pill ${isOvertime ? "pill-overtime" : "pill-active"}`}>
+                          <i className={`status-dot ${isOvertime ? "dot-overtime" : "dot-active"}`} />
+                          {isOvertime ? "🔥 OVERTIME ACTIVE" : "● LIVE SHIFT"}
+                        </span>
+                        <span className="shift-day-tag">DAY {day}</span>
+                      </div>
+                      <div className="shift-hero">
+                        <div className="shift-hero-text">
+                          <span>DELIVERIES COMPLETED</span>
+                          <h2>{completedOrders} / {dailyQuota} ORDERS</h2>
+                        </div>
+                        <div className="shift-earnings-badge">
+                          <span>SHIFT PAY</span>
+                          <strong>+ € {shiftEarnings.toFixed(2)}</strong>
+                        </div>
+                      </div>
+
+                      <div className="shift-progress-track">
+                        <i
+                          className={isOvertime ? "track-fill-overtime" : "track-fill-normal"}
+                          style={{ width: `${quotaPercent}%` }}
+                        />
+                      </div>
+
+                      {isOvertime ? (
+                        <div className="overtime-callout">
+                          <span>🔥 Quota met! All extra deliveries earn <strong>+25% Speed Tip</strong>!</span>
+                        </div>
+                      ) : (
+                        <div className="shift-meta-row">
+                          <small>{dailyQuota - completedOrders} more orders required today</small>
+                          <small>{quotaPercent}% quota met</small>
+                        </div>
+                      )}
+
+                      <div className="shift-actions-row">
+                        <button className="tactile-btn shift-action-btn" onClick={simulateDelivery}>
+                          <span>{isOvertime ? "TAKE OVERTIME ORDER" : "+ DELIVER FOOD"}</span>
+                          <span>→</span>
+                        </button>
+                        {isOvertime && (
+                          <button className="tactile-btn clockout-btn" onClick={endShift}>
+                            <span>CLOCK OUT 🏁</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STATE 3: SHIFT SUMMARY (VYHODNOTENIE DŇA) */}
+                  {shiftStatus === "summary" && (
+                    <div>
+                      <div className="shift-card-top">
+                        <span className="shift-status-pill pill-summary">
+                          <i className="status-dot dot-summary" /> 🌙 SHIFT COMPLETE
+                        </span>
+                        <span className="shift-day-tag">DAY {day}</span>
+                      </div>
+                      <div className="shift-hero">
+                        <div className="shift-hero-text">
+                          <span>DAY {day} SETTLEMENT</span>
+                          <h2 className={shiftEarnings >= dailyBills ? "text-mint" : "text-coral"}>
+                            {shiftEarnings >= dailyBills ? "+" : "-"} € {Math.abs(shiftEarnings - dailyBills).toFixed(2)} NET
+                          </h2>
+                        </div>
+                      </div>
+
+                      <div className="summary-receipt">
+                        <div className="summary-line">
+                          <span>Orders Delivered:</span>
+                          <strong>{completedOrders} / {dailyQuota} {completedOrders > dailyQuota && `(+${completedOrders - dailyQuota} Overtime)`}</strong>
+                        </div>
+                        <div className="summary-line">
+                          <span>Shift Gross Earnings:</span>
+                          <strong className="text-mint">+ € {shiftEarnings.toFixed(2)}</strong>
+                        </div>
+                        <div className="summary-line">
+                          <span>Daily Living Bills & Rent:</span>
+                          <strong className="text-coral">- € {dailyBills.toFixed(2)}</strong>
+                        </div>
+                      </div>
+
+                      <button className="tactile-btn advance-day-btn" onClick={advanceDay}>
+                        <span>SLEEP & ADVANCE TO DAY {day + 1}</span>
+                        <span>🌙 →</span>
+                      </button>
+                    </div>
+                  )}
+                </section>
+
+                {/* APPS GRID */}
+                <div className="section-label">
+                  <span>YOUR APPS</span>
+                  <small>4 installed</small>
+                </div>
+                <div className="apps-grid">
+                  <div className="app-launcher" onClick={() => {
+                    if (shiftStatus === "briefing") showNotice("Clock in first to start taking orders!");
+                    else simulateDelivery();
+                  }}>
+                    <div className="app-icon icon-food">
+                      🛵
+                      <b className={`app-badge ${shiftStatus === "briefing" ? "badge-ready" : isOvertime ? "badge-overtime" : ""}`}>
+                        {shiftStatus === "briefing" ? "Ready" : isOvertime ? "OT" : Math.max(0, dailyQuota - completedOrders)}
+                      </b>
+                    </div>
+                    <strong>Quick-Bite</strong>
+                    <small>{shiftStatus === "briefing" ? "Clock in to start" : isOvertime ? "Overtime active" : `${dailyQuota - completedOrders} orders to quota`}</small>
+                  </div>
+
+                  <div className="app-launcher" onClick={() => showNotice("Doom Garage: Tuning & upgrades available!")}>
+                    <div className="app-icon icon-garage">🔧</div>
+                    <strong>Doom Garage</strong>
+                    <small>Tune your ride</small>
+                  </div>
+
+                  <div className="app-launcher" onClick={() => showNotice(`DoomBank: Daily rent € ${dailyBills.toFixed(2)} due tonight.`)}>
+                    <div className="app-icon icon-bank">
+                      🐷
+                      <b className="app-badge">!</b>
+                    </div>
+                    <strong>DoomBank</strong>
+                    <small>€ {dailyBills.toFixed(2)} due tonight</small>
+                  </div>
+
+                  <div className="app-launcher" onClick={() => showNotice("DoomTok: Scrolling reels burns FOMO!")}>
+                    <div className="app-icon icon-tok">🔥</div>
+                    <strong>DoomTok</strong>
+                    <small>FOMO video stream</small>
+                  </div>
+                </div>
+              </div>
+
+              {/* DOCK */}
+              <div className="dock">
+                <div className="dock-btn" onClick={() => showNotice("Calling Mom...")}>📞</div>
+                <div className="dock-btn" onClick={() => showNotice("Mom: Drive safe and meet your quota!")}>💬</div>
+                <div className="dock-btn" onClick={() => showNotice("Settings: Version 2.0 (Workday Lifecycle)")}>⚙️</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

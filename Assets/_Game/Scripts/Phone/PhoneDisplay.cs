@@ -20,11 +20,8 @@ namespace DoomDriver.Phone
         [Tooltip("Material used for Reels video player (e.g. screen512)")]
         [SerializeField] private Material reelsMaterial;
 
-        [Tooltip("Material used in lobby / courier app mode (e.g. Black.mat)")]
-        [SerializeField] private Material backgroundMaterial;
-
         [Header("Transition Settings")]
-        [Tooltip("Delay in seconds before switching to reels material on delivery start (allows hand to lower smoothly with black screen)")]
+        [Tooltip("Delay in seconds before switching to reels material on delivery start (allows hand to lower smoothly)")]
         [SerializeField] private float deliveryStartSwitchDelay = 0.35f;
 
         private Coroutine switchRoutine;
@@ -47,12 +44,8 @@ namespace DoomDriver.Phone
             // Guaranteed subscription on first run (in case GameManager was not yet initialized during OnEnable)
             SubscribeToGameManager();
 
-            // Set initial screen material based on current game state
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.OrderSelection)
-            {
-                ShowBlackScreen();
-            }
-            else
+            // Set initial screen material if starting directly in active delivery
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
             {
                 ShowReels();
             }
@@ -72,9 +65,6 @@ namespace DoomDriver.Phone
         {
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
-                GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
-
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
             }
@@ -84,25 +74,14 @@ namespace DoomDriver.Phone
         {
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
             }
-        }
-
-        private void HandleOrderSelectionStarted()
-        {
-            if (switchRoutine != null)
-            {
-                StopCoroutine(switchRoutine);
-                switchRoutine = null;
-            }
-            ShowBlackScreen();
         }
 
         private void HandleDeliveryStarted()
         {
             if (switchRoutine != null) StopCoroutine(switchRoutine);
-            // Delay material switch so the hand lowers down smoothly with black screen
+            // Delay material switch so the hand lowers down smoothly
             // without flashing the video in front of the player's face
             switchRoutine = StartCoroutine(ShowReelsDelayed(deliveryStartSwitchDelay));
         }
@@ -115,7 +94,6 @@ namespace DoomDriver.Phone
         }
 
         public void ShowReels() => SetMaterial(reelsMaterial);
-        public void ShowBlackScreen() => SetMaterial(backgroundMaterial);
 
         private void SetMaterial(Material mat)
         {

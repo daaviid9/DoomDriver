@@ -68,6 +68,11 @@ namespace DoomDriver.Phone
         private void OnEnable()
         {
             Subscribe();
+
+            if (OrderManager.Instance != null && OrderManager.Instance.CurrentOffers != null && OrderManager.Instance.CurrentOffers.Count > 0)
+            {
+                PopulateOffers(OrderManager.Instance.CurrentOffers);
+            }
         }
 
         private void OnDisable()

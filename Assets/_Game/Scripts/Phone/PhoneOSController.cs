@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using DoomDriver.Economy;
 
 namespace DoomDriver.Phone
 {
@@ -68,6 +69,7 @@ namespace DoomDriver.Phone
         public PhoneScreen CurrentScreen { get; private set; } = PhoneScreen.Home;
 
         private int lastSelectedHomeIndex = 0;
+        private Coroutine hideOSCoroutine;
 
         private void Awake()
         {
@@ -103,8 +105,8 @@ namespace DoomDriver.Phone
         {
             SubscribeToEvents();
 
-            // Set initial state: In lobby start on Home Screen, during delivery hide OS
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.OrderSelection)
+            // Set initial state: hide OS during active delivery, otherwise always show Home Screen
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
             {
                 SetOSVisible(false);
             }
@@ -200,8 +202,14 @@ namespace DoomDriver.Phone
 
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= HandleDayBriefingStarted;
+                GameManager.Instance.OnDayBriefingStarted += HandleDayBriefingStarted;
+
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
+
+                GameManager.Instance.OnDaySummaryStarted -= HandleDaySummaryStarted;
+                GameManager.Instance.OnDaySummaryStarted += HandleDaySummaryStarted;
 
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
@@ -222,7 +230,9 @@ namespace DoomDriver.Phone
 
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= HandleDayBriefingStarted;
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted -= HandleDaySummaryStarted;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
             }
         }
@@ -235,6 +245,20 @@ namespace DoomDriver.Phone
             if (CurrentScreen == PhoneScreen.Home && navigator != null && navigator.SelectedIndex >= 0)
             {
                 lastSelectedHomeIndex = navigator.SelectedIndex;
+            }
+
+            // Automatically start shift when opening CourierApp during DayBriefing
+            if (targetScreen == PhoneScreen.CourierApp && GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DayBriefing)
+            {
+                Debug.Log("<color=green>[PhoneOSController]</color> Opening Courier App during DayBriefing -> Starting Shift!");
+                if (ShiftManager.Instance != null)
+                {
+                    ShiftManager.Instance.StartShift();
+                }
+                else
+                {
+                    GameManager.Instance.TransitionFromBriefingToShift();
+                }
             }
 
             CurrentScreen = targetScreen;
@@ -277,6 +301,7 @@ namespace DoomDriver.Phone
         {
             if (CurrentScreen == PhoneScreen.Home) return;
 
+            Debug.Log("<color=#94A3B8>[PhoneOSController]</color> 🔙 Returning to Home Screen");
             PlayAudio(backHomeClip);
             OpenScreen(PhoneScreen.Home);
         }
@@ -300,6 +325,12 @@ namespace DoomDriver.Phone
         private void SetupCourierNavigation()
         {
             if (navigator == null || courierAppUI == null) return;
+
+            // Ensure offers are generated if OrderManager is empty
+            if (OrderManager.Instance != null && (OrderManager.Instance.CurrentOffers == null || OrderManager.Instance.CurrentOffers.Count == 0))
+            {
+                OrderManager.Instance.GenerateOffers();
+            }
 
             if (courierAppUI.CardViews != null && courierAppUI.CardViews.Count > 0)
             {
@@ -359,18 +390,54 @@ namespace DoomDriver.Phone
             }
         }
 
+        private void HandleDayBriefingStarted()
+        {
+            CancelHideOSCoroutine();
+            Debug.Log("<color=#38BDF8>[PhoneOSController]</color> 🌅 DayBriefing started -> Showing Phone Home Screen");
+            SetOSVisible(true);
+            OpenScreen(PhoneScreen.Home);
+        }
+
         private void HandleOrderSelectionStarted()
         {
+            CancelHideOSCoroutine();
+            Debug.Log("<color=#34D399>[PhoneOSController]</color> 📋 OrderSelection started -> Showing Phone Home Screen");
+            SetOSVisible(true);
+            OpenScreen(PhoneScreen.Home);
+        }
+
+        private void HandleDaySummaryStarted()
+        {
+            CancelHideOSCoroutine();
+            Debug.Log("<color=#A78BFA>[PhoneOSController]</color> 🌙 DaySummary started -> Showing Phone Home Screen");
             SetOSVisible(true);
             OpenScreen(PhoneScreen.Home);
         }
 
         private void HandleDeliveryStarted()
         {
-            SetOSVisible(false);
             if (navigator != null)
             {
                 navigator.ClearNavigableItems();
+            }
+
+            CancelHideOSCoroutine();
+            hideOSCoroutine = StartCoroutine(HideOSAfterHandLowers(0.35f));
+        }
+
+        private System.Collections.IEnumerator HideOSAfterHandLowers(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            SetOSVisible(false);
+            hideOSCoroutine = null;
+        }
+
+        private void CancelHideOSCoroutine()
+        {
+            if (hideOSCoroutine != null)
+            {
+                StopCoroutine(hideOSCoroutine);
+                hideOSCoroutine = null;
             }
         }
 

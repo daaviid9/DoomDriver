@@ -252,22 +252,10 @@ public static class JunctionPrefabsSetup
                 "Assets/_Game/Prefabs/Environment/RoadChunk_03.prefab"
             });
 
-            // Assign TurnLeft
-            AssignArrayProperty(spawnerObj.FindProperty("turnLeftPrefabs"), new[]
+            // Assign 45-degree YFork
+            AssignArrayProperty(spawnerObj.FindProperty("yForkPrefabs"), new[]
             {
-                "Assets/_Game/Prefabs/Environment/RoadChunk_TurnLeft.prefab"
-            });
-
-            // Assign TurnRight
-            AssignArrayProperty(spawnerObj.FindProperty("turnRightPrefabs"), new[]
-            {
-                "Assets/_Game/Prefabs/Environment/RoadChunk_TurnRight.prefab"
-            });
-
-            // Assign Crossroads
-            AssignArrayProperty(spawnerObj.FindProperty("crossroadsPrefabs"), new[]
-            {
-                "Assets/_Game/Prefabs/Environment/RoadChunk_Crossroads.prefab"
+                "Assets/_Game/Prefabs/Environment/RoadChunk_YFork.prefab"
             });
 
             spawnerObj.ApplyModifiedProperties();
