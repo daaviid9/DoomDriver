@@ -78,6 +78,8 @@ public class ShiftManager : MonoBehaviour
     public float ShiftEarnings => shiftEarnings;
     public float DailyBills => dailyBills;
     public float NetShiftIncome => shiftEarnings - dailyBills;
+    /// <summary>Bills actually deducted by the last EndShift (0 when the wallet could not cover them). Not persisted.</summary>
+    public float LastBillsPaid => lastBillsPaid;
     public int OvertimeBonusPercent => overtimeBonusPercent;
     public int CareerTotalDeliveries => careerTotalDeliveries;
     public bool AllowOvertime => allowOvertime;
@@ -100,6 +102,7 @@ public class ShiftManager : MonoBehaviour
     public static event Action<float> OnShiftEarningsChanged;
 
     private bool quotaCompletionEventFired = false;
+    private float lastBillsPaid = 0f;
 
     // -------------------------------------------------------------------------
     // Unity Lifecycle
@@ -201,9 +204,12 @@ public class ShiftManager : MonoBehaviour
         Debug.Log($"<color=#F87171>[ShiftManager]</color> 🏁 SHIFT ENDED for Day {currentDay}. Finished {deliveriesCompletedToday} orders today with €{shiftEarnings:F2} earned. Deducting €{dailyBills:F2} daily bills.");
         isShiftActive = false;
 
-        if (WalletManager.Instance != null && dailyBills > 0f)
+        // DeductFunds is all-or-nothing; remember the outcome so the end-of-day report (ShiftSummaryUI)
+        // can show whether tonight's bills were actually paid instead of assuming they were.
+        lastBillsPaid = 0f;
+        if (WalletManager.Instance != null && dailyBills > 0f && WalletManager.Instance.DeductFunds(dailyBills))
         {
-            WalletManager.Instance.DeductFunds(dailyBills);
+            lastBillsPaid = dailyBills;
         }
 
         SaveProgress();

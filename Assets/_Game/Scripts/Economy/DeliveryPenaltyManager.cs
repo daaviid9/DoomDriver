@@ -68,36 +68,21 @@ namespace DoomDriver.Economy
             }
         }
 
-        private void OnEnable()
-        {
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnDeliveryFailedWithReason -= HandleDeliveryFailed;
-                GameManager.Instance.OnDeliveryFailedWithReason += HandleDeliveryFailed;
-            }
-        }
-
-        private void OnDisable()
-        {
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnDeliveryFailedWithReason -= HandleDeliveryFailed;
-            }
-        }
-
         /// <summary>
-        /// Explicit entry point to settle penalties for a failure reason.
+        /// Single entry point to settle penalties for a failure reason. GameManager.FailDelivery calls it once
+        /// before raising OnDeliveryFailed, so do not also subscribe to OnDeliveryFailedWithReason:
+        /// that charged the wallet twice per failed delivery.
         /// </summary>
         public void ProcessFailure(FailureReason reason)
         {
-            HandleDeliveryFailed(reason);
+            SettleFailure(reason);
         }
 
         /// <summary>
         /// Calculates itemized penalties based on failure reason, deducts total from WalletManager,
         /// and broadcasts the settled result.
         /// </summary>
-        public void HandleDeliveryFailed(FailureReason reason)
+        private void SettleFailure(FailureReason reason)
         {
             float fee1 = 0f;
             float fee2 = 0f;
