@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using DoomDriver.Economy;
 
 public class CameraShake : MonoBehaviour
 {
@@ -7,6 +8,7 @@ public class CameraShake : MonoBehaviour
     public static CameraShake Instance;
 
     private Vector3 originalPos;
+    private HandController phoneHand;
 
     void Awake()
     {
@@ -20,9 +22,19 @@ public class CameraShake : MonoBehaviour
 
     public void Shake(float duration, float magnitude)
     {
+        magnitude *= GetPhoneMountStabilization();
+
         // Each time we receive a new hit, stop any previous shake and start a new one
         StopAllCoroutines();
         StartCoroutine(ShakeRoutine(duration, magnitude));
+    }
+
+    // Phone Mount upgrade damps the shake only while the player is looking at the phone.
+    private float GetPhoneMountStabilization()
+    {
+        if (UpgradeManager.Instance == null) return 1f;
+        if (phoneHand == null) phoneHand = FindFirstObjectByType<HandController>();
+        return phoneHand != null && phoneHand.IsRaised ? UpgradeManager.Instance.PhoneShakeMultiplier : 1f;
     }
 
     private IEnumerator ShakeRoutine(float duration, float magnitude)

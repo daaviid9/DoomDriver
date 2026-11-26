@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Video;
+using DoomDriver.Economy;
 
 namespace DoomDriver.Phone
 {
@@ -284,10 +285,16 @@ namespace DoomDriver.Phone
             if (isScrolling)
                 fomoValue += refillRate * Time.deltaTime;
             else
-                fomoValue -= drainRate * Time.deltaTime;
+                fomoValue -= drainRate * GetFomoDrainMultiplier() * Time.deltaTime;
 
             fomoValue = Mathf.Clamp(fomoValue, 0f, 100f);
             if (fomoSlider != null) fomoSlider.value = fomoValue;
+        }
+
+        // Energy Shot upgrade slows the drain for the rest of the current shift.
+        private static float GetFomoDrainMultiplier()
+        {
+            return UpgradeManager.Instance != null ? UpgradeManager.Instance.FomoDrainMultiplier : 1f;
         }
 
         private void UpdateDrivingPostProcessing()

@@ -26,6 +26,11 @@ public class VehicleHealth : MonoBehaviour
     public event System.Action<int> OnDamageTaken;
 
     /// <summary>
+    /// Event fired when an upgrade (Bumper Armor) absorbs a hit. Passes the damage that was blocked.
+    /// </summary>
+    public event System.Action<int> OnDamageAbsorbed;
+
+    /// <summary>
     /// Event fired when health reaches zero.
     /// </summary>
     public event System.Action OnVehicleDestroyed;
@@ -58,6 +63,14 @@ public class VehicleHealth : MonoBehaviour
     public void TakeDamage(int dmg)
     {
         if (currentHealth <= 0 || dmg <= 0) return;
+
+        // Bumper Armor upgrade swallows the first hit of each delivery.
+        if (UpgradeManager.Instance != null && UpgradeManager.Instance.TryAbsorbCollision())
+        {
+            Debug.Log($"<color=lime>[VEHICLE HEALTH]</color> Bumper Armor absorbed {dmg} damage. HP stays {currentHealth}");
+            OnDamageAbsorbed?.Invoke(dmg);
+            return;
+        }
 
         currentHealth -= dmg;
         Debug.Log($"<color=red>[VEHICLE HEALTH]</color> Took {dmg} damage. Remaining HP: {currentHealth}");

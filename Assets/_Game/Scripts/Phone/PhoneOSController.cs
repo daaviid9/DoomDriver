@@ -84,6 +84,18 @@ namespace DoomDriver.Phone
             }
 
             AutoResolveDependencies();
+            EnsureShopApp();
+        }
+
+        /// <summary>
+        /// The shop panel ships empty in the prefab; ShopAppUI builds its rows at runtime.
+        /// </summary>
+        private void EnsureShopApp()
+        {
+            if (shopAppPanel != null && shopAppPanel.GetComponent<ShopAppUI>() == null)
+            {
+                shopAppPanel.AddComponent<ShopAppUI>();
+            }
         }
 
         private void OnDestroy()
