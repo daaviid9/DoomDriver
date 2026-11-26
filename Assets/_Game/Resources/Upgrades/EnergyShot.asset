@@ -15,6 +15,6 @@ MonoBehaviour:
   displayName: Caffeinated Hell Energy Shot
   description: Tastes like battery acid. FOMO drains 25% slower for one shift. Single use.
   price: 15
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 0f325ea8a41d41e7a083800ef838f694, type: 3}
   upgradeType: 1
   isConsumable: 1

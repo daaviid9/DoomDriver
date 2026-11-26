@@ -15,6 +15,6 @@ MonoBehaviour:
   displayName: Coconut Tree Air Freshener
   description: Smells like the vacation you will never take. Hangs on the mirror. Cosmetic.
   price: 10
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 643039f16fc348eb937868c011b3482a, type: 3}
   upgradeType: 3
   isConsumable: 0
