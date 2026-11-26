@@ -130,8 +130,11 @@ namespace DoomDriver.Phone
             }
             else if (upPressed)
             {
-                // If on Home Screen or in DayBriefing, pressing Up Arrow opens CourierApp / OrderSelection directly
-                if (GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.DayBriefing || (PhoneOSController.Instance != null && PhoneOSController.Instance.CurrentScreen == PhoneScreen.Home))
+                // If on Home Screen or in DayBriefing, pressing Up Arrow opens CourierApp / OrderSelection directly.
+                // Never in DaySummary: the day is settled there, and starting a shift would skip AdvanceToNextDay
+                // and let EndShift charge the daily bills a second time.
+                bool isDaySummary = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DaySummary;
+                if (!isDaySummary && (GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.DayBriefing || (PhoneOSController.Instance != null && PhoneOSController.Instance.CurrentScreen == PhoneScreen.Home)))
                 {
                     Debug.Log("<color=green>[PhoneInputNavigator]</color> Up Arrow pressed -> Opening Courier App directly!");
                     if (ShiftManager.Instance != null && !ShiftManager.Instance.IsShiftActive)

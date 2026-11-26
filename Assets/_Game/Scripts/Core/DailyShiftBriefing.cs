@@ -5,25 +5,21 @@ using DoomDriver.Environment;
 namespace DoomDriver.Core
 {
     /// <summary>
-    /// Holds the active daily shift briefing state (day index, dispatcher message, weather condition)
+    /// Holds the active daily briefing state (day name, dispatcher message, weather condition)
     /// and synchronizes weather atmosphere presets (fog density, windshield rain, wet road reflections)
-    /// with WeatherManager. Provides a decoupled integration contract for ShiftBriefingUI (Dev 5).
+    /// with WeatherManager. The day index itself is owned by ShiftManager; weather changes when it advances.
     /// </summary>
     public class DailyShiftBriefing : MonoBehaviour
     {
         public static DailyShiftBriefing Instance { get; private set; }
-
-        [Header("Shift Schedule")]
-        [SerializeField] private int currentDay = 1;
-        [SerializeField] private bool advanceWeatherOnLobbyReturn = true;
 
         private static readonly string[] DayNames =
         {
             "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
         };
 
-        public int CurrentDay => currentDay;
-        public string CurrentDayName => DayNames[(Mathf.Max(1, currentDay) - 1) % DayNames.Length];
+        public int CurrentDay => ShiftManager.Instance != null ? ShiftManager.Instance.CurrentDay : 1;
+        public string CurrentDayName => DayNameFor(CurrentDay);
         public WeatherCondition CurrentWeatherCondition { get; private set; } = WeatherCondition.LightRain;
         public string CurrentBriefingHeadline { get; private set; } = string.Empty;
 
@@ -32,7 +28,9 @@ namespace DoomDriver.Core
         /// </summary>
         public event Action<int, string, string, WeatherCondition> OnBriefingUpdated;
 
-        private bool hasCompletedFirstLobbyEntry;
+        private bool isSubscribedToDayAdvanced;
+
+        public static string DayNameFor(int day) => DayNames[(Mathf.Max(1, day) - 1) % DayNames.Length];
 
         private void Awake()
         {
@@ -45,27 +43,36 @@ namespace DoomDriver.Core
                 Destroy(gameObject);
                 return;
             }
+            // ShiftManager is created by GameManager.EnsureCompanionControllers; do not add a second one here.
         }
 
         private void Start()
         {
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.OnOrderSelectionStarted += HandleLobbyEntered;
-            }
+            ShiftManager.OnDayAdvanced += HandleDayAdvanced;
+            isSubscribedToDayAdvanced = true;
 
             if (WeatherManager.Instance != null)
             {
-                SyncFromWeatherManager(WeatherManager.Instance.CurrentCondition, WeatherManager.Instance.CurrentPreset);
                 WeatherManager.Instance.OnWeatherChanged += SyncFromWeatherManager;
+
+                // A saved game resumes on a later day: show that day's weather instead of the scene default.
+                if (CurrentDay > 1)
+                {
+                    WeatherManager.Instance.SelectDailyWeather(CurrentDay, instant: true);
+                }
+                else
+                {
+                    SyncFromWeatherManager(WeatherManager.Instance.CurrentCondition, WeatherManager.Instance.CurrentPreset);
+                }
             }
         }
 
         private void OnDestroy()
         {
-            if (GameManager.Instance != null)
+            // Static event: always detach, otherwise a reloaded scene keeps calling a destroyed briefing.
+            if (isSubscribedToDayAdvanced)
             {
-                GameManager.Instance.OnOrderSelectionStarted -= HandleLobbyEntered;
+                ShiftManager.OnDayAdvanced -= HandleDayAdvanced;
             }
 
             if (WeatherManager.Instance != null)
@@ -81,43 +88,27 @@ namespace DoomDriver.Core
         /// </summary>
         public void SetDispatcherBriefing(string briefingText, bool instant = false)
         {
-            CurrentBriefingHeadline = briefingText ?? string.Empty;
+            string text = briefingText ?? string.Empty;
 
             if (WeatherManager.Instance != null)
             {
-                CurrentWeatherCondition = WeatherManager.Instance.ApplyBriefingCondition(CurrentBriefingHeadline, instant);
+                // ApplyWeather raises OnWeatherChanged, which overwrites the headline with the preset text.
+                CurrentWeatherCondition = WeatherManager.Instance.ApplyBriefingCondition(text, instant);
             }
             else
             {
-                CurrentWeatherCondition = WeatherManager.ParseConditionFromBriefing(CurrentBriefingHeadline);
+                CurrentWeatherCondition = WeatherManager.ParseConditionFromBriefing(text);
             }
 
-            OnBriefingUpdated?.Invoke(currentDay, CurrentDayName, CurrentBriefingHeadline, CurrentWeatherCondition);
+            CurrentBriefingHeadline = text;
+            OnBriefingUpdated?.Invoke(CurrentDay, CurrentDayName, CurrentBriefingHeadline, CurrentWeatherCondition);
         }
 
-        /// <summary>
-        /// Advances to the next shift day and selects its corresponding weather atmosphere condition.
-        /// </summary>
-        public void AdvanceToNextDay(bool instant = false)
+        private void HandleDayAdvanced(int day)
         {
-            currentDay++;
             if (WeatherManager.Instance != null)
             {
-                WeatherManager.Instance.SelectDailyWeather(currentDay, instant);
-            }
-        }
-
-        private void HandleLobbyEntered()
-        {
-            if (!hasCompletedFirstLobbyEntry)
-            {
-                hasCompletedFirstLobbyEntry = true;
-                return;
-            }
-
-            if (advanceWeatherOnLobbyReturn)
-            {
-                AdvanceToNextDay(instant: false);
+                WeatherManager.Instance.SelectDailyWeather(day, instant: false);
             }
         }
 
@@ -127,7 +118,7 @@ namespace DoomDriver.Core
             string prefix = $"{CurrentDayName}: ";
             string body = preset != null ? preset.BriefingHeadline : condition.ToString();
             CurrentBriefingHeadline = body.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? body : $"{prefix}{body}";
-            OnBriefingUpdated?.Invoke(currentDay, CurrentDayName, CurrentBriefingHeadline, CurrentWeatherCondition);
+            OnBriefingUpdated?.Invoke(CurrentDay, CurrentDayName, CurrentBriefingHeadline, CurrentWeatherCondition);
         }
     }
 }
