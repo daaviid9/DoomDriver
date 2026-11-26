@@ -188,6 +188,8 @@ public class WorldSpeedController : MonoBehaviour
     {
         switch (newState)
         {
+            case GameState.DayBriefing:
+            case GameState.DaySummary:
             case GameState.OrderSelection:
             case GameState.DeliveryCompleted:
             case GameState.DeliveryFailed:

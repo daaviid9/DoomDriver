@@ -50,6 +50,7 @@ namespace DoomDriver.Phone
         {
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted += HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
             }
@@ -59,6 +60,9 @@ namespace DoomDriver.Phone
         {
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDayBriefingStarted += HandleOrderSelectionStarted;
+
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
 
@@ -66,7 +70,9 @@ namespace DoomDriver.Phone
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
             }
 
-            if (GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.OrderSelection)
+            if (GameManager.Instance == null || 
+                GameManager.Instance.CurrentState == GameState.OrderSelection ||
+                GameManager.Instance.CurrentState == GameState.DayBriefing)
             {
                 SetNavigationActive(true);
             }
@@ -76,6 +82,7 @@ namespace DoomDriver.Phone
         {
             if (GameManager.Instance != null)
             {
+                GameManager.Instance.OnDayBriefingStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
             }
@@ -123,6 +130,26 @@ namespace DoomDriver.Phone
             }
             else if (upPressed)
             {
+                // If on Home Screen or in DayBriefing, pressing Up Arrow opens CourierApp / OrderSelection directly
+                if (GameManager.Instance == null || GameManager.Instance.CurrentState == GameState.DayBriefing || (PhoneOSController.Instance != null && PhoneOSController.Instance.CurrentScreen == PhoneScreen.Home))
+                {
+                    Debug.Log("<color=green>[PhoneInputNavigator]</color> Up Arrow pressed -> Opening Courier App directly!");
+                    if (ShiftManager.Instance != null && !ShiftManager.Instance.IsShiftActive)
+                    {
+                        ShiftManager.Instance.StartShift();
+                    }
+                    else if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DayBriefing)
+                    {
+                        GameManager.Instance.TransitionFromBriefingToShift();
+                    }
+
+                    if (PhoneOSController.Instance != null)
+                    {
+                        PhoneOSController.Instance.OpenScreen(PhoneScreen.CourierApp);
+                        return;
+                    }
+                }
+
                 Navigate(-gridColumns);
             }
             else if (confirmPressed)
