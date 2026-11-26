@@ -7,8 +7,8 @@ using DoomDriver.Economy;
 /// Builds the cockpit accessories at scene load and attaches them to the player's car, so cosmetic shop
 /// upgrades show up in game without any scene or prefab edits:
 /// - a rearview mirror (always; the car model has none) with the Coconut Tree air freshener dangling from it,
-/// - a racing-stripes sun strip across the top of the windshield.
-/// The hood is not used because the dashboard hides it completely from the driver camera.
+/// - two white racing stripes along the hood (from the driver seat the front of the hood shows just above
+///   the dashboard, through the bottom of the windshield).
 /// Positions are world-space measurements of carInterior in EnviromentScene with the Player at the origin.
 /// </summary>
 public static class CosmeticUpgradeInstaller
@@ -21,8 +21,6 @@ public static class CosmeticUpgradeInstaller
     private const float CAR_CENTER_X = 0.49f;
     private static readonly Vector2 GlassTopYZ = new Vector2(1.337f, 0.984f);
     private static readonly Vector2 GlassBottomYZ = new Vector2(0.566f, 1.932f);
-    private const float GLASS_LEFT_X = -0.87f;
-    private const float GLASS_RIGHT_X = 1.845f;
 
     // Rearview mirror (left-hand drive: driver at x = 0, mirror on the car centre line).
     private static readonly Vector3 MirrorSize = new Vector3(0.24f, 0.07f, 0.025f);
@@ -34,15 +32,16 @@ public static class CosmeticUpgradeInstaller
     private const float STRING_LENGTH = 0.05f;
     private const float FRESHENER_HEIGHT = 0.10f;
 
-    // Sun strip with racing stripes.
-    private const float STRIP_HEIGHT = 0.11f;    // measured along the glass
-    private const float STRIP_INSET = 0.012f;    // just in front of the glass
-    private const float STRIPE_HEIGHT = 0.018f;
+    // Hood (Car Color surface of carInterior): rear edge at the windshield base, front edge of the car.
+    private static readonly Vector2 HoodRearYZ = new Vector2(0.566f, 1.96f);
+    private static readonly Vector2 HoodFrontYZ = new Vector2(0.362f, 3.50f);
+    private const float STRIPE_WIDTH = 0.17f;
+    private const float STRIPE_GAP = 0.09f;      // between the two stripes
+    private const float STRIPE_LIFT = 0.006f;    // above the paint so it never z-fights
 
     private static readonly Color MirrorBody = new Color(0.08f, 0.08f, 0.1f);
     private static readonly Color MirrorGlass = new Color(0.55f, 0.62f, 0.7f);
     private static readonly Color StringColor = new Color(0.9f, 0.88f, 0.8f);
-    private static readonly Color StripColor = new Color(0.96f, 0.33f, 0.29f);
     private static readonly Color StripeColor = Color.white;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -128,25 +127,24 @@ public static class CosmeticUpgradeInstaller
 
     private static void BuildRacingStripes(Transform vehicle, Material template)
     {
-        Vector3 down = GlassDownDirection();
-        Vector3 inward = Vector3.Cross(down, Vector3.right).normalized; // points from the glass towards the driver
-        if (inward.z > 0f) inward = -inward;
-
-        Vector3 topEdge = GlassPointAtY(GlassTopYZ.x);
-        Vector3 center = topEdge + down * (STRIP_HEIGHT * 0.5f) + inward * STRIP_INSET;
-        center.x = (GLASS_LEFT_X + GLASS_RIGHT_X) * 0.5f;
-        float width = GLASS_RIGHT_X - GLASS_LEFT_X;
+        var rear = new Vector3(CAR_CENTER_X, HoodRearYZ.x, HoodRearYZ.y);
+        var front = new Vector3(CAR_CENTER_X, HoodFrontYZ.x, HoodFrontYZ.y);
+        Vector3 along = (front - rear).normalized;
+        var rotation = Quaternion.LookRotation(along, Vector3.up); // local up = hood surface normal
+        Vector3 normal = rotation * Vector3.up;
 
         var root = new GameObject(STRIPES_NAME).transform;
-        root.position = center;
-        root.rotation = Quaternion.LookRotation(-inward, -down);
+        root.position = (rear + front) * 0.5f + normal * STRIPE_LIFT;
+        root.rotation = rotation;
 
         var visual = new GameObject("Visual").transform;
         visual.SetParent(root, false);
-        CreateLocalBox("Strip", visual, Vector3.zero, new Vector3(width, STRIP_HEIGHT, 0.004f), Tinted(template, StripColor));
-        float offset = STRIPE_HEIGHT * 1.2f;
-        CreateLocalBox("StripeUpper", visual, new Vector3(0f, offset, -0.003f), new Vector3(width, STRIPE_HEIGHT, 0.002f), Tinted(template, StripeColor));
-        CreateLocalBox("StripeLower", visual, new Vector3(0f, -offset, -0.003f), new Vector3(width, STRIPE_HEIGHT, 0.002f), Tinted(template, StripeColor));
+        float length = Vector3.Distance(rear, front);
+        float offset = (STRIPE_WIDTH + STRIPE_GAP) * 0.5f;
+        var stripe = new Vector3(STRIPE_WIDTH, 0.004f, length);
+        Material white = Tinted(template, StripeColor);
+        CreateLocalBox("StripeLeft", visual, new Vector3(-offset, 0f, 0f), stripe, white);
+        CreateLocalBox("StripeRight", visual, new Vector3(offset, 0f, 0f), stripe, white);
 
         root.SetParent(vehicle, true);
         root.gameObject.AddComponent<CosmeticUpgradeView>().Configure(UpgradeType.RacingStripes, visual.gameObject, false);
@@ -156,11 +154,6 @@ public static class CosmeticUpgradeInstaller
     {
         float t = Mathf.InverseLerp(GlassTopYZ.x, GlassBottomYZ.x, y);
         return new Vector3(CAR_CENTER_X, y, Mathf.Lerp(GlassTopYZ.y, GlassBottomYZ.y, t));
-    }
-
-    private static Vector3 GlassDownDirection()
-    {
-        return new Vector3(0f, GlassBottomYZ.x - GlassTopYZ.x, GlassBottomYZ.y - GlassTopYZ.y).normalized;
     }
 
     private static Sprite LoadIcon(UpgradeType type)
