@@ -217,7 +217,7 @@ public class TurnTrigger : MonoBehaviour
 
         if (health != null)
         {
-            health.TakeDamage(health.MaxHealth);
+            health.TakeFatalDamage();
         }
         else if (GameManager.Instance != null)
         {

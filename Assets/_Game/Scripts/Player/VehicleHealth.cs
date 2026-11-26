@@ -72,6 +72,22 @@ public class VehicleHealth : MonoBehaviour
             return;
         }
 
+        ApplyDamage(dmg);
+    }
+
+    /// <summary>
+    /// Unavoidable crash (fork crash barrier, wall after a missed turn): always destroys the vehicle.
+    /// Bypasses Bumper Armor, because those callers already stop the world and rely on the delivery failing;
+    /// an absorbed hit there would leave the car frozen with no way to end the delivery.
+    /// </summary>
+    public void TakeFatalDamage()
+    {
+        if (currentHealth <= 0) return;
+        ApplyDamage(currentHealth);
+    }
+
+    private void ApplyDamage(int dmg)
+    {
         currentHealth -= dmg;
         Debug.Log($"<color=red>[VEHICLE HEALTH]</color> Took {dmg} damage. Remaining HP: {currentHealth}");
 
