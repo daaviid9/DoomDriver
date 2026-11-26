@@ -69,6 +69,7 @@ namespace DoomDriver.Phone
         public PhoneScreen CurrentScreen { get; private set; } = PhoneScreen.Home;
 
         private int lastSelectedHomeIndex = 0;
+        private Coroutine hideOSCoroutine;
 
         private void Awake()
         {
@@ -104,20 +105,15 @@ namespace DoomDriver.Phone
         {
             SubscribeToEvents();
 
-            // Set initial state: In lobby start in Home during DayBriefing, in Courier App during OrderSelection, during delivery hide OS
+            // Set initial state: hide OS during active delivery, otherwise always show Home Screen
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
             {
                 SetOSVisible(false);
             }
-            else if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DayBriefing)
-            {
-                SetOSVisible(true);
-                OpenScreen(PhoneScreen.Home);
-            }
             else
             {
                 SetOSVisible(true);
-                OpenScreen(PhoneScreen.CourierApp);
+                OpenScreen(PhoneScreen.Home);
             }
         }
 
@@ -218,13 +214,6 @@ namespace DoomDriver.Phone
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
             }
-
-            ShiftManager.OnDeliveryCountChanged -= HandleShiftChanged;
-            ShiftManager.OnDeliveryCountChanged += HandleShiftChanged;
-            ShiftManager.OnDayAdvanced -= HandleShiftDayAdvanced;
-            ShiftManager.OnDayAdvanced += HandleShiftDayAdvanced;
-            ShiftManager.OnShiftStarted -= HandleShiftStarted;
-            ShiftManager.OnShiftStarted += HandleShiftStarted;
         }
 
         private void UnsubscribeFromEvents()
@@ -245,50 +234,6 @@ namespace DoomDriver.Phone
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnDaySummaryStarted -= HandleDaySummaryStarted;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
-            }
-
-            ShiftManager.OnDeliveryCountChanged -= HandleShiftChanged;
-            ShiftManager.OnDayAdvanced -= HandleShiftDayAdvanced;
-            ShiftManager.OnShiftStarted -= HandleShiftStarted;
-        }
-
-        private void HandleShiftChanged(int delivered, int quota)
-        {
-            RefreshHomeScreenShiftInfo();
-        }
-
-        private void HandleShiftDayAdvanced(int newDay)
-        {
-            RefreshHomeScreenShiftInfo();
-        }
-
-        private void HandleShiftStarted()
-        {
-            RefreshHomeScreenShiftInfo();
-        }
-
-        private void RefreshHomeScreenShiftInfo()
-        {
-            if (homeScreenPanel == null) return;
-
-            int day = ShiftManager.Instance != null ? ShiftManager.Instance.CurrentDay : 1;
-            int delivered = ShiftManager.Instance != null ? ShiftManager.Instance.DeliveriesCompletedToday : 0;
-            int quota = ShiftManager.Instance != null ? ShiftManager.Instance.DailyQuota : 3;
-            bool isQuotaMet = ShiftManager.Instance != null && ShiftManager.Instance.IsQuotaMet;
-
-            var texts = homeScreenPanel.GetComponentsInChildren<TMP_Text>(true);
-            foreach (var t in texts)
-            {
-                if (t.gameObject.name == "DateText" && t.transform.parent != null && t.transform.parent.name == "Date&WelcomeWidget")
-                {
-                    t.textWrappingMode = TextWrappingModes.NoWrap;
-                    t.text = isQuotaMet ? $"DAY {day}  •  {delivered}/{quota} ORDERS" : $"DAY {day}  •  GOAL: {delivered}/{quota} ORDERS";
-                }
-                else if (t.gameObject.name == "HeaderText" && t.transform.parent != null && t.transform.parent.name == "Date&WelcomeWidget")
-                {
-                    t.textWrappingMode = TextWrappingModes.NoWrap;
-                    t.text = isQuotaMet ? "Overtime Active" : "Ready to roll?";
-                }
             }
         }
 
@@ -329,7 +274,6 @@ namespace DoomDriver.Phone
             switch (targetScreen)
             {
                 case PhoneScreen.Home:
-                    RefreshHomeScreenShiftInfo();
                     SetupHomeNavigation();
                     break;
 
@@ -448,6 +392,7 @@ namespace DoomDriver.Phone
 
         private void HandleDayBriefingStarted()
         {
+            CancelHideOSCoroutine();
             Debug.Log("<color=#38BDF8>[PhoneOSController]</color> 🌅 DayBriefing started -> Showing Phone Home Screen");
             SetOSVisible(true);
             OpenScreen(PhoneScreen.Home);
@@ -455,13 +400,15 @@ namespace DoomDriver.Phone
 
         private void HandleOrderSelectionStarted()
         {
-            Debug.Log("<color=#34D399>[PhoneOSController]</color> 📋 OrderSelection started -> Showing Courier App with orders");
+            CancelHideOSCoroutine();
+            Debug.Log("<color=#34D399>[PhoneOSController]</color> 📋 OrderSelection started -> Showing Phone Home Screen");
             SetOSVisible(true);
-            OpenScreen(PhoneScreen.CourierApp);
+            OpenScreen(PhoneScreen.Home);
         }
 
         private void HandleDaySummaryStarted()
         {
+            CancelHideOSCoroutine();
             Debug.Log("<color=#A78BFA>[PhoneOSController]</color> 🌙 DaySummary started -> Showing Phone Home Screen");
             SetOSVisible(true);
             OpenScreen(PhoneScreen.Home);
@@ -469,10 +416,28 @@ namespace DoomDriver.Phone
 
         private void HandleDeliveryStarted()
         {
-            SetOSVisible(false);
             if (navigator != null)
             {
                 navigator.ClearNavigableItems();
+            }
+
+            CancelHideOSCoroutine();
+            hideOSCoroutine = StartCoroutine(HideOSAfterHandLowers(0.35f));
+        }
+
+        private System.Collections.IEnumerator HideOSAfterHandLowers(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            SetOSVisible(false);
+            hideOSCoroutine = null;
+        }
+
+        private void CancelHideOSCoroutine()
+        {
+            if (hideOSCoroutine != null)
+            {
+                StopCoroutine(hideOSCoroutine);
+                hideOSCoroutine = null;
             }
         }
 

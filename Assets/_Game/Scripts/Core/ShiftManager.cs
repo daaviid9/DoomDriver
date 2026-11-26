@@ -62,6 +62,13 @@ public class ShiftManager : MonoBehaviour
     [Tooltip("Is a working shift currently active")]
     [SerializeField] private bool isShiftActive = false;
 
+    [Header("Shift Economy")]
+    [Tooltip("Daily living bills & vehicle rent deducted at the end of each shift")]
+    [SerializeField] private float dailyBills = 25f;
+
+    [Tooltip("Overtime tip bonus percentage unlocked once daily quota is met")]
+    [SerializeField] private int overtimeBonusPercent = 25;
+
     // -------------------------------------------------------------------------
     // Public Properties
     // -------------------------------------------------------------------------
@@ -69,6 +76,9 @@ public class ShiftManager : MonoBehaviour
     public int DailyQuota => dailyQuota;
     public int DeliveriesCompletedToday => deliveriesCompletedToday;
     public float ShiftEarnings => shiftEarnings;
+    public float DailyBills => dailyBills;
+    public float NetShiftIncome => shiftEarnings - dailyBills;
+    public int OvertimeBonusPercent => overtimeBonusPercent;
     public int CareerTotalDeliveries => careerTotalDeliveries;
     public bool AllowOvertime => allowOvertime;
     public bool AutoAdvanceOnQuotaMet
@@ -182,8 +192,20 @@ public class ShiftManager : MonoBehaviour
     /// </summary>
     public void EndShift()
     {
-        Debug.Log($"<color=#F87171>[ShiftManager]</color> 🏁 SHIFT ENDED for Day {currentDay}. Finished {deliveriesCompletedToday} orders today with €{shiftEarnings:F2} earned. Proceeding to DaySummary settlement.");
+        // Guard against duplicate settlement if already in DaySummary
+        if (!isShiftActive && GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DaySummary)
+        {
+            return;
+        }
+
+        Debug.Log($"<color=#F87171>[ShiftManager]</color> 🏁 SHIFT ENDED for Day {currentDay}. Finished {deliveriesCompletedToday} orders today with €{shiftEarnings:F2} earned. Deducting €{dailyBills:F2} daily bills.");
         isShiftActive = false;
+
+        if (WalletManager.Instance != null && dailyBills > 0f)
+        {
+            WalletManager.Instance.DeductFunds(dailyBills);
+        }
+
         SaveProgress();
 
         if (GameManager.Instance != null)

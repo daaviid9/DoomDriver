@@ -27,13 +27,6 @@ namespace DoomDriver.Phone
         [Tooltip("Optional reference to PhoneInputNavigator. If null, resolved automatically.")]
         [SerializeField] private PhoneInputNavigator navigator;
 
-        [Header("Shift & Day Progress Display")]
-        [Tooltip("Header text displaying day and title, e.g. 'Day 1 • Deliveries'")]
-        [SerializeField] private TMP_Text headerTitleText;
-
-        [Tooltip("Subtitle text displaying quota, e.g. 'Daily Goal: 0 / 3 Orders'")]
-        [SerializeField] private TMP_Text shiftQuotaText;
-
         /// <summary>
         /// Event fired whenever new order cards are spawned and ready.
         /// </summary>
@@ -69,19 +62,12 @@ namespace DoomDriver.Phone
                 navigator = GetComponent<PhoneInputNavigator>() ?? GetComponentInParent<PhoneInputNavigator>();
             }
 
-            AutoResolveHeaderReferences();
-
             Debug.Log($"<color=magenta>[CourierAppUI]</color> Awake on '{gameObject.name}'. Canvas: {(appCanvas != null ? appCanvas.name : "NULL")}, Container: {(cardsContainer != null ? cardsContainer.name : "NULL")}, Prefab: {(cardPrefab != null ? cardPrefab.name : "NULL")}");
         }
 
         private void OnEnable()
         {
             Subscribe();
-            ShiftManager.OnDeliveryCountChanged += HandleShiftDeliveryCountChanged;
-            ShiftManager.OnDayAdvanced += HandleShiftDayAdvanced;
-            ShiftManager.OnShiftStarted += HandleShiftStarted;
-
-            RefreshShiftHeader();
 
             if (OrderManager.Instance != null && OrderManager.Instance.CurrentOffers != null && OrderManager.Instance.CurrentOffers.Count > 0)
             {
@@ -92,15 +78,11 @@ namespace DoomDriver.Phone
         private void OnDisable()
         {
             Unsubscribe();
-            ShiftManager.OnDeliveryCountChanged -= HandleShiftDeliveryCountChanged;
-            ShiftManager.OnDayAdvanced -= HandleShiftDayAdvanced;
-            ShiftManager.OnShiftStarted -= HandleShiftStarted;
         }
 
         private void Start()
         {
             Subscribe();
-            RefreshShiftHeader();
 
             // Ensure canvas visibility matches the active game state
             if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.OrderSelection)
@@ -266,74 +248,6 @@ namespace DoomDriver.Phone
                     navigator.SetNavigableItems(cardViews, 0);
                 }
             }
-        }
-
-        private void AutoResolveHeaderReferences()
-        {
-            if (headerTitleText == null || shiftQuotaText == null)
-            {
-                var texts = GetComponentsInChildren<TMP_Text>(true);
-                foreach (var t in texts)
-                {
-                    if (headerTitleText == null && t.gameObject.name == "HeaderText")
-                    {
-                        headerTitleText = t;
-                    }
-                    else if (shiftQuotaText == null && t.gameObject.name == "DateText")
-                    {
-                        shiftQuotaText = t;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Refreshes the top header showing day number and current shift progress.
-        /// </summary>
-        public void RefreshShiftHeader()
-        {
-            AutoResolveHeaderReferences();
-
-            int day = ShiftManager.Instance != null ? ShiftManager.Instance.CurrentDay : 1;
-            int delivered = ShiftManager.Instance != null ? ShiftManager.Instance.DeliveriesCompletedToday : 0;
-            int quota = ShiftManager.Instance != null ? ShiftManager.Instance.DailyQuota : 3;
-            bool isQuotaMet = ShiftManager.Instance != null && ShiftManager.Instance.IsQuotaMet;
-
-            if (headerTitleText != null)
-            {
-                headerTitleText.text = $"Day {day} • Deliveries";
-            }
-
-            Debug.Log($"<color=magenta>[CourierAppUI]</color> 📋 Refreshed Header -> Day {day} • Orders: {delivered}/{quota} (QuotaMet: {isQuotaMet})");
-
-            if (shiftQuotaText != null)
-            {
-                if (isQuotaMet)
-                {
-                    shiftQuotaText.text = $"Quota Met: {delivered} / {quota} Orders (Overtime)";
-                    shiftQuotaText.color = new Color(0.2f, 0.95f, 0.35f);
-                }
-                else
-                {
-                    shiftQuotaText.text = $"Daily Quota: {delivered} / {quota} Orders";
-                    shiftQuotaText.color = new Color(0.9f, 0.9f, 0.9f);
-                }
-            }
-        }
-
-        private void HandleShiftDeliveryCountChanged(int delivered, int quota)
-        {
-            RefreshShiftHeader();
-        }
-
-        private void HandleShiftDayAdvanced(int newDay)
-        {
-            RefreshShiftHeader();
-        }
-
-        private void HandleShiftStarted()
-        {
-            RefreshShiftHeader();
         }
     }
 }

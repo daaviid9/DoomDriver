@@ -173,6 +173,13 @@ public class DeliveryProgressTracker : MonoBehaviour
         if (!isOvertime)
         {
             timeTip = maxTip;
+
+            // Apply Overtime Shift Bonus (+X% Speed Tip) when daily quota is already met
+            if (ShiftManager.Instance != null && ShiftManager.Instance.IsQuotaMet && ShiftManager.Instance.OvertimeBonusPercent > 0)
+            {
+                decimal bonusMultiplier = 1m + (ShiftManager.Instance.OvertimeBonusPercent / 100m);
+                timeTip = System.Math.Round(timeTip * bonusMultiplier, 2, System.MidpointRounding.AwayFromZero);
+            }
         }
         else
         {
