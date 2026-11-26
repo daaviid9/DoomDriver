@@ -1,4 +1,5 @@
 using UnityEngine;
+using DoomDriver.Economy;
 
 public class HandController : MonoBehaviour
 {
@@ -22,9 +23,17 @@ public class HandController : MonoBehaviour
     private float currentT = 0f;
     private Vector3 swayOffset;
     
+    public bool IsRaised => isRaised;
+
     public void SetRaised(bool raised)
     {
         isRaised = raised;
+    }
+
+    // Phone Mount upgrade steadies the phone in hand.
+    private static float GetSwayMultiplier()
+    {
+        return UpgradeManager.Instance != null ? UpgradeManager.Instance.PhoneShakeMultiplier : 1f;
     }
     
     void Start()
@@ -46,7 +55,7 @@ public class HandController : MonoBehaviour
         
         if (enableSway && easedT > 0.5f)
         {
-            float swayStrength = (easedT - 0.5f) * 2f;
+            float swayStrength = (easedT - 0.5f) * 2f * GetSwayMultiplier();
             swayOffset.x = Mathf.Sin(Time.time * swaySpeed) * swayAmount * swayStrength;
             swayOffset.y = Mathf.Cos(Time.time * swaySpeed * 0.7f) * swayAmount * 0.5f * swayStrength;
             pos += swayOffset;

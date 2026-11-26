@@ -56,6 +56,7 @@ public class VehicleVFX : MonoBehaviour
         {
             health.OnHealthChanged += HandleHealthChanged;
             health.OnDamageTaken += HandleDamageTaken;
+            health.OnDamageAbsorbed += HandleDamageAbsorbed;
         }
 
         if (collisionHandler != null)
@@ -81,6 +82,7 @@ public class VehicleVFX : MonoBehaviour
         {
             health.OnHealthChanged -= HandleHealthChanged;
             health.OnDamageTaken -= HandleDamageTaken;
+            health.OnDamageAbsorbed -= HandleDamageAbsorbed;
         }
 
         if (collisionHandler != null)
@@ -113,6 +115,15 @@ public class VehicleVFX : MonoBehaviour
         {
             float shakePower = dmg >= 50 ? majorCollisionShake : minorCollisionShake;
             CameraShake.Instance.Shake(0.3f, shakePower);
+        }
+    }
+
+    // Bumper Armor blocked the hit: only a light jolt, no explosion or smoke.
+    private void HandleDamageAbsorbed(int blockedDamage)
+    {
+        if (CameraShake.Instance != null)
+        {
+            CameraShake.Instance.Shake(0.2f, minorCollisionShake);
         }
     }
 

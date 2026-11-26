@@ -320,6 +320,11 @@ public class GameManager : MonoBehaviour
             gameObject.AddComponent<WalletManager>();
         }
 
+        if (DoomDriver.Economy.UpgradeManager.Instance == null && GetComponent<DoomDriver.Economy.UpgradeManager>() == null)
+        {
+            gameObject.AddComponent<DoomDriver.Economy.UpgradeManager>();
+        }
+
         if (GameUIController.Instance == null && GetComponent<GameUIController>() == null)
         {
             gameObject.AddComponent<GameUIController>();
