@@ -7,8 +7,8 @@ using DoomDriver.Economy;
 /// Builds the cockpit accessories at scene load and attaches them to the player's car, so cosmetic shop
 /// upgrades show up in game without any scene or prefab edits:
 /// - a rearview mirror (always; the car model has none) with the Coconut Tree air freshener dangling from it,
-/// - two white racing stripes along the hood (from the driver seat the front of the hood shows just above
-///   the dashboard, through the bottom of the windshield).
+/// - two red racing stripes along the hood. Note: with the current driver camera height the dashboard
+///   hides the hood, so the stripes are not visible from the driver seat.
 /// Positions are world-space measurements of carInterior in EnviromentScene with the Player at the origin.
 /// </summary>
 public static class CosmeticUpgradeInstaller
@@ -35,14 +35,14 @@ public static class CosmeticUpgradeInstaller
     // Hood (Car Color surface of carInterior): rear edge at the windshield base, front edge of the car.
     private static readonly Vector2 HoodRearYZ = new Vector2(0.566f, 1.96f);
     private static readonly Vector2 HoodFrontYZ = new Vector2(0.362f, 3.50f);
-    private const float STRIPE_WIDTH = 0.17f;
+    private const float STRIPE_WIDTH = 0.22f;
     private const float STRIPE_GAP = 0.09f;      // between the two stripes
     private const float STRIPE_LIFT = 0.006f;    // above the paint so it never z-fights
 
     private static readonly Color MirrorBody = new Color(0.08f, 0.08f, 0.1f);
     private static readonly Color MirrorGlass = new Color(0.55f, 0.62f, 0.7f);
     private static readonly Color StringColor = new Color(0.9f, 0.88f, 0.8f);
-    private static readonly Color StripeColor = Color.white;
+    private static readonly Color StripeColor = new Color(0.86f, 0.1f, 0.13f); // racing red
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Register()
@@ -142,9 +142,9 @@ public static class CosmeticUpgradeInstaller
         float length = Vector3.Distance(rear, front);
         float offset = (STRIPE_WIDTH + STRIPE_GAP) * 0.5f;
         var stripe = new Vector3(STRIPE_WIDTH, 0.004f, length);
-        Material white = Tinted(template, StripeColor);
-        CreateLocalBox("StripeLeft", visual, new Vector3(-offset, 0f, 0f), stripe, white);
-        CreateLocalBox("StripeRight", visual, new Vector3(offset, 0f, 0f), stripe, white);
+        Material paint = Tinted(template, StripeColor);
+        CreateLocalBox("StripeLeft", visual, new Vector3(-offset, 0f, 0f), stripe, paint);
+        CreateLocalBox("StripeRight", visual, new Vector3(offset, 0f, 0f), stripe, paint);
 
         root.SetParent(vehicle, true);
         root.gameObject.AddComponent<CosmeticUpgradeView>().Configure(UpgradeType.RacingStripes, visual.gameObject, false);
