@@ -218,7 +218,7 @@ public class DashboardGauges : MonoBehaviour
             jitter = noise * maxJitterAngle * jitterIntensity;
         }
 
-        float finalAngle = baseAngle + jitter;
+        float finalAngle = -(baseAngle + jitter) + 180f;
         speedometerNeedle.localRotation = speedInitialLocalRot * Quaternion.AngleAxis(finalAngle, speedRotationAxis.normalized);
     }
 
@@ -236,7 +236,7 @@ public class DashboardGauges : MonoBehaviour
             rpmJitter = noise * (maxJitterAngle * 0.6f);
         }
 
-        float finalAngle = baseAngle + rpmJitter;
+        float finalAngle = -(baseAngle + rpmJitter) + 200f;
         tachometerNeedle.localRotation = rpmInitialLocalRot * Quaternion.AngleAxis(finalAngle, rpmRotationAxis.normalized);
     }
 
