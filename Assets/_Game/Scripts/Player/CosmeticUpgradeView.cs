@@ -30,6 +30,18 @@ public class CosmeticUpgradeView : MonoBehaviour
         if (visualRoot != null) restRotation = visualRoot.transform.localRotation;
     }
 
+    /// <summary>
+    /// Used by CosmeticUpgradeInstaller when it builds the accessory at runtime (serialized fields are not set then).
+    /// </summary>
+    public void Configure(UpgradeType type, GameObject visual, bool shouldDangle)
+    {
+        upgradeType = type;
+        visualRoot = visual;
+        dangle = shouldDangle;
+        if (visualRoot != null) restRotation = visualRoot.transform.localRotation;
+        Refresh();
+    }
+
     private void OnEnable()
     {
         UpgradeManager.OnUpgradesChanged += Refresh;
