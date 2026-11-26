@@ -316,6 +316,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TurnTrigger
   lateralTurnThreshold: 1.5
   steeringInputThreshold: 0.25
+  forkCorridorWindow: 35
 --- !u!1 &1100000000000000006
 GameObject:
   m_ObjectHideFlags: 0

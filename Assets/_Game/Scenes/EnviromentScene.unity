@@ -6633,7 +6633,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91ab2d58a74e4fe498c19eb821037ca0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VehicleCollisionHandler
-  carDamage: 40
+  carDamage: 100
   barricadeDamage: 30
   edgeDamage: 15
   smallPenalty: 4
@@ -11449,7 +11449,6 @@ MonoBehaviour:
   phoneRenderer: {fileID: 1828479572}
   screenMaterialIndex: 1
   reelsMaterial: {fileID: 2100000, guid: 017a6494a230b02479a30169fe2e1cf1, type: 2}
-  backgroundMaterial: {fileID: 2100000, guid: 064a68d302e6fdd4189ff0365930b743, type: 2}
   deliveryStartSwitchDelay: 0.35
 --- !u!1 &1883192622
 GameObject:
