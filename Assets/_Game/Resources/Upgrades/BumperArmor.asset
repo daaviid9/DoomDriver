@@ -15,6 +15,6 @@ MonoBehaviour:
   displayName: Reinforced Bumper Armor
   description: Welded from stolen shopping carts. Shrugs off the first crash of every delivery.
   price: 80
-  icon: {fileID: 21300000, guid: 377b2fb78c9e71349879d72104243ced, type: 3}
+  icon: {fileID: 21300000, guid: bb2a4d99a6c84aab8c62ab9d22c34778, type: 3}
   upgradeType: 2
   isConsumable: 0

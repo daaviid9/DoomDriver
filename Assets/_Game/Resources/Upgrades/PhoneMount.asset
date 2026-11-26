@@ -15,6 +15,6 @@ MonoBehaviour:
   displayName: Phone Mount 3000
   description: Dashboard clamp for pro doomscrolling. 70% less shake while you stare at the phone.
   price: 40
-  icon: {fileID: 21300000, guid: 2e29be0d9d3fb324a918db494fc280de, type: 3}
+  icon: {fileID: 21300000, guid: b2a582c131f34ebba2720a4703a02c34, type: 3}
   upgradeType: 0
   isConsumable: 0

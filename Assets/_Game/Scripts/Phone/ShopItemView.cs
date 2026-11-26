@@ -17,7 +17,8 @@ namespace DoomDriver.Phone
         private const int CARD_PADDING = 14;
         private const float CARD_SPACING = 14f;
         private const float ICON_SIZE = 72f;
-        private const float ICON_INSET = 12f;
+        private const float ICON_INSET = 6f;
+        private const float BUTTON_MIN_TEXT_SIZE = 14f;
         private const float BUTTON_WIDTH = 104f;
         private const float BUTTON_HEIGHT = 46f;
 
@@ -70,14 +71,16 @@ namespace DoomDriver.Phone
             var tile = PhoneUIStyle.CreateRect("IconTile", transform);
             PhoneUIStyle.AddRoundedImage(tile.gameObject, style.SmallRadius, PhoneUIStyle.PillLight).raycastTarget = false;
             var layout = tile.gameObject.AddComponent<LayoutElement>();
+            // min = preferred: long descriptions must not squeeze the icon tile.
+            layout.minWidth = size;
             layout.preferredWidth = size;
+            layout.minHeight = size;
             layout.preferredHeight = size;
 
             if (Item.Icon != null)
             {
                 var icon = PhoneUIStyle.CreateRect("Icon", tile).gameObject.AddComponent<Image>();
                 icon.sprite = Item.Icon;
-                icon.color = PhoneUIStyle.Indigo;
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
                 Inset((RectTransform)icon.transform, ICON_INSET);
@@ -99,7 +102,9 @@ namespace DoomDriver.Phone
             column.childControlHeight = true;
             column.childForceExpandHeight = false;
             column.spacing = 2f;
-            columnRect.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            var textLayout = columnRect.gameObject.AddComponent<LayoutElement>();
+            textLayout.flexibleWidth = 1f;
+            textLayout.minWidth = 0f;
 
             PhoneUIStyle.CreateText(columnRect, style, PhoneUIStyle.CARD_TITLE_SIZE, FontStyles.Bold, TextAlignmentOptions.Left, PhoneUIStyle.TextPrimary, "Title").text = Item.Name;
             PhoneUIStyle.CreateText(columnRect, style, PhoneUIStyle.SMALL_SIZE, FontStyles.Normal, TextAlignmentOptions.TopLeft, PhoneUIStyle.TextMuted, "Description").text = Item.Description;
@@ -114,7 +119,10 @@ namespace DoomDriver.Phone
             column.childControlHeight = true;
             column.childForceExpandHeight = false;
             column.spacing = 4f;
-            columnRect.gameObject.AddComponent<LayoutElement>().preferredWidth = BUTTON_WIDTH;
+            // min = preferred: the button keeps its width so "OWNED" / prices never wrap.
+            var priceLayout = columnRect.gameObject.AddComponent<LayoutElement>();
+            priceLayout.minWidth = BUTTON_WIDTH;
+            priceLayout.preferredWidth = BUTTON_WIDTH;
 
             var buttonRect = PhoneUIStyle.CreateRect("PriceButton", columnRect);
             buttonImage = PhoneUIStyle.AddRoundedImage(buttonRect.gameObject, style.SmallRadius, PhoneUIStyle.ActionButton);
@@ -124,9 +132,11 @@ namespace DoomDriver.Phone
             buttonRect.gameObject.AddComponent<LayoutElement>().preferredHeight = BUTTON_HEIGHT;
 
             buttonText = PhoneUIStyle.CreateText(buttonRect, style, PhoneUIStyle.BUTTON_TEXT_SIZE, FontStyles.Bold, TextAlignmentOptions.Center, PhoneUIStyle.IndigoDark, "Label");
+            FitOnOneLine(buttonText, PhoneUIStyle.BUTTON_TEXT_SIZE);
             PhoneUIStyle.Stretch((RectTransform)buttonText.transform);
 
             chargesText = PhoneUIStyle.CreateText(columnRect, style, PhoneUIStyle.SMALL_SIZE, FontStyles.Bold, TextAlignmentOptions.Center, PhoneUIStyle.Indigo, "Charges");
+            FitOnOneLine(chargesText, PhoneUIStyle.SMALL_SIZE);
         }
 
         /// <summary>
@@ -191,6 +201,14 @@ namespace DoomDriver.Phone
         public void OnPointerClick(PointerEventData eventData)
         {
             Select();
+        }
+
+        private static void FitOnOneLine(TMP_Text text, float maxSize)
+        {
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = BUTTON_MIN_TEXT_SIZE * (maxSize / PhoneUIStyle.BUTTON_TEXT_SIZE);
+            text.fontSizeMax = maxSize;
         }
 
         private static void Inset(RectTransform rect, float inset)
