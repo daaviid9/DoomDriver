@@ -664,6 +664,7 @@ MonoBehaviour:
   maxOvertimeDuration: 15
   penaltyPerOvertimeSecond: 0.5
   damagePenaltyPerHp: 0.05
+  missedTurnExtraDistance: 150
 --- !u!114 &194867914
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -424,7 +424,7 @@ namespace DoomDriver.Core
                     {
                         Step = step,
                         Title = "CHOOSE AN ORDER",
-                        Message = "You can choose any of the orders. They come in <b>3 difficulties</b> (Easy, Medium, Hard). Longer routes pay more, but carry higher risk.\n\nEach order has a distance and a <b>time limit</b> - being late drains your payout, and if it runs out, the customer cancels the order!",
+                        Message = "Orders come in <b>3 difficulties</b> (Easy, Medium, Hard). You can choose any of them. Longer routes pay more, but carry higher risk.\n\nEach order has a distance and a <b>time limit</b> - being late drains your payout, and if it runs out, the customer cancels the order!",
                         IsDrivingStep = false
                     };
 
