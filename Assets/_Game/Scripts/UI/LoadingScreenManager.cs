@@ -162,6 +162,26 @@ public class LoadingScreenManager : MonoBehaviour
         SceneManager.LoadScene(gameSceneName);
     }
 
+    /// <summary>
+    /// Clears all saved career, wallet, upgrade, highscore, and tutorial PlayerPrefs,
+    /// then starts a fresh game from Day 1.
+    /// </summary>
+    public void StartNewGame()
+    {
+        ResetSaveData();
+        StartGame();
+    }
+
+    /// <summary>
+    /// Wipes all saved progress in PlayerPrefs without immediately loading the game scene.
+    /// </summary>
+    public void ResetSaveData()
+    {
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
+        Debug.Log("<color=#38BDF8>[LoadingScreenManager]</color> All PlayerPrefs save data cleared (New Save).");
+    }
+
     public void QuitGame()
     {
         Application.Quit();

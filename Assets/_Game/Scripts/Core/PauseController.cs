@@ -10,6 +10,7 @@ public class PauseController : MonoBehaviour
     public static PauseController Instance { get; private set; }
 
     public bool IsPaused { get; private set; } = false;
+    public bool IsTutorialPaused { get; private set; } = false;
 
     /// <summary>
     /// Event fired whenever the pause state changes.
@@ -32,6 +33,8 @@ public class PauseController : MonoBehaviour
 
     private void Update()
     {
+        if (IsTutorialPaused) return;
+
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             // If phone OS is open and currently inside a sub-app, Escape returns to Home instead of pausing
@@ -60,12 +63,25 @@ public class PauseController : MonoBehaviour
     /// </summary>
     public void SetPaused(bool paused)
     {
+        IsTutorialPaused = false;
         IsPaused = paused;
 
         Time.timeScale = IsPaused ? 0f : 1f;
         AudioListener.pause = IsPaused;
 
         OnPauseToggled?.Invoke(IsPaused);
+    }
+
+    /// <summary>
+    /// Silently pauses or resumes the game for tutorial popups without opening the Pause menu UI.
+    /// </summary>
+    public void SetTutorialPaused(bool paused)
+    {
+        IsTutorialPaused = paused;
+        IsPaused = paused;
+
+        Time.timeScale = IsPaused ? 0f : 1f;
+        AudioListener.pause = IsPaused;
     }
 
     /// <summary>
