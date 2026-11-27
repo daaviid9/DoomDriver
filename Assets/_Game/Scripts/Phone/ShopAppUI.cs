@@ -119,6 +119,9 @@ namespace DoomDriver.Phone
                 case PurchaseResult.InsufficientFunds:
                     SetStatus("Not enough cash. Go deliver something.", PhoneUIStyle.Negative);
                     break;
+                case PurchaseResult.ShopClosed:
+                    SetStatus("Doom Garage is only open at the end of the day.", PhoneUIStyle.Negative);
+                    break;
                 default:
                     SetStatus("Shop is offline. Try again later.", PhoneUIStyle.Negative);
                     break;

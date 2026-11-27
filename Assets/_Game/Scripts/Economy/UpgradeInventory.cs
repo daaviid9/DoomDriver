@@ -8,7 +8,8 @@ namespace DoomDriver.Economy
         Success,
         AlreadyOwned,
         InsufficientFunds,
-        InvalidItem
+        InvalidItem,
+        ShopClosed
     }
 
     /// <summary>
@@ -69,6 +70,15 @@ namespace DoomDriver.Economy
             else permanentUpgrades.Remove(type);
 
             charges[type] = Math.Max(0, chargeCount);
+        }
+
+        /// <summary>
+        /// Clears all owned permanent upgrades and consumable charges.
+        /// </summary>
+        public void Clear()
+        {
+            permanentUpgrades.Clear();
+            charges.Clear();
         }
     }
 }

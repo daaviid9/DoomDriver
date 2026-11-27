@@ -94,6 +94,10 @@ namespace DoomDriver.Economy
         public PurchaseResult TryPurchase(CourierUpgradeItem item)
         {
             if (item == null) return PurchaseResult.InvalidItem;
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DaySummary)
+            {
+                return PurchaseResult.ShopClosed;
+            }
             if (WalletManager.Instance == null)
             {
                 Debug.LogWarning("<color=yellow>[UpgradeManager]</color> Cannot purchase: WalletManager is missing.");
@@ -242,6 +246,32 @@ namespace DoomDriver.Economy
             PlayerPrefs.SetInt(ENERGY_SHOT_ACTIVE_KEY, isEnergyShotActive ? 1 : 0);
 
             PlayerPrefs.Save();
+        }
+
+        /// <summary>
+        /// Clears all owned upgrades, charges, active Energy Shot state, and their PlayerPrefs keys.
+        /// </summary>
+        [ContextMenu("Reset All Upgrades")]
+        public void ResetUpgrades()
+        {
+            inventory.Clear();
+            isEnergyShotActive = false;
+            bumperShieldsLeft = 0;
+
+            if (ShouldPersist)
+            {
+                foreach (UpgradeType type in Enum.GetValues(typeof(UpgradeType)))
+                {
+                    PlayerPrefs.DeleteKey(OWNED_KEY_PREFIX + type);
+                    PlayerPrefs.DeleteKey(CHARGES_KEY_PREFIX + type);
+                }
+
+                PlayerPrefs.DeleteKey(ENERGY_SHOT_ACTIVE_KEY);
+                PlayerPrefs.Save();
+            }
+
+            Debug.Log("<color=#EF4444>[UpgradeManager]</color> All upgrades and charges reset.");
+            OnUpgradesChanged?.Invoke();
         }
     }
 }

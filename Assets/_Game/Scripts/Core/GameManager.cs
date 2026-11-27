@@ -398,11 +398,12 @@ public class GameManager : MonoBehaviour
             if (ShiftManager.Instance != null) ShiftManager.Instance.AdvanceToNextDay();
             else StartNewDayBriefing();
         }
-        // U: Reset Career back to Day 1 (0 orders)
+        // U: Reset Career back to Day 1 (0 orders) and clear saved upgrades
         else if (UnityEngine.InputSystem.Keyboard.current.uKey.wasPressedThisFrame)
         {
-            Debug.Log("<color=red>[DEBUG]</color> U pressed -> Resetting Career to Day 1 (0 orders)!");
+            Debug.Log("<color=red>[DEBUG]</color> U pressed -> Resetting Career to Day 1 (0 orders) and clearing upgrades!");
             if (ShiftManager.Instance != null) ShiftManager.Instance.ResetCareer();
+            if (UpgradeManager.Instance != null) UpgradeManager.Instance.ResetUpgrades();
         }
     }
 #endif
