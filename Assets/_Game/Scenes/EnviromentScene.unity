@@ -1024,8 +1024,11 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
-  - component: {fileID: 330585548}
   - component: {fileID: 330585549}
+  - component: {fileID: 330585548}
+  - component: {fileID: 330585552}
+  - component: {fileID: 330585551}
+  - component: {fileID: 330585550}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1165,28 +1168,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f525966abef337459eb00dbf102f506, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PhoneSystem
-  fomoSlider: {fileID: 0}
   reelsManager: {fileID: 2114611482}
   handController: {fileID: 679730008}
-  postProcessVolume: {fileID: 832575518}
-  maxVignetteIntensity: 1
-  vignettePower: 2
-  fomoValue: 100
-  drainRate: 8
-  refillRate: 20
-  mainCamera: {fileID: 330585545}
-  normalFOV: 60
-  phoneFOV: 60
-  orderSelectionFOV: 45.5
-  orderSelectionPitchTilt: 14.1
-  fovTransitionSpeed: 3
-  enableLobbyBlur: 1
-  lobbyBlurStart: 0.8
-  lobbyBlurEnd: 2.2
-  lobbyBlurRadius: 1.5
-  enableLobbyDarkening: 1
-  lobbyVignetteIntensity: 0.45
-  lobbyVignetteSmoothness: 0.6
+  fomoMeter: {fileID: 330585552}
+  cameraFocus: {fileID: 330585551}
+  postProcessController: {fileID: 330585550}
 --- !u!114 &330585549
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1199,6 +1185,63 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8412396f0a50b5a4f963bab61d1f086c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraShake
+--- !u!114 &330585550
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbec54aa0bcd00644871aa23e0c55cb1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Phone.FomoPostProcessController
+  postProcessVolume: {fileID: 832575518}
+  fomoMeter: {fileID: 330585552}
+  maxVignetteIntensity: 1
+  vignettePower: 2
+  transitionSpeed: 3
+  enableLobbyBlur: 1
+  lobbyBlurStart: 0.8
+  lobbyBlurEnd: 2.2
+  lobbyBlurRadius: 1.5
+  enableLobbyDarkening: 1
+  lobbyVignetteIntensity: 0.45
+  lobbyVignetteSmoothness: 0.6
+--- !u!114 &330585551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b422ee987932b45a9e0c6d29cbd586, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Phone.PhoneCameraFocusController
+  mainCamera: {fileID: 330585545}
+  normalFOV: 60
+  phoneFOV: 60
+  orderSelectionFOV: 45.5
+  orderSelectionPitchTilt: 14.1
+  fovTransitionSpeed: 3
+--- !u!114 &330585552
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12079da2f3dfc2244a3c012188172d77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Phone.FomoMeter
+  fomoValue: 100
+  drainRate: 8
+  refillRate: 20
 --- !u!1 &330585560
 GameObject:
   m_ObjectHideFlags: 0
@@ -12077,7 +12120,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Core.TutorialManager
   enableTutorial: 1
-  alwaysShowInEditor: 0
+  alwaysShowInEditor: 1
   drivingControlsDelay: 1
   fomoTriggerThreshold: 60
   phoneSystem: {fileID: 330585548}
