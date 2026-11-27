@@ -73,6 +73,39 @@ public class EnvironmentSpawner : MonoBehaviour
 
     public IReadOnlyList<GameObject> ActiveChunks => activeChunks;
 
+    /// <summary>
+    /// Computes the remaining distance (in meters) from <paramref name="carZ"/> to the next intersection
+    /// still waiting in <see cref="plannedRouteQueue"/>. Returns false when no queued turns remain.
+    /// </summary>
+    public bool TryGetQueuedTurnDistance(float carZ, out float distanceMeters)
+    {
+        distanceMeters = 0f;
+        if (plannedRouteQueue.Count == 0) return false;
+
+        float nextSpawnZ = startZPosition;
+        for (int i = activeChunks.Count - 1; i >= 0; i--)
+        {
+            if (activeChunks[i] == null) continue;
+            float len = activeChunks[i].TryGetComponent<RoadChunk>(out var rc) ? rc.ChunkLength : defaultChunkLength;
+            nextSpawnZ = activeChunks[i].transform.position.z + len;
+            break;
+        }
+
+        int straightCount = 0;
+        foreach (var chunkType in plannedRouteQueue)
+        {
+            if (chunkType != RoadChunkType.Straight)
+            {
+                const float defaultIntersectionCenterZ = 19f;
+                distanceMeters = Mathf.Max(0f, (nextSpawnZ - carZ) + (straightCount * defaultChunkLength) + defaultIntersectionCenterZ);
+                return true;
+            }
+            straightCount++;
+        }
+
+        return false;
+    }
+
     private void Awake()
     {
         if (Instance == null)
@@ -139,11 +172,16 @@ public class EnvironmentSpawner : MonoBehaviour
     {
         ClearActiveChunks();
 
+        bool isParkedInLobby = GameManager.Instance != null &&
+                               (GameManager.Instance.CurrentState == GameState.DayBriefing ||
+                                GameManager.Instance.CurrentState == GameState.OrderSelection);
+
         float spawnZ = startZPosition;
         for (int i = 0; i < numberOfChunksOnScreen; i++)
         {
-            // Initial chunks in front of the vehicle are always straight for a smooth start
-            RoadChunkType type = (i < 2) ? RoadChunkType.Straight : GetNextChunkTypeFromQueue();
+            // Initial chunks in front of the vehicle are always straight for a smooth start,
+            // and while parked in the lobby we only show straight road (never pre-spawn a debug YFork).
+            RoadChunkType type = (i < 2 || isParkedInLobby) ? RoadChunkType.Straight : GetNextChunkTypeFromQueue();
             GameObject chunk = SpawnChunk(type, spawnZ);
 
             float length = defaultChunkLength;
@@ -670,6 +708,7 @@ public class EnvironmentSpawner : MonoBehaviour
         {
             var order = DoomDriver.Economy.OrderManager.Instance.SelectedOrder;
             ConfigureRouteFromTurns(order.TotalDistance, order.TurnSequence);
+            InitializeRoad();
             Debug.Log($"[EnvironmentSpawner] Loaded route from selected order '{order.RestaurantName}': {order.TotalDistance:F0}m, {order.TurnCount} turns.");
         }
     }

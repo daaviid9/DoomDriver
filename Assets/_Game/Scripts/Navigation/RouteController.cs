@@ -318,10 +318,25 @@ public class RouteController : MonoBehaviour
         }
         else
         {
-            // If active delivery is running but no intersection is within view yet, guide the player to continue straight
+            // If active delivery is running but no intersection is spawned yet, count down smoothly
+            // to the next queued turn (or to the delivery destination if no turns remain).
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
             {
-                float straightDistance = 150f;
+                float carZ = VehicleMovement.Instance != null ? VehicleMovement.Instance.transform.position.z : 0f;
+                float straightDistance;
+                if (EnvironmentSpawner.Instance.TryGetQueuedTurnDistance(carZ, out float queuedTurnDist))
+                {
+                    straightDistance = queuedTurnDist;
+                }
+                else if (DeliveryProgressTracker.Instance != null)
+                {
+                    straightDistance = DeliveryProgressTracker.Instance.RemainingDistance;
+                }
+                else
+                {
+                    straightDistance = 150f;
+                }
+
                 currentManeuverId = "delivery-straight-corridor";
                 currentManeuverDirection = DashboardNavigationSource.Maneuver.Straight;
                 navigationSource.Publish(currentManeuverId, currentManeuverDirection, straightDistance);
