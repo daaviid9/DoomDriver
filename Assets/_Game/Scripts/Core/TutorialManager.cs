@@ -424,7 +424,7 @@ namespace DoomDriver.Core
                     {
                         Step = step,
                         Title = "CHOOSE AN ORDER",
-                        Message = "Orders come in <b>3 difficulties</b> (Easy, Medium, Hard). Longer routes pay more, but carry higher risk.\n\nEach order has a distance and a <b>time limit</b> - being late drains your payout, and if it runs out, the customer cancels the order!",
+                        Message = "You can choose any of the orders. They come in <b>3 difficulties</b> (Easy, Medium, Hard). Longer routes pay more, but carry higher risk.\n\nEach order has a distance and a <b>time limit</b> - being late drains your payout, and if it runs out, the customer cancels the order!",
                         IsDrivingStep = false
                     };
 
@@ -441,8 +441,8 @@ namespace DoomDriver.Core
                     return new TutorialPrompt
                     {
                         Step = step,
-                        Title = "FIGHTING BOREDOM (FOMO)",
-                        Message = "Your focus is fading and the road is getting dark!\n\nHold <b>SPACE</b> to raise your phone and scroll DoomTok reels to refill your dopamine — just don't crash while watching!",
+                        Title = "FIGHTING BOREDOM",
+                        Message = "Your focus is fading and eyes are starting to feel heavy!\n\nHold <b>SPACE</b> to raise your phone and scroll DoomTok reels to refill your dopamine. Just don't crash while watching!",
                         IsDrivingStep = true
                     };
 
