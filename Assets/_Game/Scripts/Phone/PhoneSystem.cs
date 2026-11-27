@@ -34,6 +34,8 @@ namespace DoomDriver.Phone
         [SerializeField] private float drainRate = 8f;
         [SerializeField] private float refillRate = 20f;
 
+        public float FomoValue => fomoValue;
+
         [Header("Camera Zoom & FOV Settings")]
         [SerializeField] private Camera mainCamera;
         [SerializeField] private float normalFOV = 60f;

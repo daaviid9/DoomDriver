@@ -27,6 +27,9 @@ public class DeliveryProgressTracker : MonoBehaviour
     [Tooltip("Amount deducted per vehicle HP lost upon delivery.")]
     [SerializeField] private float damagePenaltyPerHp = 0.05f;
 
+    [Tooltip("Extra route distance (in meters) added when the player misses a turn.")]
+    [SerializeField] private float missedTurnExtraDistance = 150f;
+
     public float CurrentDistance => currentDistance;
     public float TargetDistance => targetDistance;
     public float RemainingDistance => Mathf.Max(0f, targetDistance - currentDistance);
@@ -90,6 +93,11 @@ public class DeliveryProgressTracker : MonoBehaviour
             GameManager.Instance.OnDeliveryFailed += CheckHighscore;
             GameManager.Instance.OnDeliveryCompleted += CheckHighscore;
         }
+
+        if (RouteController.Instance != null)
+        {
+            RouteController.Instance.OnMissedTurn += HandleMissedTurn;
+        }
     }
 
     private void OnDestroy()
@@ -100,6 +108,11 @@ public class DeliveryProgressTracker : MonoBehaviour
             GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
             GameManager.Instance.OnDeliveryFailed -= CheckHighscore;
             GameManager.Instance.OnDeliveryCompleted -= CheckHighscore;
+        }
+
+        if (RouteController.Instance != null)
+        {
+            RouteController.Instance.OnMissedTurn -= HandleMissedTurn;
         }
 
         if (Instance == this) Instance = null;
@@ -237,6 +250,24 @@ public class DeliveryProgressTracker : MonoBehaviour
         OnDistanceProgressUpdated?.Invoke(currentDistance, targetDistance);
         OnTimeUpdated?.Invoke(deliveryTimeElapsed);
         OnTimerUpdated?.Invoke(timeLimit, false, 0f, 0f);
+    }
+
+    /// <summary>
+    /// Extends the active delivery target distance (e.g. when a turn is missed) and notifies HUD listeners.
+    /// </summary>
+    public void ExtendTargetDistance(float extraMeters)
+    {
+        if (!isMissionActive || extraMeters <= 0f) return;
+
+        targetDistance += extraMeters;
+        Debug.Log($"<color=orange>[DeliveryProgressTracker]</color> Route extended by +{extraMeters:F0}m -> New target: {targetDistance:F0}m");
+        OnDistanceUpdated?.Invoke(currentDistance);
+        OnDistanceProgressUpdated?.Invoke(currentDistance, targetDistance);
+    }
+
+    private void HandleMissedTurn(int _)
+    {
+        ExtendTargetDistance(missedTurnExtraDistance);
     }
 
     /// <summary>

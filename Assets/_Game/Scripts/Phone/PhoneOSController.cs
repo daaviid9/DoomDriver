@@ -66,7 +66,13 @@ namespace DoomDriver.Phone
         /// </summary>
         public event System.Action<PhoneScreen> OnScreenChanged;
 
+        /// <summary>
+        /// Event fired when opening a screen is blocked by PhoneScreenAccessPolicy.
+        /// </summary>
+        public event System.Action<PhoneScreen> OnScreenAccessDenied;
+
         public PhoneScreen CurrentScreen { get; private set; } = PhoneScreen.Home;
+        public bool IsOSVisible => osCanvas != null && osCanvas.enabled;
 
         private int lastSelectedHomeIndex = 0;
         private Coroutine hideOSCoroutine;
@@ -250,10 +256,18 @@ namespace DoomDriver.Phone
         }
 
         /// <summary>
-        /// Switches to the specified application or screen.
+        /// Switches to the specified application or screen if allowed by PhoneScreenAccessPolicy.
         /// </summary>
         public void OpenScreen(PhoneScreen targetScreen)
         {
+            GameState? currentState = GameManager.Instance != null ? GameManager.Instance.CurrentState : (GameState?)null;
+            if (!PhoneScreenAccessPolicy.CanOpen(targetScreen, currentState))
+            {
+                Debug.Log($"<color=yellow>[PhoneOSController]</color> Access denied for {targetScreen} in state {currentState}.");
+                OnScreenAccessDenied?.Invoke(targetScreen);
+                return;
+            }
+
             if (CurrentScreen == PhoneScreen.Home && navigator != null && navigator.SelectedIndex >= 0)
             {
                 lastSelectedHomeIndex = navigator.SelectedIndex;

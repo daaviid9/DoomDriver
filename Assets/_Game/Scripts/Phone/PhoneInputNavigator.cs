@@ -52,6 +52,7 @@ namespace DoomDriver.Phone
             {
                 GameManager.Instance.OnDayBriefingStarted += HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted += HandleOrderSelectionStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
             }
         }
@@ -66,13 +67,17 @@ namespace DoomDriver.Phone
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
 
+                GameManager.Instance.OnDaySummaryStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted += HandleOrderSelectionStarted;
+
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
             }
 
             if (GameManager.Instance == null || 
                 GameManager.Instance.CurrentState == GameState.OrderSelection ||
-                GameManager.Instance.CurrentState == GameState.DayBriefing)
+                GameManager.Instance.CurrentState == GameState.DayBriefing ||
+                GameManager.Instance.CurrentState == GameState.DaySummary)
             {
                 SetNavigationActive(true);
             }
@@ -84,6 +89,7 @@ namespace DoomDriver.Phone
             {
                 GameManager.Instance.OnDayBriefingStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
+                GameManager.Instance.OnDaySummaryStarted -= HandleOrderSelectionStarted;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
             }
 

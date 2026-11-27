@@ -296,6 +296,28 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Quits the application (or stops Play Mode in the Unity Editor).
+    /// </summary>
+    public void QuitGame()
+    {
+        if (PauseController.Instance != null)
+        {
+            PauseController.Instance.SetPaused(false);
+        }
+        else
+        {
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
+        }
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
+    /// <summary>
     /// Ensures all modular core controllers are present on the manager object.
     /// </summary>
     private void EnsureCompanionControllers()
@@ -398,11 +420,12 @@ public class GameManager : MonoBehaviour
             if (ShiftManager.Instance != null) ShiftManager.Instance.AdvanceToNextDay();
             else StartNewDayBriefing();
         }
-        // U: Reset Career back to Day 1 (0 orders)
+        // U: Reset Career back to Day 1 (0 orders) and clear saved upgrades
         else if (UnityEngine.InputSystem.Keyboard.current.uKey.wasPressedThisFrame)
         {
-            Debug.Log("<color=red>[DEBUG]</color> U pressed -> Resetting Career to Day 1 (0 orders)!");
+            Debug.Log("<color=red>[DEBUG]</color> U pressed -> Resetting Career to Day 1 (0 orders) and clearing upgrades!");
             if (ShiftManager.Instance != null) ShiftManager.Instance.ResetCareer();
+            if (UpgradeManager.Instance != null) UpgradeManager.Instance.ResetUpgrades();
         }
     }
 #endif

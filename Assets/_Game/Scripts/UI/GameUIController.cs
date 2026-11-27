@@ -24,6 +24,7 @@ public class GameUIController : MonoBehaviour
     [SerializeField] private TMP_Text highscoreText;
 
     private int lastDisplayedMeters = -1;
+    private int lastDisplayedTargetMeters = -1; 
 
     private void Awake()
     {
@@ -180,20 +181,17 @@ public class GameUIController : MonoBehaviour
     private void HandleDistanceUpdated(float distance)
     {
         int meters = Mathf.FloorToInt(distance);
-        if (meters == lastDisplayedMeters) return;
+        int target = (DeliveryProgressTracker.Instance != null && DeliveryProgressTracker.Instance.TargetDistance > 0f)
+            ? Mathf.FloorToInt(DeliveryProgressTracker.Instance.TargetDistance)
+            : 0;
+
+        if (meters == lastDisplayedMeters && target == lastDisplayedTargetMeters) return;
         lastDisplayedMeters = meters;
+        lastDisplayedTargetMeters = target;
 
         if (scoreText != null)
         {
-            if (DeliveryProgressTracker.Instance != null && DeliveryProgressTracker.Instance.TargetDistance > 0f)
-            {
-                int target = Mathf.FloorToInt(DeliveryProgressTracker.Instance.TargetDistance);
-                scoreText.text = $"{meters} / {target} m";
-            }
-            else
-            {
-                scoreText.text = $"{meters} m";
-            }
+            scoreText.text = target > 0 ? $"{meters} / {target} m" : $"{meters} m";
         }
     }
 

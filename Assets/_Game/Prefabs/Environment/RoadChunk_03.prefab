@@ -1106,6 +1106,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RoadChunk
   chunkType: 0
   chunkLength: 44.75
+  intersectionCenterZ: 19
+  leftBranchOffset: {x: -25.8, y: 0, z: 19}
+  rightBranchOffset: {x: 25.8, y: 0, z: 19}
+  turnTriggerWindow: 4
+  branchExitDistance: 25.8
+  targetManeuver: 2
+  leftForkExitPosition: {x: -27.086, y: 0, z: 45.456}
+  leftForkExitRotation: {x: 0, y: -45, z: 0}
+  rightForkExitPosition: {x: 27.086, y: 0, z: 45.456}
+  rightForkExitRotation: {x: 0, y: 45, z: 0}
+  turnDuration: 0.95
 --- !u!1 &8067574947598190438
 GameObject:
   m_ObjectHideFlags: 0
