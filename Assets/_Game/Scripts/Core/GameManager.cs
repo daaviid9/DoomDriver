@@ -296,6 +296,28 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Quits the application (or stops Play Mode in the Unity Editor).
+    /// </summary>
+    public void QuitGame()
+    {
+        if (PauseController.Instance != null)
+        {
+            PauseController.Instance.SetPaused(false);
+        }
+        else
+        {
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
+        }
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
+
+    /// <summary>
     /// Ensures all modular core controllers are present on the manager object.
     /// </summary>
     private void EnsureCompanionControllers()

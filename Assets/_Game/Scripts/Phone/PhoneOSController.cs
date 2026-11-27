@@ -72,6 +72,7 @@ namespace DoomDriver.Phone
         public event System.Action<PhoneScreen> OnScreenAccessDenied;
 
         public PhoneScreen CurrentScreen { get; private set; } = PhoneScreen.Home;
+        public bool IsOSVisible => osCanvas != null && osCanvas.enabled;
 
         private int lastSelectedHomeIndex = 0;
         private Coroutine hideOSCoroutine;
