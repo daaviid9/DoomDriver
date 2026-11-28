@@ -28,11 +28,9 @@ namespace DoomDriver.Core
                 Debug.Log("<color=yellow>[DEBUG]</color> R pressed -> Returning to Order Selection Lobby!");
                 GameManager.Instance.ReturnToOrderSelection();
             }
-            else if ((keyboard.upArrowKey.wasPressedThisFrame ||
-                      keyboard.wKey.wasPressedThisFrame ||
-                      keyboard.bKey.wasPressedThisFrame) && currentState == GameState.DayBriefing)
+            else if (keyboard.bKey.wasPressedThisFrame && currentState == GameState.DayBriefing)
             {
-                Debug.Log("<color=green>[DEBUG]</color> Up Arrow / W / B pressed -> Starting Shift and opening Order Selection!");
+                Debug.Log("<color=green>[DEBUG]</color> B pressed -> Starting Shift and opening Order Selection!");
                 if (ShiftManager.Instance != null) ShiftManager.Instance.StartShift();
                 else GameManager.Instance.TransitionFromBriefingToShift();
 

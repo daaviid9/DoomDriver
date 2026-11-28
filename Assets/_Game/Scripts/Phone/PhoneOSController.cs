@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using DoomDriver.Economy;
@@ -18,62 +17,39 @@ namespace DoomDriver.Phone
     /// <summary>
     /// Central manager for the in-game smartphone operating system ("DoomOS").
     /// Controls screen transitions between Home Screen and installed Apps (Courier, Shop, Bills),
-    /// updates the status bar clock, and injects active navigation contexts into PhoneInputNavigator.
+    /// and injects active navigation contexts into PhoneInputNavigator.
     /// </summary>
     public class PhoneOSController : MonoBehaviour
     {
         public static PhoneOSController Instance { get; private set; }
 
         [Header("Screens & Panels")]
-        [Tooltip("Root panel of the Home Screen (contains app icons)")]
         [SerializeField] private GameObject homeScreenPanel;
-
-        [Tooltip("Root panel of the Courier app (order cards)")]
         [SerializeField] private GameObject courierAppPanel;
-
-        [Tooltip("Root panel of the Courier Upgrade Shop")]
         [SerializeField] private GameObject shopAppPanel;
-
-        [Tooltip("Root panel of the Bills & Living Expenses app")]
         [SerializeField] private GameObject billsAppPanel;
 
         [Header("Status Bar")]
-        [Tooltip("Text component displaying the current digital time")]
         [SerializeField] private TMP_Text clockText;
+        [SerializeField] private PhoneClockUI clockUI;
 
         [Header("Core Dependencies")]
-        [Tooltip("Reference to the PhoneInputNavigator. If null, resolved automatically.")]
         [SerializeField] private PhoneInputNavigator navigator;
-
-        [Tooltip("Reference to CourierAppUI on the Courier panel.")]
         [SerializeField] private CourierAppUI courierAppUI;
-
-        [Tooltip("The root World Space Canvas for the phone OS")]
         [SerializeField] private Canvas osCanvas;
 
         [Header("Audio & Effects (Optional)")]
-        [Tooltip("Audio source for phone click / tap sounds")]
         [SerializeField] private AudioSource phoneAudioSource;
-
-        [Tooltip("Sound played when opening an app")]
         [SerializeField] private AudioClip openAppClip;
-
-        [Tooltip("Sound played when pressing back to home")]
         [SerializeField] private AudioClip backHomeClip;
 
-        /// <summary>
-        /// Event fired whenever the active phone screen changes.
-        /// </summary>
         public event System.Action<PhoneScreen> OnScreenChanged;
-
-        /// <summary>
-        /// Event fired when opening a screen is blocked by PhoneScreenAccessPolicy.
-        /// </summary>
         public event System.Action<PhoneScreen> OnScreenAccessDenied;
 
         public PhoneScreen CurrentScreen { get; private set; } = PhoneScreen.Home;
         public bool IsOSVisible => osCanvas != null && osCanvas.enabled;
 
+        private readonly Dictionary<PhoneScreen, GameObject> screenPanels = new Dictionary<PhoneScreen, GameObject>();
         private int lastSelectedHomeIndex = 0;
         private Coroutine hideOSCoroutine;
 
@@ -90,17 +66,37 @@ namespace DoomDriver.Phone
             }
 
             AutoResolveDependencies();
+            BuildScreenMap();
             EnsureShopApp();
+            EnsureClockUI();
         }
 
-        /// <summary>
-        /// The shop panel ships empty in the prefab; ShopAppUI builds its rows at runtime.
-        /// </summary>
+        private void BuildScreenMap()
+        {
+            screenPanels.Clear();
+            if (homeScreenPanel != null) screenPanels[PhoneScreen.Home] = homeScreenPanel;
+            if (courierAppPanel != null) screenPanels[PhoneScreen.CourierApp] = courierAppPanel;
+            if (shopAppPanel != null) screenPanels[PhoneScreen.ShopApp] = shopAppPanel;
+            if (billsAppPanel != null) screenPanels[PhoneScreen.BillsApp] = billsAppPanel;
+        }
+
         private void EnsureShopApp()
         {
             if (shopAppPanel != null && shopAppPanel.GetComponent<ShopAppUI>() == null)
             {
                 shopAppPanel.AddComponent<ShopAppUI>();
+            }
+        }
+
+        private void EnsureClockUI()
+        {
+            if (clockUI == null)
+            {
+                clockUI = GetComponent<PhoneClockUI>() ?? gameObject.AddComponent<PhoneClockUI>();
+            }
+            if (clockText != null)
+            {
+                clockUI.Bind(clockText);
             }
         }
 
@@ -123,7 +119,6 @@ namespace DoomDriver.Phone
         {
             SubscribeToEvents();
 
-            // Set initial state: hide OS during active delivery, otherwise always show Home Screen
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
             {
                 SetOSVisible(false);
@@ -135,11 +130,6 @@ namespace DoomDriver.Phone
             }
         }
 
-        private void Update()
-        {
-            UpdateClock();
-        }
-
 #if UNITY_EDITOR
         private void OnValidate()
         {
@@ -149,20 +139,9 @@ namespace DoomDriver.Phone
 
         private void AutoResolveDependencies()
         {
-            if (osCanvas == null)
-            {
-                osCanvas = GetComponent<Canvas>() ?? GetComponentInParent<Canvas>();
-            }
-
-            if (navigator == null)
-            {
-                navigator = GetComponent<PhoneInputNavigator>() ?? GetComponentInChildren<PhoneInputNavigator>(true);
-            }
-
-            if (courierAppUI == null)
-            {
-                courierAppUI = GetComponentInChildren<CourierAppUI>(true);
-            }
+            if (osCanvas == null) osCanvas = GetComponent<Canvas>() ?? GetComponentInParent<Canvas>();
+            if (navigator == null) navigator = GetComponent<PhoneInputNavigator>() ?? GetComponentInChildren<PhoneInputNavigator>(true);
+            if (courierAppUI == null) courierAppUI = GetComponentInChildren<CourierAppUI>(true);
 
             if (homeScreenPanel == null)
             {
@@ -174,10 +153,7 @@ namespace DoomDriver.Phone
             {
                 var t = transform.Find("CourierAppPanel") ?? transform.Find("CourierApp") ?? transform.Find("CardsContainer");
                 if (t != null) courierAppPanel = t.gameObject;
-                else if (courierAppUI != null && courierAppUI.gameObject != this.gameObject)
-                {
-                    courierAppPanel = courierAppUI.gameObject;
-                }
+                else if (courierAppUI != null && courierAppUI.gameObject != gameObject) courierAppPanel = courierAppUI.gameObject;
             }
 
             if (shopAppPanel == null)
@@ -220,14 +196,14 @@ namespace DoomDriver.Phone
 
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.OnDayBriefingStarted -= HandleDayBriefingStarted;
-                GameManager.Instance.OnDayBriefingStarted += HandleDayBriefingStarted;
+                GameManager.Instance.OnDayBriefingStarted -= ShowHomeScreen;
+                GameManager.Instance.OnDayBriefingStarted += ShowHomeScreen;
 
-                GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
-                GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionStarted;
+                GameManager.Instance.OnOrderSelectionStarted -= ShowHomeScreen;
+                GameManager.Instance.OnOrderSelectionStarted += ShowHomeScreen;
 
-                GameManager.Instance.OnDaySummaryStarted -= HandleDaySummaryStarted;
-                GameManager.Instance.OnDaySummaryStarted += HandleDaySummaryStarted;
+                GameManager.Instance.OnDaySummaryStarted -= ShowHomeScreen;
+                GameManager.Instance.OnDaySummaryStarted += ShowHomeScreen;
 
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
                 GameManager.Instance.OnDeliveryStarted += HandleDeliveryStarted;
@@ -248,16 +224,13 @@ namespace DoomDriver.Phone
 
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.OnDayBriefingStarted -= HandleDayBriefingStarted;
-                GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionStarted;
-                GameManager.Instance.OnDaySummaryStarted -= HandleDaySummaryStarted;
+                GameManager.Instance.OnDayBriefingStarted -= ShowHomeScreen;
+                GameManager.Instance.OnOrderSelectionStarted -= ShowHomeScreen;
+                GameManager.Instance.OnDaySummaryStarted -= ShowHomeScreen;
                 GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
             }
         }
 
-        /// <summary>
-        /// Switches to the specified application or screen if allowed by PhoneScreenAccessPolicy.
-        /// </summary>
         public void OpenScreen(PhoneScreen targetScreen)
         {
             GameState? currentState = GameManager.Instance != null ? GameManager.Instance.CurrentState : (GameState?)null;
@@ -273,56 +246,29 @@ namespace DoomDriver.Phone
                 lastSelectedHomeIndex = navigator.SelectedIndex;
             }
 
-            // Automatically start shift when opening CourierApp during DayBriefing
             if (targetScreen == PhoneScreen.CourierApp && GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DayBriefing)
             {
                 Debug.Log("<color=green>[PhoneOSController]</color> Opening Courier App during DayBriefing -> Starting Shift!");
-                if (ShiftManager.Instance != null)
-                {
-                    ShiftManager.Instance.StartShift();
-                }
-                else
-                {
-                    GameManager.Instance.TransitionFromBriefingToShift();
-                }
+                if (ShiftManager.Instance != null) ShiftManager.Instance.StartShift();
+                else GameManager.Instance.TransitionFromBriefingToShift();
             }
 
             CurrentScreen = targetScreen;
             Debug.Log($"<color=cyan>[PhoneOSController]</color> Switching screen to: {targetScreen}");
 
-            // Toggle panels
-            if (homeScreenPanel != null) homeScreenPanel.SetActive(targetScreen == PhoneScreen.Home);
-            if (courierAppPanel != null) courierAppPanel.SetActive(targetScreen == PhoneScreen.CourierApp);
-            if (shopAppPanel != null) shopAppPanel.SetActive(targetScreen == PhoneScreen.ShopApp);
-            if (billsAppPanel != null) billsAppPanel.SetActive(targetScreen == PhoneScreen.BillsApp);
-
-            // Configure navigation context based on the active screen
-            switch (targetScreen)
+            foreach (var kvp in screenPanels)
             {
-                case PhoneScreen.Home:
-                    SetupHomeNavigation();
-                    break;
-
-                case PhoneScreen.CourierApp:
-                    SetupCourierNavigation();
-                    break;
-
-                case PhoneScreen.ShopApp:
-                    SetupShopNavigation();
-                    break;
-
-                case PhoneScreen.BillsApp:
-                    SetupBillsNavigation();
-                    break;
+                if (kvp.Value != null)
+                {
+                    kvp.Value.SetActive(kvp.Key == targetScreen);
+                }
             }
 
+            ConfigureNavigationForScreen(targetScreen);
             PlayAudio(openAppClip);
             OnScreenChanged?.Invoke(targetScreen);
         }
 
-        /// <summary>
-        /// Returns back to the Home Screen.
-        /// </summary>
         public void ReturnToHomeScreen()
         {
             if (CurrentScreen == PhoneScreen.Home) return;
@@ -332,15 +278,38 @@ namespace DoomDriver.Phone
             OpenScreen(PhoneScreen.Home);
         }
 
-        private void SetupHomeNavigation()
+        private void ConfigureNavigationForScreen(PhoneScreen screen)
         {
-            if (navigator == null || homeScreenPanel == null) return;
+            if (navigator == null) return;
 
-            var icons = homeScreenPanel.GetComponentsInChildren<AppIconView>(false);
-            if (icons != null && icons.Length > 0)
+            switch (screen)
             {
-                // Pass columns: 2 for the 2x2 home screen apps grid
-                navigator.SetNavigableItems(icons, lastSelectedHomeIndex, columns: 2);
+                case PhoneScreen.Home:
+                    SetupPanelNavigation(homeScreenPanel, lastSelectedHomeIndex, columns: 2);
+                    break;
+
+                case PhoneScreen.CourierApp:
+                    SetupCourierNavigation();
+                    break;
+
+                case PhoneScreen.ShopApp:
+                    SetupPanelNavigation(shopAppPanel, 0, columns: 1);
+                    break;
+
+                case PhoneScreen.BillsApp:
+                    SetupPanelNavigation(billsAppPanel, 0, columns: 1);
+                    break;
+            }
+        }
+
+        private void SetupPanelNavigation(GameObject panel, int initialIndex, int columns)
+        {
+            if (navigator == null || panel == null) return;
+
+            var items = panel.GetComponentsInChildren<IPhoneNavigable>(false);
+            if (items != null && items.Length > 0)
+            {
+                navigator.SetNavigableItems(items, initialIndex, columns);
             }
             else
             {
@@ -352,7 +321,6 @@ namespace DoomDriver.Phone
         {
             if (navigator == null || courierAppUI == null) return;
 
-            // Ensure offers are generated if OrderManager is empty
             if (OrderManager.Instance != null && (OrderManager.Instance.CurrentOffers == null || OrderManager.Instance.CurrentOffers.Count == 0))
             {
                 OrderManager.Instance.GenerateOffers();
@@ -368,39 +336,8 @@ namespace DoomDriver.Phone
             }
         }
 
-        private void SetupShopNavigation()
-        {
-            if (navigator == null || shopAppPanel == null) return;
-
-            var shopItems = shopAppPanel.GetComponentsInChildren<IPhoneNavigable>(false);
-            if (shopItems != null && shopItems.Length > 0)
-            {
-                navigator.SetNavigableItems(shopItems, 0);
-            }
-            else
-            {
-                navigator.ClearNavigableItems();
-            }
-        }
-
-        private void SetupBillsNavigation()
-        {
-            if (navigator == null || billsAppPanel == null) return;
-
-            var billItems = billsAppPanel.GetComponentsInChildren<IPhoneNavigable>(false);
-            if (billItems != null && billItems.Length > 0)
-            {
-                navigator.SetNavigableItems(billItems, 0);
-            }
-            else
-            {
-                navigator.ClearNavigableItems();
-            }
-        }
-
         private void HandleBackRequested()
         {
-            // If inside an app, back navigates to Home
             if (CurrentScreen != PhoneScreen.Home)
             {
                 ReturnToHomeScreen();
@@ -409,33 +346,15 @@ namespace DoomDriver.Phone
 
         private void HandleCourierCardsPopulated(IReadOnlyList<OrderCardView> cards)
         {
-            // If player is currently looking at CourierApp, refresh items
             if (CurrentScreen == PhoneScreen.CourierApp && navigator != null)
             {
                 navigator.SetNavigableItems(cards, 0);
             }
         }
 
-        private void HandleDayBriefingStarted()
+        private void ShowHomeScreen()
         {
             CancelHideOSCoroutine();
-            Debug.Log("<color=#38BDF8>[PhoneOSController]</color> 🌅 DayBriefing started -> Showing Phone Home Screen");
-            SetOSVisible(true);
-            OpenScreen(PhoneScreen.Home);
-        }
-
-        private void HandleOrderSelectionStarted()
-        {
-            CancelHideOSCoroutine();
-            Debug.Log("<color=#34D399>[PhoneOSController]</color> 📋 OrderSelection started -> Showing Phone Home Screen");
-            SetOSVisible(true);
-            OpenScreen(PhoneScreen.Home);
-        }
-
-        private void HandleDaySummaryStarted()
-        {
-            CancelHideOSCoroutine();
-            Debug.Log("<color=#A78BFA>[PhoneOSController]</color> 🌙 DaySummary started -> Showing Phone Home Screen");
             SetOSVisible(true);
             OpenScreen(PhoneScreen.Home);
         }
@@ -472,15 +391,6 @@ namespace DoomDriver.Phone
             if (osCanvas != null)
             {
                 osCanvas.enabled = visible;
-            }
-        }
-
-        private void UpdateClock()
-        {
-            if (clockText != null)
-            {
-                var now = System.DateTime.Now;
-                clockText.text = $"{now.Hour:D2}:{now.Minute:D2}";
             }
         }
 

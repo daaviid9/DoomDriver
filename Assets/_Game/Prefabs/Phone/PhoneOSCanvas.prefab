@@ -340,6 +340,7 @@ GameObject:
   - component: {fileID: 4058985852236357248}
   - component: {fileID: 2547058114819740444}
   - component: {fileID: 5937537455028439645}
+  - component: {fileID: 6099237390983875758}
   m_Layer: 5
   m_Name: PhoneOSCanvas
   m_TagString: Untagged
@@ -522,6 +523,7 @@ MonoBehaviour:
   shopAppPanel: {fileID: 593795293259789939}
   billsAppPanel: {fileID: 266225130493940897}
   clockText: {fileID: 1795956538860093984}
+  clockUI: {fileID: 0}
   navigator: {fileID: 1284759283749102837}
   courierAppUI: {fileID: 2173700088927324797}
   osCanvas: {fileID: 4944052557405553572}
@@ -588,11 +590,25 @@ MonoBehaviour:
   popupRoot: {fileID: 7262271020006658585}
   messageText: {fileID: 7888430685459248468}
   displayDuration: 2.5
-  screenMessageOverrides:
+  screenMessages:
   - screen: 2
     message: Doom Garage is only accessible at the end of the day.
   - screen: 3
-    message: Doom Bank is currently not available.
+    message: DoomBank is currently unavailable.
+  fallbackMessage: This app is currently unavailable.
+--- !u!114 &6099237390983875758
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 220944538689734788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01d98a5c29fd60b4096c93c5e64bfc55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Phone.PhoneClockUI
+  clockText: {fileID: 1795956538860093984}
 --- !u!1 &266225130493940897
 GameObject:
   m_ObjectHideFlags: 0
