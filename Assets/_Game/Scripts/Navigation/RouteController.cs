@@ -125,6 +125,11 @@ public class RouteController : MonoBehaviour
                 EnvironmentSpawner.Instance.AddRecalculationChunks(recalculationChunks);
             }
 
+            if (navigationSource != null)
+            {
+                navigationSource.SetRecalculating();
+            }
+
             currentManeuverId = "";
         }
     }

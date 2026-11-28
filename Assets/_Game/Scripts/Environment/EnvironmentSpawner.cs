@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
+using DoomDriver.Environment;
 
 /// <summary>
 /// Procedural spawner for modular road chunks and intersections.
-/// Controls the forward sequence of road segments based on active DeliveryOrder or debug sequences.
-/// Publishes upcoming turn distance to DashboardNavigationSource (Dev 5 integration contract).
-/// Adheres to AGENTS.md conventions: Single Responsibility, Decoupled Events, and Zero Update allocations.
+/// Delegates route sequence planning to RoutePlanQueue and leaves GPS publishing to RouteController.
 /// </summary>
 public class EnvironmentSpawner : MonoBehaviour
 {
@@ -55,15 +54,9 @@ public class EnvironmentSpawner : MonoBehaviour
         RoadChunkType.YFork
     };
 
-    // Active spawned chunks tracked in world
     private readonly List<GameObject> activeChunks = new List<GameObject>();
-    private readonly Queue<RoadChunkType> plannedRouteQueue = new Queue<RoadChunkType>();
+    private readonly RoutePlanQueue routePlan = new RoutePlanQueue();
 
-    private int debugTurnIndex = 0;
-    private int currentStraightCounter = 0;
-    private DashboardNavigationSource navigationSource;
-
-    // Events for decoupled observation (e.g. TurnTrigger, GPS UI)
     public event System.Action<RoadChunk> OnChunkSpawned;
     public event System.Action<RoadChunk> OnChunkDespawned;
 
@@ -73,15 +66,8 @@ public class EnvironmentSpawner : MonoBehaviour
 
     public IReadOnlyList<GameObject> ActiveChunks => activeChunks;
 
-    /// <summary>
-    /// Computes the remaining distance (in meters) from <paramref name="carZ"/> to the next intersection
-    /// still waiting in <see cref="plannedRouteQueue"/>. Returns false when no queued turns remain.
-    /// </summary>
     public bool TryGetQueuedTurnDistance(float carZ, out float distanceMeters)
     {
-        distanceMeters = 0f;
-        if (plannedRouteQueue.Count == 0) return false;
-
         float nextSpawnZ = startZPosition;
         for (int i = activeChunks.Count - 1; i >= 0; i--)
         {
@@ -91,19 +77,7 @@ public class EnvironmentSpawner : MonoBehaviour
             break;
         }
 
-        int straightCount = 0;
-        foreach (var chunkType in plannedRouteQueue)
-        {
-            if (chunkType != RoadChunkType.Straight)
-            {
-                const float defaultIntersectionCenterZ = 19f;
-                distanceMeters = Mathf.Max(0f, (nextSpawnZ - carZ) + (straightCount * defaultChunkLength) + defaultIntersectionCenterZ);
-                return true;
-            }
-            straightCount++;
-        }
-
-        return false;
+        return routePlan.TryGetQueuedTurnDistance(nextSpawnZ, carZ, defaultChunkLength, out distanceMeters);
     }
 
     private void Awake()
@@ -118,7 +92,6 @@ public class EnvironmentSpawner : MonoBehaviour
             return;
         }
 
-        // Migrate legacy chunkPrefabs if straightPrefabs array is empty
         if ((straightPrefabs == null || straightPrefabs.Length == 0) && chunkPrefabs != null && chunkPrefabs.Length > 0)
         {
             straightPrefabs = chunkPrefabs;
@@ -127,8 +100,6 @@ public class EnvironmentSpawner : MonoBehaviour
 
     private void Start()
     {
-        navigationSource = Object.FindFirstObjectByType<DashboardNavigationSource>();
-
         if (GameManager.Instance != null)
         {
             GameManager.Instance.OnOrderSelectionStarted += HandleOrderSelectionReset;
@@ -145,14 +116,14 @@ public class EnvironmentSpawner : MonoBehaviour
             GameManager.Instance.OnOrderSelectionStarted -= HandleOrderSelectionReset;
             GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
         }
+
+        if (Instance == this) Instance = null;
     }
 
     private void Update()
     {
-        // Don't spawn new chunks if delivery is failed
         if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryFailed) return;
 
-        // Check if the oldest chunk has moved past destroy threshold
         if (activeChunks.Count > 0 && activeChunks[0] != null && activeChunks[0].transform.position.z < destroyZPosition)
         {
             DeleteOldestChunk();
@@ -161,13 +132,8 @@ public class EnvironmentSpawner : MonoBehaviour
                 SpawnNextChunkInSequence();
             }
         }
-
-        UpdateNavigationSource();
     }
 
-    /// <summary>
-    /// Clears and instantiates initial road segments at scene start or reset.
-    /// </summary>
     public void InitializeRoad()
     {
         ClearActiveChunks();
@@ -179,8 +145,6 @@ public class EnvironmentSpawner : MonoBehaviour
         float spawnZ = startZPosition;
         for (int i = 0; i < numberOfChunksOnScreen; i++)
         {
-            // Initial chunks in front of the vehicle are always straight for a smooth start,
-            // and while parked in the lobby we only show straight road (never pre-spawn a debug YFork).
             RoadChunkType type = (i < 2 || isParkedInLobby) ? RoadChunkType.Straight : GetNextChunkTypeFromQueue();
             GameObject chunk = SpawnChunk(type, spawnZ);
 
@@ -188,154 +152,30 @@ public class EnvironmentSpawner : MonoBehaviour
             if (chunk != null && chunk.TryGetComponent<RoadChunk>(out var roadChunk))
             {
                 length = roadChunk.ChunkLength;
-
-                // When a Y-fork is spawned, stop generating further forward chunks.
-                // The road splits into left and right branches only; no straight road continues ahead.
-                if (roadChunk.IsFork)
-                {
-                    break;
-                }
+                if (roadChunk.IsFork) break;
             }
 
             spawnZ += length;
         }
     }
 
-    /// <summary>
-    /// Loads a pre-planned route sequence from a DeliveryOrder.
-    /// </summary>
     public void SetRoute(IEnumerable<RoadChunkType> routeSequence)
     {
-        plannedRouteQueue.Clear();
-        if (routeSequence != null)
-        {
-            foreach (var chunkType in routeSequence)
-            {
-                plannedRouteQueue.Enqueue(chunkType);
-            }
-        }
+        routePlan.SetRoute(routeSequence);
     }
 
-    /// <summary>
-    /// Configures the route queue based on total route distance and sequence of turns.
-    /// Turn sequence integer values match OrderManager: 0 = Straight, 1 = Left, 2 = Right.
-    /// </summary>
     public void ConfigureRouteFromTurns(float totalDistance, int[] turnSequence)
     {
-        plannedRouteQueue.Clear();
-
-        if (turnSequence == null || turnSequence.Length == 0)
-        {
-            int chunkCount = Mathf.Max(3, Mathf.RoundToInt(totalDistance / defaultChunkLength));
-            for (int i = 0; i < chunkCount; i++)
-            {
-                plannedRouteQueue.Enqueue(RoadChunkType.Straight);
-            }
-            return;
-        }
-
-        int totalChunks = Mathf.Max(turnSequence.Length * 3, Mathf.RoundToInt(totalDistance / defaultChunkLength));
-        int chunksPerTurn = Mathf.Max(2, totalChunks / (turnSequence.Length + 1));
-
-        for (int t = 0; t < turnSequence.Length; t++)
-        {
-            for (int s = 0; s < chunksPerTurn; s++)
-            {
-                plannedRouteQueue.Enqueue(RoadChunkType.Straight);
-            }
-
-            RoadChunkType turnType = turnSequence[t] switch
-            {
-                1 => RoadChunkType.TurnLeft,
-                2 => RoadChunkType.TurnRight,
-                _ => RoadChunkType.Straight
-            };
-            plannedRouteQueue.Enqueue(turnType);
-        }
-
-        for (int s = 0; s < chunksPerTurn; s++)
-        {
-            plannedRouteQueue.Enqueue(RoadChunkType.Straight);
-        }
-
-        Debug.Log($"[EnvironmentSpawner] Configured route for distance {totalDistance:F0}m with {turnSequence.Length} turns (Total chunks in queue: {plannedRouteQueue.Count}).");
+        routePlan.ConfigureFromTurns(totalDistance, turnSequence, defaultChunkLength);
+        Debug.Log($"[EnvironmentSpawner] Configured route for distance {totalDistance:F0}m with {turnSequence?.Length ?? 0} turns (Total chunks in queue: {routePlan.Count}).");
     }
 
-    /// <summary>
-    /// Called when the player misses a turn ('Recalculating').
-    /// Dynamically injects extra straight road chunks into the front of the route to extend the trip.
-    /// </summary>
-    /// <param name="extraStraightChunks">Number of extra straight segments to add (e.g. 3 chunks = ~134m).</param>
     public void AddRecalculationChunks(int extraStraightChunks = 3)
     {
-        List<RoadChunkType> existingList = new List<RoadChunkType>(plannedRouteQueue);
-        plannedRouteQueue.Clear();
-
-        // Prepend extra straight chunks
-        for (int i = 0; i < extraStraightChunks; i++)
-        {
-            plannedRouteQueue.Enqueue(RoadChunkType.Straight);
-        }
-
-        // Re-enqueue remaining route
-        for (int i = 0; i < existingList.Count; i++)
-        {
-            plannedRouteQueue.Enqueue(existingList[i]);
-        }
-
-        if (navigationSource != null)
-        {
-            navigationSource.SetRecalculating();
-        }
-
+        routePlan.PrependRecalculationChunks(extraStraightChunks);
         Debug.Log($"[EnvironmentSpawner] Recalculating: Injected {extraStraightChunks} extra straight chunks.");
     }
 
-    private void UpdateNavigationSource()
-    {
-        // If RouteController is present in the scene, let it own GPS publishing (SoC)
-        if (RouteController.Instance != null) return;
-        if (navigationSource == null) return;
-
-        if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive)
-        {
-            return;
-        }
-
-        // Find nearest active intersection ahead of vehicle
-        RoadChunk nearestTurnChunk = null;
-        for (int i = 0; i < activeChunks.Count; i++)
-        {
-            if (activeChunks[i] != null && activeChunks[i].TryGetComponent<RoadChunk>(out var rc))
-            {
-                if (rc.IsIntersection && rc.GetDistanceToCenter() >= -rc.TurnTriggerWindow)
-                {
-                    nearestTurnChunk = rc;
-                    break;
-                }
-            }
-        }
-
-        if (nearestTurnChunk != null)
-        {
-            float dist = Mathf.Max(0f, nearestTurnChunk.GetDistanceToCenter());
-            DashboardNavigationSource.Maneuver dir = nearestTurnChunk.ChunkType switch
-            {
-                RoadChunkType.TurnLeft => DashboardNavigationSource.Maneuver.Left,
-                RoadChunkType.TurnRight => DashboardNavigationSource.Maneuver.Right,
-                RoadChunkType.YFork => DashboardNavigationSource.Maneuver.ForkLeft,
-                _ => DashboardNavigationSource.Maneuver.Straight
-            };
-
-            string id = $"turn-{nearestTurnChunk.GetInstanceID()}";
-            navigationSource.Publish(id, dir, dist);
-        }
-    }
-
-    /// <summary>
-    /// Destroys all chunks in activeChunks located ahead of the specified intersection chunk.
-    /// Called when the player turns so the old straight road doesn't overlap the new street.
-    /// </summary>
     public void PruneChunksAheadOf(GameObject intersectionChunk)
     {
         if (intersectionChunk == null) return;
@@ -357,41 +197,29 @@ public class EnvironmentSpawner : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Resumes procedural chunk generation forward along +Z after a 90-degree world turn.
-    /// If a preview branch chunk was already visible during the turn, promotes it to the active road;
-    /// otherwise spawns new road segments starting from the rotated intersection branch exit.
-    /// </summary>
     public void ResumeGenerationAfterTurn(RoadChunk intersectionChunk, DashboardNavigationSource.Maneuver direction = DashboardNavigationSource.Maneuver.Left)
     {
         isWorldTurnInProgress = false;
-
         if (intersectionChunk == null) return;
 
         float spawnZ;
-
-        // 1. Check if a branch preview chunk was attached to this intersection
         GameObject branchChunk = intersectionChunk.DetachBranchChunk(direction);
 
         if (branchChunk != null)
         {
-            // Detach from parent and maintain exact world position and rotation
             branchChunk.transform.SetParent(null, true);
 
-            // Re-enable WorldMover so it continues moving down -Z with the world
             if (!branchChunk.TryGetComponent<WorldMover>(out var mover))
             {
                 mover = branchChunk.AddComponent<WorldMover>();
             }
             mover.enabled = true;
 
-            // Ensure RoadChunk component exists
             if (!branchChunk.TryGetComponent<RoadChunk>(out var rc))
             {
                 rc = branchChunk.AddComponent<RoadChunk>();
             }
 
-            // Add to activeChunks as the immediate successor to intersectionChunk
             activeChunks.Add(branchChunk);
             OnChunkSpawned?.Invoke(rc);
 
@@ -402,12 +230,10 @@ public class EnvironmentSpawner : MonoBehaviour
         }
         else
         {
-            // Fallback if no preview chunk was attached: calculate branch exit in world space
             Vector3 worldBranchExit = intersectionChunk.GetBranchExitWorldPosition(direction);
             spawnZ = worldBranchExit.z + branchExitDistanceOffset;
         }
 
-        // 2. Fill activeChunks back up to numberOfChunksOnScreen
         while (activeChunks.Count < numberOfChunksOnScreen)
         {
             RoadChunkType nextType = GetNextChunkTypeFromQueue();
@@ -417,33 +243,22 @@ public class EnvironmentSpawner : MonoBehaviour
             if (newChunk != null && newChunk.TryGetComponent<RoadChunk>(out var roadChunk))
             {
                 length = roadChunk.ChunkLength;
-                if (roadChunk.IsFork)
-                {
-                    break;
-                }
+                if (roadChunk.IsFork) break;
             }
 
             spawnZ += length;
         }
     }
 
-    /// <summary>
-    /// Checks if there is currently an active Y-fork ahead of the vehicle in activeChunks
-    /// that has not yet been navigated or completed.
-    /// </summary>
     public bool HasActiveForkAhead()
     {
         for (int i = 0; i < activeChunks.Count; i++)
         {
             if (activeChunks[i] != null && activeChunks[i].TryGetComponent<RoadChunk>(out var rc))
             {
-                if (rc.IsFork)
+                if (rc.IsFork && rc.transform.position.z + rc.IntersectionCenterZ > -5f)
                 {
-                    // Fork center is ahead of the car (Z > -5m)
-                    if (rc.transform.position.z + rc.IntersectionCenterZ > -5f)
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
         }
@@ -458,58 +273,25 @@ public class EnvironmentSpawner : MonoBehaviour
             return;
         }
 
-        // If an active Y-fork is currently ahead of the vehicle, DO NOT spawn any straight chunk behind it.
-        // The road splits into left and right branches only.
-        if (HasActiveForkAhead())
-        {
-            return;
-        }
+        if (HasActiveForkAhead()) return;
 
         GameObject lastChunk = activeChunks[activeChunks.Count - 1];
         RoadChunk lastRoadChunk = null;
-        if (lastChunk != null && lastChunk.TryGetComponent<RoadChunk>(out lastRoadChunk))
+        if (lastChunk != null && lastChunk.TryGetComponent(out lastRoadChunk) && lastRoadChunk.IsFork)
         {
-            if (lastRoadChunk.IsFork)
-            {
-                return;
-            }
+            return;
         }
 
         float lastChunkZ = (lastChunk != null) ? lastChunk.transform.position.z : 0f;
         float lastChunkLength = (lastRoadChunk != null) ? lastRoadChunk.ChunkLength : defaultChunkLength;
 
         float spawnZ = lastChunkZ + lastChunkLength;
-        RoadChunkType nextType = GetNextChunkTypeFromQueue();
-        SpawnChunk(nextType, spawnZ);
+        SpawnChunk(GetNextChunkTypeFromQueue(), spawnZ);
     }
 
     private RoadChunkType GetNextChunkTypeFromQueue()
     {
-        if (plannedRouteQueue.Count > 0)
-        {
-            return plannedRouteQueue.Dequeue();
-        }
-
-        // Debug fallback generation
-        if (useDebugSequence)
-        {
-            if (currentStraightCounter < debugStraightsBetweenTurns)
-            {
-                currentStraightCounter++;
-                return RoadChunkType.Straight;
-            }
-
-            // Time for an intersection
-            currentStraightCounter = 0;
-            if (debugTurnSequence != null && debugTurnSequence.Length > 0)
-            {
-                RoadChunkType turn = debugTurnSequence[debugTurnIndex % debugTurnSequence.Length];
-                debugTurnIndex++;
-                return turn;
-            }
-        }
-
-        return RoadChunkType.Straight;
+        return routePlan.DequeueNext(useDebugSequence, debugStraightsBetweenTurns, debugTurnSequence);
     }
 
     private GameObject SpawnChunk(RoadChunkType type, float spawnZ)
@@ -528,42 +310,20 @@ public class EnvironmentSpawner : MonoBehaviour
             return null;
         }
 
-        Vector3 spawnPosition = new Vector3(0f, 0f, spawnZ);
-        GameObject newChunk = Instantiate(prefabToSpawn, spawnPosition, Quaternion.identity);
+        GameObject newChunk = Instantiate(prefabToSpawn, new Vector3(0f, 0f, spawnZ), Quaternion.identity);
 
-        // Ensure RoadChunk component exists
         if (!newChunk.TryGetComponent<RoadChunk>(out var roadChunk))
         {
             roadChunk = newChunk.AddComponent<RoadChunk>();
         }
 
-        // Configure target maneuver for intersection/fork chunks
-        if (roadChunk.IsFork || roadChunk.IsIntersection)
-        {
-            if (type == RoadChunkType.TurnLeft)
-            {
-                roadChunk.TargetManeuver = DashboardNavigationSource.Maneuver.Left;
-            }
-            else if (type == RoadChunkType.TurnRight)
-            {
-                roadChunk.TargetManeuver = DashboardNavigationSource.Maneuver.Right;
-            }
-            else if (type == RoadChunkType.YFork)
-            {
-                // In debug or neutral fork sequence, alternate between ForkLeft and ForkRight
-                roadChunk.TargetManeuver = (debugTurnIndex % 2 == 0)
-                    ? DashboardNavigationSource.Maneuver.ForkLeft
-                    : DashboardNavigationSource.Maneuver.ForkRight;
-            }
-        }
+        ConfigureChunkManeuver(roadChunk, type);
 
-        // Ensure TurnTrigger component exists on intersection chunks for turn detection
         if (roadChunk.IsIntersection && newChunk.GetComponent<TurnTrigger>() == null)
         {
             newChunk.AddComponent<TurnTrigger>();
         }
 
-        // Ensure WorldMover component exists
         if (newChunk.GetComponent<WorldMover>() == null)
         {
             newChunk.AddComponent<WorldMover>();
@@ -572,7 +332,6 @@ public class EnvironmentSpawner : MonoBehaviour
         newChunk.tag = "Untagged";
         activeChunks.Add(newChunk);
 
-        // Pre-attach preview straight chunks to side branches so the player sees real streets down the side roads
         if (roadChunk.IsIntersection)
         {
             AttachSideBranchPreviews(roadChunk);
@@ -582,11 +341,26 @@ public class EnvironmentSpawner : MonoBehaviour
         return newChunk;
     }
 
-    /// <summary>
-    /// Spawns straight road chunks attached to the side branches of an intersection.
-    /// These chunks are immediately visible to the player when approaching and during the turn maneuver,
-    /// eliminating any visual gap or empty void.
-    /// </summary>
+    private void ConfigureChunkManeuver(RoadChunk roadChunk, RoadChunkType type)
+    {
+        if (!roadChunk.IsFork && !roadChunk.IsIntersection) return;
+
+        if (type == RoadChunkType.TurnLeft)
+        {
+            roadChunk.TargetManeuver = DashboardNavigationSource.Maneuver.Left;
+        }
+        else if (type == RoadChunkType.TurnRight)
+        {
+            roadChunk.TargetManeuver = DashboardNavigationSource.Maneuver.Right;
+        }
+        else if (type == RoadChunkType.YFork)
+        {
+            roadChunk.TargetManeuver = (routePlan.DebugTurnIndex % 2 == 0)
+                ? DashboardNavigationSource.Maneuver.ForkLeft
+                : DashboardNavigationSource.Maneuver.ForkRight;
+        }
+    }
+
     private void AttachSideBranchPreviews(RoadChunk roadChunk)
     {
         if (roadChunk == null || straightPrefabs == null || straightPrefabs.Length == 0) return;
@@ -621,42 +395,29 @@ public class EnvironmentSpawner : MonoBehaviour
         previewChunk.transform.localRotation = localRot;
         previewChunk.transform.localScale = Vector3.one;
 
-        // Ensure WorldMover is disabled while attached to the parent intersection chunk so it does not double-translate
         if (previewChunk.TryGetComponent<WorldMover>(out var mover))
         {
             mover.enabled = false;
         }
 
-        // Tag as Untagged
         previewChunk.tag = "Untagged";
-
-        // Store reference on the intersection RoadChunk
         intersectionChunk.SetBranchChunk(direction, previewChunk);
     }
 
     private GameObject PickPrefabForType(RoadChunkType type)
     {
-        switch (type)
+        return type switch
         {
-            case RoadChunkType.Straight:
-                return PickRandomPrefab(straightPrefabs);
-
-            case RoadChunkType.TurnLeft:
-            case RoadChunkType.TurnRight:
-            case RoadChunkType.Crossroads:
-            case RoadChunkType.YFork:
-                return PickRandomPrefab(yForkPrefabs);
-
-            default:
-                return PickRandomPrefab(straightPrefabs);
-        }
+            RoadChunkType.Straight => PickRandomPrefab(straightPrefabs),
+            RoadChunkType.TurnLeft or RoadChunkType.TurnRight or RoadChunkType.Crossroads or RoadChunkType.YFork => PickRandomPrefab(yForkPrefabs),
+            _ => PickRandomPrefab(straightPrefabs)
+        };
     }
 
     private GameObject PickRandomPrefab(GameObject[] array)
     {
         if (array == null || array.Length == 0) return null;
-        int index = Random.Range(0, array.Length);
-        return array[index];
+        return array[Random.Range(0, array.Length)];
     }
 
     private void DeleteOldestChunk()
@@ -691,15 +452,8 @@ public class EnvironmentSpawner : MonoBehaviour
 
     private void HandleOrderSelectionReset()
     {
-        plannedRouteQueue.Clear();
-        currentStraightCounter = 0;
-        debugTurnIndex = 0;
+        routePlan.ResetAll();
         InitializeRoad();
-
-        if (navigationSource != null)
-        {
-            navigationSource.ClearRoute();
-        }
     }
 
     private void HandleDeliveryStarted()
