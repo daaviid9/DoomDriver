@@ -1,10 +1,10 @@
 using System;
 using UnityEngine;
+using DoomDriver.Navigation;
 
 /// <summary>
-/// Central backend controller for delivery navigation, turn evaluations, and dynamic rerouting.
-/// Coordinates between EnvironmentSpawner, TurnTrigger, and DashboardNavigationSource (Dev 5).
-/// Fulfills Card 4.2 – Turn Detection & Recalculating.
+/// Central backend controller for delivery navigation, turn evaluations, and GPS maneuver publishing.
+/// Coordinates between EnvironmentSpawner, TurnTrigger, WorldTurnExecutor, and DashboardNavigationSource.
 /// </summary>
 public class RouteController : MonoBehaviour
 {
@@ -21,11 +21,13 @@ public class RouteController : MonoBehaviour
     [SerializeField] private float recalculatingDuration = 2.5f;
 
     [Header("World Turn Animation")]
-    [Tooltip("Default turn duration in seconds for Y-Fork (45-degree) turns. Lower = faster, higher = slower and smoother.")]
+    [Tooltip("Default turn duration in seconds for Y-Fork (45-degree) turns.")]
     [SerializeField] private float forkTurnDuration = 0.95f;
 
-    [Tooltip("Default turn duration in seconds for standard 90-degree intersection turns. Lower = faster, higher = slower and smoother.")]
+    [Tooltip("Default turn duration in seconds for standard 90-degree intersection turns.")]
     [SerializeField] private float sharpTurnDuration = 1.1f;
+
+    [SerializeField] private WorldTurnExecutor worldTurnExecutor;
 
     [Header("Route State")]
     [SerializeField] private int completedTurnsCount = 0;
@@ -44,7 +46,6 @@ public class RouteController : MonoBehaviour
     public bool HasActiveManeuver => !string.IsNullOrEmpty(currentManeuverId);
     public DashboardNavigationSource.Maneuver CurrentManeuverDirection => currentManeuverDirection;
 
-    // Events for decoupled observation (HUD, audio, stats)
     public event Action<int> OnCorrectTurn;
     public event Action<int> OnMissedTurn;
     public event Action OnRecalculating;
@@ -59,6 +60,11 @@ public class RouteController : MonoBehaviour
         {
             Destroy(gameObject);
             return;
+        }
+
+        if (worldTurnExecutor == null)
+        {
+            worldTurnExecutor = GetComponent<WorldTurnExecutor>() ?? gameObject.AddComponent<WorldTurnExecutor>();
         }
     }
 
@@ -78,7 +84,7 @@ public class RouteController : MonoBehaviour
         if (GameManager.Instance != null)
         {
             GameManager.Instance.OnOrderSelectionStarted -= ResetRouteStats;
-            GameManager.Instance.OnDeliveryStarted -= HandleDeliveryStarted;
+            GameManager.Instance.OnDeliveryStarted -= ResetRouteStats;
         }
 
         if (Instance == this) Instance = null;
@@ -93,7 +99,6 @@ public class RouteController : MonoBehaviour
 
     /// <summary>
     /// Evaluates the outcome of a turn taken by the player at an intersection.
-    /// Called by TurnTrigger.
     /// </summary>
     public void ReportTurnOutcome(TurnTrigger trigger, DashboardNavigationSource.Maneuver actual, DashboardNavigationSource.Maneuver expected, bool isCorrect)
     {
@@ -107,8 +112,6 @@ public class RouteController : MonoBehaviour
             completedTurnsCount++;
             Debug.Log($"<color=green>[RouteController] Correct turn executed!</color> (Total completed: {completedTurnsCount})");
             OnCorrectTurn?.Invoke(completedTurnsCount);
-
-            // Clear current maneuver ID so the next intersection takes over
             currentManeuverId = "";
         }
         else
@@ -119,7 +122,6 @@ public class RouteController : MonoBehaviour
             OnMissedTurn?.Invoke(missedTurnsCount);
             OnRecalculating?.Invoke();
 
-            // Inject penalty road chunks to extend the route
             if (EnvironmentSpawner.Instance != null)
             {
                 EnvironmentSpawner.Instance.AddRecalculationChunks(recalculationChunks);
@@ -135,124 +137,12 @@ public class RouteController : MonoBehaviour
     }
 
     /// <summary>
-    /// Executes a smooth 90-degree world pivot turn transition (Temple Run style).
-    /// Pivots the intersection chunk so the side street becomes the new forward track,
-    /// animates the car cornering drift, prunes old forward chunks, and resumes generation.
+    /// Delegates the smooth world pivot turn transition to WorldTurnExecutor.
     /// </summary>
     public void ExecuteWorldTurn(RoadChunk intersectionChunk, DashboardNavigationSource.Maneuver direction)
     {
-        if (intersectionChunk == null) return;
-        StartCoroutine(WorldTurnRoutine(intersectionChunk, direction));
-    }
-
-    private System.Collections.IEnumerator WorldTurnRoutine(RoadChunk intersectionChunk, DashboardNavigationSource.Maneuver direction)
-    {
-        bool isFork = (intersectionChunk != null && intersectionChunk.ChunkType == RoadChunkType.YFork);
-        float turnAngle = (intersectionChunk != null) ? intersectionChunk.TurnAngle : 90f;
-        float defaultDuration = isFork ? forkTurnDuration : sharpTurnDuration;
-        float duration = (intersectionChunk != null && intersectionChunk.TurnDuration > 0f)
-            ? intersectionChunk.TurnDuration
-            : defaultDuration;
-        bool isLeft = (direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft);
-        float targetAngle = isLeft ? turnAngle : -turnAngle;
-
-        // 1. Notify EnvironmentSpawner that a world turn is in progress and prune chunks ahead
-        if (EnvironmentSpawner.Instance != null)
-        {
-            EnvironmentSpawner.Instance.IsWorldTurnInProgress = true;
-            EnvironmentSpawner.Instance.PruneChunksAheadOf(intersectionChunk.gameObject);
-        }
-
-        // 2. Start smooth vehicle turn animation (gentle wheel steering, zero drift yaw)
-        if (VehicleMovement.Instance != null)
-        {
-            VehicleMovement.Instance.StartTurnManeuver(direction, duration, isFork);
-        }
-
-        // 3. Small camera bump for sharp 90-degree turns (skipped on forks for smooth cornering)
-        if (!isFork && CameraShake.Instance != null)
-        {
-            CameraShake.Instance.Shake(duration * 0.5f, 0.12f);
-        }
-
-        // 4. Smoothly rotate the intersection chunk around its intersection center.
-        // Disable WorldMover during rotation so we manage position and rotation with 100% precision without frame fighting.
-        WorldMover worldMover = intersectionChunk.GetComponent<WorldMover>();
-        if (worldMover != null)
-        {
-            worldMover.enabled = false;
-        }
-
-        Vector3 localCenter = new Vector3(0f, 0f, intersectionChunk.IntersectionCenterZ);
-        // Track the world position of the intersection center starting from its current location
-        Vector3 centerWorld = intersectionChunk.transform.TransformPoint(localCenter);
-
-        float elapsed = 0f;
-
-        while (elapsed < duration)
-        {
-            if (PauseController.Instance != null && PauseController.Instance.IsPaused)
-            {
-                yield return null;
-                continue;
-            }
-
-            float dt = Time.deltaTime;
-            elapsed += dt;
-
-            // Move the world intersection center backwards along world -Z at current forward driving speed
-            float forwardSpeed = (WorldSpeedController.Instance != null) ? WorldSpeedController.Instance.CurrentSpeed : 0f;
-            centerWorld.z -= forwardSpeed * dt;
-
-            float t = Mathf.Clamp01(elapsed / duration);
-            float smoothT = Mathf.SmoothStep(0f, 1f, t);
-            float currentAngle = Mathf.Lerp(0f, targetAngle, smoothT);
-
-            if (intersectionChunk != null)
-            {
-                Quaternion rot = Quaternion.Euler(0f, currentAngle, 0f);
-                intersectionChunk.transform.rotation = rot;
-
-                // Closed-form exact placement:
-                // Ensures intersection center is always locked at X = 0 and smoothly moves down Z.
-                // Since chunk.pos + rot * localCenter = centerWorld,
-                // chunk.pos = centerWorld - rot * localCenter.
-                Vector3 rotOffset = rot * localCenter;
-                intersectionChunk.transform.position = new Vector3(
-                    0f - rotOffset.x,
-                    centerWorld.y,
-                    centerWorld.z - rotOffset.z
-                );
-            }
-
-            yield return null;
-        }
-
-        // 5. Finalize alignment of the intersection chunk
-        if (intersectionChunk != null)
-        {
-            Quaternion finalRot = Quaternion.Euler(0f, targetAngle, 0f);
-            intersectionChunk.transform.rotation = finalRot;
-
-            Vector3 finalRotOffset = finalRot * localCenter;
-            intersectionChunk.transform.position = new Vector3(
-                0f - finalRotOffset.x,
-                centerWorld.y,
-                centerWorld.z - finalRotOffset.z
-            );
-
-            // Re-enable WorldMover so it continues moving down -Z with the world
-            if (worldMover != null)
-            {
-                worldMover.enabled = true;
-            }
-        }
-
-        // 6. Resume generation in the new forward direction (+Z)
-        if (EnvironmentSpawner.Instance != null && intersectionChunk != null)
-        {
-            EnvironmentSpawner.Instance.ResumeGenerationAfterTurn(intersectionChunk, direction);
-        }
+        if (intersectionChunk == null || worldTurnExecutor == null) return;
+        worldTurnExecutor.ExecuteTurn(intersectionChunk, direction, forkTurnDuration, sharpTurnDuration);
     }
 
     private void UpdateUpcomingManeuverGPS()
@@ -271,7 +161,6 @@ public class RouteController : MonoBehaviour
 
         if (EnvironmentSpawner.Instance == null) return;
 
-        // Find nearest active intersection ahead of vehicle
         RoadChunk nearestIntersection = null;
         var activeChunks = EnvironmentSpawner.Instance.ActiveChunks;
         for (int i = 0; i < activeChunks.Count; i++)
@@ -280,7 +169,6 @@ public class RouteController : MonoBehaviour
             {
                 if (chunk.IsIntersection && chunk.GetDistanceToCenter() >= -chunk.TurnTriggerWindow)
                 {
-                    // Skip intersections that have already triggered/completed their evaluation
                     if (chunk.TryGetComponent<TurnTrigger>(out var trigger) && trigger.HasTriggered)
                     {
                         continue;
@@ -298,15 +186,15 @@ public class RouteController : MonoBehaviour
 
             if (nearestIntersection.ChunkType == RoadChunkType.YFork)
             {
-                bool targetRight = (nearestIntersection.TargetManeuver == DashboardNavigationSource.Maneuver.Right ||
-                                    nearestIntersection.TargetManeuver == DashboardNavigationSource.Maneuver.ForkRight);
+                bool targetRight = nearestIntersection.TargetManeuver == DashboardNavigationSource.Maneuver.Right ||
+                                   nearestIntersection.TargetManeuver == DashboardNavigationSource.Maneuver.ForkRight;
                 currentManeuverDirection = targetRight
                     ? DashboardNavigationSource.Maneuver.ForkRight
                     : DashboardNavigationSource.Maneuver.ForkLeft;
             }
             else
             {
-                currentManeuverDirection = (nearestIntersection.TargetManeuver != DashboardNavigationSource.Maneuver.Straight)
+                currentManeuverDirection = nearestIntersection.TargetManeuver != DashboardNavigationSource.Maneuver.Straight
                     ? nearestIntersection.TargetManeuver
                     : nearestIntersection.ChunkType switch
                     {
@@ -316,41 +204,34 @@ public class RouteController : MonoBehaviour
                     };
             }
 
-            // Stable maneuver ID per unique intersection instance
             currentManeuverId = $"delivery-turn-{nearestIntersection.GetInstanceID()}";
-
             navigationSource.Publish(currentManeuverId, currentManeuverDirection, remainingMeters);
         }
-        else
+        else if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
         {
-            // If active delivery is running but no intersection is spawned yet, count down smoothly
-            // to the next queued turn (or to the delivery destination if no turns remain).
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryActive)
+            float carZ = VehicleMovement.Instance != null ? VehicleMovement.Instance.transform.position.z : 0f;
+            float straightDistance;
+            if (EnvironmentSpawner.Instance.TryGetQueuedTurnDistance(carZ, out float queuedTurnDist))
             {
-                float carZ = VehicleMovement.Instance != null ? VehicleMovement.Instance.transform.position.z : 0f;
-                float straightDistance;
-                if (EnvironmentSpawner.Instance.TryGetQueuedTurnDistance(carZ, out float queuedTurnDist))
-                {
-                    straightDistance = queuedTurnDist;
-                }
-                else if (DeliveryProgressTracker.Instance != null)
-                {
-                    straightDistance = DeliveryProgressTracker.Instance.RemainingDistance;
-                }
-                else
-                {
-                    straightDistance = 150f;
-                }
+                straightDistance = queuedTurnDist;
+            }
+            else if (DeliveryProgressTracker.Instance != null)
+            {
+                straightDistance = DeliveryProgressTracker.Instance.RemainingDistance;
+            }
+            else
+            {
+                straightDistance = 150f;
+            }
 
-                currentManeuverId = "delivery-straight-corridor";
-                currentManeuverDirection = DashboardNavigationSource.Maneuver.Straight;
-                navigationSource.Publish(currentManeuverId, currentManeuverDirection, straightDistance);
-            }
-            else if (HasActiveManeuver)
-            {
-                currentManeuverId = "";
-                navigationSource.ClearRoute();
-            }
+            currentManeuverId = "delivery-straight-corridor";
+            currentManeuverDirection = DashboardNavigationSource.Maneuver.Straight;
+            navigationSource.Publish(currentManeuverId, currentManeuverDirection, straightDistance);
+        }
+        else if (HasActiveManeuver)
+        {
+            currentManeuverId = "";
+            navigationSource.ClearRoute();
         }
     }
 
@@ -366,10 +247,4 @@ public class RouteController : MonoBehaviour
             navigationSource.ClearRoute();
         }
     }
-
-    private void HandleDeliveryStarted()
-    {
-        ResetRouteStats();
-    }
 }
-
