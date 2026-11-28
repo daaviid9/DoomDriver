@@ -543,9 +543,7 @@ GameObject:
   - component: {fileID: 194867915}
   - component: {fileID: 194867917}
   - component: {fileID: 194867921}
-  - component: {fileID: 194867918}
   - component: {fileID: 194867919}
-  - component: {fileID: 194867920}
   m_Layer: 0
   m_Name: GameManagers
   m_TagString: Untagged
@@ -741,38 +739,6 @@ MonoBehaviour:
   missedTurnsCount: 0
   currentManeuverId: 
   currentManeuverDirection: 0
---- !u!114 &194867918
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194867906}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab03, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WeatherManager
-  presets:
-  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab21, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab22, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab23, type: 2}
-  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab24, type: 2}
-  defaultCondition: 2
-  randomizeOnStart: 0
-  alternateWeatherPerShift: 1
-  transitionDuration: 2
-  windshieldRain: {fileID: 330585562}
-  directionalLight: {fileID: 0}
-  mainCamera: {fileID: 330585545}
-  dryRoadMaterial: {fileID: 2100000, guid: c5148690b7f04114cbac64f48dcebc9c, type: 2}
-  wetRoadMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab10, type: 2}
-  sceneRoadRenderer: {fileID: 372252488}
-  carConstructionRenderer: {fileID: 0}
-  carGlassMaterialIndex: 5
-  windshieldGlassMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab41, type: 2}
-  wiperController: {fileID: 194867920}
-  enableDebugCycleKey: 1
 --- !u!114 &194867919
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -785,26 +751,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab05, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Core.DailyShiftBriefing
---- !u!114 &194867920
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194867906}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab42, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WindshieldWiperController
-  lightRainSweepSpeed: 0.75
-  heavyRainSweepSpeed: 1.25
-  parkAngleDeg: -78
-  maxSweepAngleDeg: 58
-  autoCalibratePivots: 1
-  pivotOffsetTuning: {x: 0, y: -0.34}
-  wiperSpacing: 0.62
-  wiperLength: 0.7
 --- !u!114 &194867921
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6117,6 +6063,11 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
+--- !u!23 &351257077 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 922818451579588732, guid: 5a96d676a8a8c624abcc70a5e125bca8, type: 3}
+  m_PrefabInstance: {fileID: 7243173397531802448}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &372252485
 GameObject:
   m_ObjectHideFlags: 0
@@ -13604,6 +13555,130 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1d89bf9ea7166ae4db34d88b7f49c77d, type: 3}
+--- !u!1 &1795841954
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1795841960}
+  - component: {fileID: 1795841959}
+  - component: {fileID: 1795841958}
+  - component: {fileID: 1795841957}
+  - component: {fileID: 1795841956}
+  - component: {fileID: 1795841955}
+  m_Layer: 0
+  m_Name: WeatherManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1795841955
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1795841954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f26c4e28f924b7944a2c47bea9796305, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.VehicleWindshieldWeather
+  carConstructionRenderer: {fileID: 351257077}
+  carGlassMaterialIndex: 5
+  windshieldGlassMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab41, type: 2}
+  wiperController: {fileID: 1795841958}
+--- !u!114 &1795841956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1795841954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f18edfcd7b6fa8e459484dc893af361c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.RoadWetnessReceiver
+  dryRoadMaterial: {fileID: 2100000, guid: c5148690b7f04114cbac64f48dcebc9c, type: 2}
+  wetRoadMaterial: {fileID: 2100000, guid: a1b2c3d4e5f64789901234567890ab10, type: 2}
+  sceneRoadRenderer: {fileID: 372252488}
+--- !u!114 &1795841957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1795841954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2236faf5d79d38b4788f47637b5a0e50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.AtmosphereWeatherReceiver
+  windshieldRain: {fileID: 330585562}
+  directionalLight: {fileID: 410087040}
+  mainCamera: {fileID: 330585545}
+--- !u!114 &1795841958
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1795841954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WindshieldWiperController
+  lightRainSweepSpeed: 0.75
+  heavyRainSweepSpeed: 1.25
+  parkAngleDeg: -78
+  maxSweepAngleDeg: 58
+  autoCalibratePivots: 1
+  pivotOffsetTuning: {x: 0, y: -0.34}
+  wiperSpacing: 0.62
+  wiperLength: 0.7
+--- !u!114 &1795841959
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1795841954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab03, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Environment.WeatherManager
+  presets:
+  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab21, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab22, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab23, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f64789901234567890ab24, type: 2}
+  defaultCondition: 2
+  randomizeOnStart: 0
+  alternateWeatherPerShift: 1
+  transitionDuration: 2
+  enableDebugCycleKey: 1
+--- !u!4 &1795841960
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1795841954}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.68268, y: 0.91862, z: 0.54695}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1828479571 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1145214836529793487, guid: 93903fac38405d94381bff9993d61f64, type: 3}
@@ -15499,3 +15574,4 @@ SceneRoots:
   - {fileID: 1211236822}
   - {fileID: 1025693454}
   - {fileID: 621160810}
+  - {fileID: 1795841960}
