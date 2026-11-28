@@ -4,13 +4,9 @@ using DoomDriver.Economy;
 
 /// <summary>
 /// Core State Machine for the DoomDriver gameplay loop.
-/// Strictly adheres to Single Responsibility Principle (SRP) and Encapsulation:
-/// - Manages GameState transitions and high-level gameplay events.
-/// - Does NOT manage economy (see WalletManager).
-/// - Does NOT manage world movement speed (see WorldSpeedController).
-/// - Does NOT manage pause/timescale (see PauseController).
-/// - Does NOT manage score/distance metrics (see DeliveryProgressTracker).
-/// - Does NOT manage HUD/UI panels (see GameUIController).
+/// Manages GameState transitions, delivery lifecycle, and scene navigation.
+/// Companion managers (ShiftManager, WalletManager, UpgradeManager, WeatherManager, etc.)
+/// must be placed explicitly as scene objects/prefabs rather than auto-added here.
 /// </summary>
 public class GameManager : MonoBehaviour
 {
@@ -21,7 +17,6 @@ public class GameManager : MonoBehaviour
     public GameState CurrentState => currentState;
     public DeliveryResult CompletedDelivery { get; private set; }
     private DeliveryResult rewardInput;
-    private VehicleHealth deliveryHealth;
     private bool rewardSettled;
     private bool returningToLobby;
 
@@ -29,7 +24,6 @@ public class GameManager : MonoBehaviour
     [Tooltip("Name of the scene to load on exit to menu")]
     [SerializeField] private string mainMenuSceneName = "LoadingScreenMenu";
 
-    // High-level C# events for decoupled observation by other systems
     public event System.Action<GameState> OnGameStateChanged;
     public event System.Action OnDayBriefingStarted;
     public event System.Action OnOrderSelectionStarted;
@@ -51,9 +45,6 @@ public class GameManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-
-        EnsureCompanionControllers();
-        deliveryHealth = FindFirstObjectByType<VehicleHealth>();
     }
 
     private void OnDestroy()
@@ -65,8 +56,6 @@ public class GameManager : MonoBehaviour
     {
         ObstacleSpawner.ClearAllObstacles();
 
-        // If a shift was already in progress during session load, resume in OrderSelection.
-        // Otherwise, start the day in DayBriefing.
         if (ShiftManager.Instance != null && ShiftManager.Instance.IsShiftActive)
         {
             SetState(GameState.OrderSelection);
@@ -77,21 +66,10 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-#if UNITY_EDITOR
-        HandleDebugInput();
-#endif
-    }
-
-    /// <summary>
-    /// Sets a new game state and triggers the corresponding lifecycle events.
-    /// Private to prevent external scripts from forcing arbitrary states.
-    /// </summary>
     private void SetState(GameState newState)
     {
         currentState = newState;
-        string shiftInfo = ShiftManager.Instance != null 
+        string shiftInfo = ShiftManager.Instance != null
             ? $" (Day {ShiftManager.Instance.CurrentDay} • {ShiftManager.Instance.DeliveriesCompletedToday}/{ShiftManager.Instance.DailyQuota} orders • ShiftActive: {ShiftManager.Instance.IsShiftActive})"
             : "";
         Debug.Log($"<color=#60A5FA>[GameManager]</color> 🔄 Game state changed to: <b>{currentState}</b>{shiftInfo}");
@@ -127,9 +105,6 @@ public class GameManager : MonoBehaviour
         OnGameStateChanged?.Invoke(currentState);
     }
 
-    /// <summary>
-    /// Starts a delivery order from the lobby.
-    /// </summary>
     public void StartDelivery()
     {
         if (currentState != GameState.OrderSelection) return;
@@ -141,11 +116,6 @@ public class GameManager : MonoBehaviour
         SetState(GameState.DeliveryActive);
     }
 
-    /// <summary>
-    /// Snapshots the successful delivery. Payment occurs only when returning to the lobby.
-    /// </summary>
-    // Integration point: order/navigation backend supplies final accounting amounts before completion.
-    // Never infer financial penalties from the presentation-only GPS source.
     public bool SetDeliveryReward(DeliveryResult result)
     {
         if (currentState != GameState.DeliveryActive || result == null) return false;
@@ -170,9 +140,6 @@ public class GameManager : MonoBehaviour
         SetState(GameState.DeliveryCompleted);
     }
 
-    /// <summary>
-    /// Fails the active delivery (e.g. car destroyed or time expired).
-    /// </summary>
     public void FailDelivery(FailureReason reason = FailureReason.VehicleCrash)
     {
         if (currentState != GameState.DeliveryActive) return;
@@ -187,9 +154,6 @@ public class GameManager : MonoBehaviour
         SetState(GameState.DeliveryFailed);
     }
 
-    /// <summary>
-    /// Returns to the parked car lobby to select a new order, recording shift progress upon completion.
-    /// </summary>
     public void ReturnToOrderSelection()
     {
         if (returningToLobby || currentState == GameState.OrderSelection) return;
@@ -204,22 +168,20 @@ public class GameManager : MonoBehaviour
                 }
                 else
                 {
-                    // Set before notifying wallet listeners: reentrant Continue cannot pay twice.
                     rewardSettled = true;
                     WalletManager.Instance.AddFunds((float)CompletedDelivery.NetEarnings);
                     Debug.Log($"<color=#10B981>[GameManager]</color> 💰 Delivery payout settled: +€{CompletedDelivery.NetEarnings:F2}. New Wallet Balance: €{WalletManager.Instance.Balance:F2}");
 
-                    // Record completed delivery in ShiftManager
                     if (ShiftManager.Instance != null)
                     {
                         ShiftManager.Instance.RecordDeliveryCompleted(CompletedDelivery.NetEarnings);
                     }
                 }
             }
+
             if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
             ObstacleSpawner.ClearAllObstacles();
 
-            // If auto-advance on quota met is active, transition straight to DaySummary
             if (ShiftManager.Instance != null && ShiftManager.Instance.IsQuotaMet && ShiftManager.Instance.AutoAdvanceOnQuotaMet)
             {
                 ShiftManager.Instance.EndShift();
@@ -228,21 +190,18 @@ public class GameManager : MonoBehaviour
 
             SetState(GameState.OrderSelection);
         }
-        finally { returningToLobby = false; }
+        finally
+        {
+            returningToLobby = false;
+        }
     }
 
-    /// <summary>
-    /// Transitions from morning briefing to the order selection lobby.
-    /// </summary>
     public void TransitionFromBriefingToShift()
     {
         if (currentState != GameState.DayBriefing) return;
         SetState(GameState.OrderSelection);
     }
 
-    /// <summary>
-    /// Opens the end-of-day summary and settlement screen.
-    /// </summary>
     public void OpenDaySummary()
     {
         if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
@@ -250,65 +209,28 @@ public class GameManager : MonoBehaviour
         SetState(GameState.DaySummary);
     }
 
-    /// <summary>
-    /// Starts a new working day morning briefing.
-    /// </summary>
     public void StartNewDayBriefing()
     {
         if (PauseController.Instance != null) PauseController.Instance.SetPaused(false);
         ObstacleSpawner.ClearAllObstacles();
         SetState(GameState.DayBriefing);
     }
-    /// <summary>
-    /// Restarts the current active scene.
-    /// </summary>
+
     public void RestartGame()
     {
-        if (PauseController.Instance != null)
-        {
-            PauseController.Instance.SetPaused(false);
-        }
-        else
-        {
-            Time.timeScale = 1f;
-            AudioListener.pause = false;
-        }
-
+        ResetPauseAndTimeScale();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
-    /// <summary>
-    /// Exits the driving scene and returns to the main menu.
-    /// </summary>
     public void ExitGame()
     {
-        if (PauseController.Instance != null)
-        {
-            PauseController.Instance.SetPaused(false);
-        }
-        else
-        {
-            Time.timeScale = 1f;
-            AudioListener.pause = false;
-        }
-
+        ResetPauseAndTimeScale();
         SceneManager.LoadScene(mainMenuSceneName);
     }
 
-    /// <summary>
-    /// Quits the application (or stops Play Mode in the Unity Editor).
-    /// </summary>
     public void QuitGame()
     {
-        if (PauseController.Instance != null)
-        {
-            PauseController.Instance.SetPaused(false);
-        }
-        else
-        {
-            Time.timeScale = 1f;
-            AudioListener.pause = false;
-        }
+        ResetPauseAndTimeScale();
 
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
@@ -317,116 +239,16 @@ public class GameManager : MonoBehaviour
 #endif
     }
 
-    /// <summary>
-    /// Ensures all modular core controllers are present on the manager object.
-    /// </summary>
-    private void EnsureCompanionControllers()
+    private static void ResetPauseAndTimeScale()
     {
-        if (WorldSpeedController.Instance == null && GetComponent<WorldSpeedController>() == null)
+        if (PauseController.Instance != null)
         {
-            gameObject.AddComponent<WorldSpeedController>();
+            PauseController.Instance.SetPaused(false);
         }
-
-        if (DeliveryProgressTracker.Instance == null && GetComponent<DeliveryProgressTracker>() == null)
+        else
         {
-            gameObject.AddComponent<DeliveryProgressTracker>();
-        }
-
-        if (PauseController.Instance == null && GetComponent<PauseController>() == null)
-        {
-            gameObject.AddComponent<PauseController>();
-        }
-
-        if (WalletManager.Instance == null && GetComponent<WalletManager>() == null)
-        {
-            gameObject.AddComponent<WalletManager>();
-        }
-
-        if (DoomDriver.Economy.UpgradeManager.Instance == null && GetComponent<DoomDriver.Economy.UpgradeManager>() == null)
-        {
-            gameObject.AddComponent<DoomDriver.Economy.UpgradeManager>();
-        }
-
-        if (GameUIController.Instance == null && GetComponent<GameUIController>() == null)
-        {
-            gameObject.AddComponent<GameUIController>();
-        }
-
-        if (RouteController.Instance == null && GetComponent<RouteController>() == null)
-        {
-            gameObject.AddComponent<RouteController>();
-        }
-
-        if (ShiftManager.Instance == null && GetComponent<ShiftManager>() == null)
-        {
-            gameObject.AddComponent<ShiftManager>();
-        }
-
-        if (DoomDriver.Environment.WeatherManager.Instance == null && GetComponent<DoomDriver.Environment.WeatherManager>() == null)
-        {
-            gameObject.AddComponent<DoomDriver.Environment.WeatherManager>();
-        }
-
-        if (DoomDriver.Core.DailyShiftBriefing.Instance == null && GetComponent<DoomDriver.Core.DailyShiftBriefing>() == null)
-        {
-            gameObject.AddComponent<DoomDriver.Core.DailyShiftBriefing>();
+            Time.timeScale = 1f;
+            AudioListener.pause = false;
         }
     }
-
-#if UNITY_EDITOR
-    private void HandleDebugInput()
-    {
-        if (UnityEngine.InputSystem.Keyboard.current == null) return;
-
-        // C: Complete delivery
-        if (UnityEngine.InputSystem.Keyboard.current.cKey.wasPressedThisFrame && currentState == GameState.DeliveryActive)
-        {
-            Debug.Log("<color=green>[DEBUG]</color> C pressed -> Completing Delivery!");
-            CompleteDelivery();
-        }
-        // R: Return to Lobby
-        else if (UnityEngine.InputSystem.Keyboard.current.rKey.wasPressedThisFrame && 
-                (currentState == GameState.DeliveryCompleted || currentState == GameState.DeliveryFailed))
-        {
-            Debug.Log("<color=yellow>[DEBUG]</color> R pressed -> Returning to Order Selection Lobby!");
-            ReturnToOrderSelection();
-        }
-        // Up Arrow / W / B: Start Shift from DayBriefing directly into Order Selection
-        else if ((UnityEngine.InputSystem.Keyboard.current.upArrowKey.wasPressedThisFrame ||
-                  UnityEngine.InputSystem.Keyboard.current.wKey.wasPressedThisFrame ||
-                  UnityEngine.InputSystem.Keyboard.current.bKey.wasPressedThisFrame) && currentState == GameState.DayBriefing)
-        {
-            Debug.Log("<color=green>[DEBUG]</color> Up Arrow / W / B pressed -> Starting Shift and opening Order Selection!");
-            if (ShiftManager.Instance != null) ShiftManager.Instance.StartShift();
-            else TransitionFromBriefingToShift();
-
-            if (DoomDriver.Phone.PhoneOSController.Instance != null)
-            {
-                DoomDriver.Phone.PhoneOSController.Instance.OpenScreen(DoomDriver.Phone.PhoneScreen.CourierApp);
-            }
-        }
-        // N: End Shift to DaySummary
-        else if (UnityEngine.InputSystem.Keyboard.current.nKey.wasPressedThisFrame && 
-                (currentState == GameState.OrderSelection || currentState == GameState.DeliveryCompleted))
-        {
-            Debug.Log("<color=yellow>[DEBUG]</color> N pressed -> Ending Shift to DaySummary!");
-            if (ShiftManager.Instance != null) ShiftManager.Instance.EndShift();
-            else OpenDaySummary();
-        }
-        // M: Advance to Next Day from DaySummary
-        else if (UnityEngine.InputSystem.Keyboard.current.mKey.wasPressedThisFrame && currentState == GameState.DaySummary)
-        {
-            Debug.Log("<color=cyan>[DEBUG]</color> M pressed -> Advancing to Next Day!");
-            if (ShiftManager.Instance != null) ShiftManager.Instance.AdvanceToNextDay();
-            else StartNewDayBriefing();
-        }
-        // U: Reset Career back to Day 1 (0 orders) and clear saved upgrades
-        else if (UnityEngine.InputSystem.Keyboard.current.uKey.wasPressedThisFrame)
-        {
-            Debug.Log("<color=red>[DEBUG]</color> U pressed -> Resetting Career to Day 1 (0 orders) and clearing upgrades!");
-            if (ShiftManager.Instance != null) ShiftManager.Instance.ResetCareer();
-            if (UpgradeManager.Instance != null) UpgradeManager.Instance.ResetUpgrades();
-        }
-    }
-#endif
 }

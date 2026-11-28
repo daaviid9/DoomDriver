@@ -534,60 +534,16 @@ GameObject:
   m_Component:
   - component: {fileID: 194867909}
   - component: {fileID: 194867908}
-  - component: {fileID: 194867907}
-  - component: {fileID: 194867914}
   - component: {fileID: 194867913}
   - component: {fileID: 194867912}
-  - component: {fileID: 194867911}
-  - component: {fileID: 194867916}
   - component: {fileID: 194867915}
-  - component: {fileID: 194867917}
-  - component: {fileID: 194867921}
-  - component: {fileID: 194867919}
   m_Layer: 0
-  m_Name: GameManagers
+  m_Name: Core
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &194867907
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194867906}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c5f018d5564758c4ba5afa82f8a2e8f1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ObstacleSpawner
-  carPrefabs:
-  - {fileID: 2908944898091809559, guid: 8d1af90125950e342999c5dbdefdd676, type: 3}
-  - {fileID: 3294435270369087206, guid: 7982fc080c354a942b3561f445489e11, type: 3}
-  - {fileID: 6721311052883881255, guid: f59b89dd3a405be4f8c5d373aa147948, type: 3}
-  - {fileID: 4304101046722780987, guid: e19078d0cac14bf47a4b41dd8b21442d, type: 3}
-  - {fileID: 7235495544061757970, guid: 3579b6a191a6262488eca857742b994d, type: 3}
-  - {fileID: 4760081433214567601, guid: d754c2ea8f00ac642b74fa7820389a10, type: 3}
-  - {fileID: 1412363122834768907, guid: c2950abe12173684f8fb76d8cd3ed1b3, type: 3}
-  - {fileID: 2102204373591914974, guid: c113180fba5d60d419f8e84af96f8306, type: 3}
-  - {fileID: 1280414521145918320, guid: c46b09b837db5d546890e409caf769e6, type: 3}
-  edgeObstacles:
-  - {fileID: 774150586620734464, guid: 31f228c1024f8da4581961e96457b4b4, type: 3}
-  - {fileID: 2692432772633423667, guid: 9af55394096b68c42b07d13f698ac0c0, type: 3}
-  - {fileID: 2369251498285015646, guid: ba36d2d797a6524448a103756e50ae5c, type: 3}
-  barricadePrefabs:
-  - {fileID: 1989318905738134537, guid: 23b3ee2b372b87943a6cbce286749574, type: 3}
-  - {fileID: 1969914521657366805, guid: 068c53bb3cbf50444a3c727dabf5dbbc, type: 3}
-  - {fileID: 5427522932507016689, guid: 88434706d6ff5e243868b378b33cd8b1, type: 3}
-  carChance: 60
-  edgeChance: 15
-  barricadeChance: 25
-  spawnInterval: 14.5
-  spawnDistanceForward: 160
-  laneDistance: 3
-  spawnYOffset: -0.5
 --- !u!114 &194867908
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -610,27 +566,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 194867906}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 2.51142, y: 0.51, z: -10.80023}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 697059235}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &194867911
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194867906}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 81cb3df6014e41a99f13612458b091f0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WalletManager
-  initialBalance: 50
-  persistBalance: 1
 --- !u!114 &194867912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -662,28 +604,7 @@ MonoBehaviour:
   highscore: 0
   maxOvertimeDuration: 15
   penaltyPerOvertimeSecond: 0.5
-  damagePenaltyPerHp: 0.05
   missedTurnExtraDistance: 150
---- !u!114 &194867914
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194867906}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c491176b6b7a489182319ec8ba1925b4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WorldSpeedController
-  currentSpeed: 0
-  defaultCruiseSpeed: 12
-  topSpeed: 28
-  playerAccelerationRate: 10
-  naturalDecelerationRate: 6
-  playerBrakeDeceleration: 14
-  minSpeed: 5
-  brakeDeceleration: 20
 --- !u!114 &194867915
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -693,76 +614,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 194867906}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d1fb1819cd39bac42958aa81ebd8e69d, type: 3}
+  m_Script: {fileID: 11500000, guid: 05463ade8cc5a324b98ca3961fe8f08a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Economy.OrderManager
-  easyProfile: {fileID: 11400000, guid: e53ac38eea424de40a656363e5c78835, type: 2}
-  mediumProfile: {fileID: 11400000, guid: e2c7f3aad28a47f4c8656287a34dd9e5, type: 2}
-  hardProfile: {fileID: 11400000, guid: 32b3e3f5317d7c74296303b8e856c337, type: 2}
---- !u!114 &194867916
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194867906}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2ce98db510984a40b304021dba37fc03, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Economy.DeliveryPenaltyManager
-  crashTowFee: 7
-  crashRepairDeductible: 5
-  crashCancelledOrderFee: 3
-  timeoutUnfulfilledOrderFee: 3
-  timeoutCustomerDelayFee: 2
-  timeoutPlatformCancellationFee: 1
---- !u!114 &194867917
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194867906}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c231a0e1d2d445e899d4c326a22717de, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RouteController
-  penaltyPerMissedTurn: 5
-  recalculationChunks: 3
-  recalculatingDuration: 2.5
-  forkTurnDuration: 0.5
-  sharpTurnDuration: 0.5
-  worldTurnExecutor: {fileID: 194867921}
-  completedTurnsCount: 0
-  missedTurnsCount: 0
-  currentManeuverId: 
-  currentManeuverDirection: 0
---- !u!114 &194867919
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194867906}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab05, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Core.DailyShiftBriefing
---- !u!114 &194867921
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 194867906}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9c098557c39f86b44b566ac3c9ea1b3e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Navigation.WorldTurnExecutor
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Core.GameDebugHotkeys
 --- !u!4 &242284266 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1d89bf9ea7166ae4db34d88b7f49c77d, type: 3}
@@ -7829,6 +7683,73 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
   m_HorizontalFit: 0
   m_VerticalFit: 2
+--- !u!1 &611511539
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 611511542}
+  - component: {fileID: 611511541}
+  - component: {fileID: 611511540}
+  m_Layer: 0
+  m_Name: Navigation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &611511540
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 611511539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c098557c39f86b44b566ac3c9ea1b3e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Navigation.WorldTurnExecutor
+--- !u!114 &611511541
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 611511539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c231a0e1d2d445e899d4c326a22717de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RouteController
+  penaltyPerMissedTurn: 5
+  recalculationChunks: 3
+  recalculatingDuration: 2.5
+  forkTurnDuration: 0.5
+  sharpTurnDuration: 0.5
+  worldTurnExecutor: {fileID: 0}
+  completedTurnsCount: 0
+  missedTurnsCount: 0
+  currentManeuverId: 
+  currentManeuverDirection: 0
+--- !u!4 &611511542
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 611511539}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 697059235}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &621160806
 GameObject:
   m_ObjectHideFlags: 0
@@ -8014,6 +7935,45 @@ MonoBehaviour:
   enableSway: 1
   swayAmount: 0.01
   swaySpeed: 2
+--- !u!1 &697059234
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 697059235}
+  m_Layer: 0
+  m_Name: Managers
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &697059235
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 697059234}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.51142, y: -0.51, z: 10.80023}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 194867909}
+  - {fileID: 1650050935}
+  - {fileID: 611511542}
+  - {fileID: 2141447642}
+  - {fileID: 2048812572}
+  - {fileID: 1795841960}
+  - {fileID: 1953100163}
+  - {fileID: 2057425606}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &746738057
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12097,55 +12057,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1176875638}
   m_CullTransparentMesh: 1
---- !u!1 &1211236820
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1211236822}
-  - component: {fileID: 1211236821}
-  m_Layer: 0
-  m_Name: TutorialManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1211236821
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1211236820}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 62ceef4ee08f48d9b3773ca88205243e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Core.TutorialManager
-  enableTutorial: 1
-  alwaysShowInEditor: 1
-  drivingControlsDelay: 1
-  fomoTriggerThreshold: 60
-  phoneSystem: {fileID: 330585548}
---- !u!4 &1211236822
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1211236820}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.09199, y: 0.29214, z: -0.00682}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1218605481
 GameObject:
   m_ObjectHideFlags: 0
@@ -12882,10 +12793,12 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1650050935}
+  - component: {fileID: 1650050938}
   - component: {fileID: 1650050934}
   - component: {fileID: 1650050936}
+  - component: {fileID: 1650050937}
   m_Layer: 0
-  m_Name: EnviromentManager
+  m_Name: World
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -12930,12 +12843,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1650050933}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.49304, y: -0.51, z: 55.07317}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.01838, y: 0, z: 44.27294}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 697059235}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1650050936
 MonoBehaviour:
@@ -12957,6 +12870,63 @@ MonoBehaviour:
   maxAlpha: 0.848
   debugPreviewInFrontOfCar: 0
   debugPreviewDistance: 15
+--- !u!114 &1650050937
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650050933}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5f018d5564758c4ba5afa82f8a2e8f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ObstacleSpawner
+  carPrefabs:
+  - {fileID: 2908944898091809559, guid: 8d1af90125950e342999c5dbdefdd676, type: 3}
+  - {fileID: 3294435270369087206, guid: 7982fc080c354a942b3561f445489e11, type: 3}
+  - {fileID: 6721311052883881255, guid: f59b89dd3a405be4f8c5d373aa147948, type: 3}
+  - {fileID: 4304101046722780987, guid: e19078d0cac14bf47a4b41dd8b21442d, type: 3}
+  - {fileID: 7235495544061757970, guid: 3579b6a191a6262488eca857742b994d, type: 3}
+  - {fileID: 4760081433214567601, guid: d754c2ea8f00ac642b74fa7820389a10, type: 3}
+  - {fileID: 1412363122834768907, guid: c2950abe12173684f8fb76d8cd3ed1b3, type: 3}
+  - {fileID: 2102204373591914974, guid: c113180fba5d60d419f8e84af96f8306, type: 3}
+  - {fileID: 1280414521145918320, guid: c46b09b837db5d546890e409caf769e6, type: 3}
+  edgeObstacles:
+  - {fileID: 774150586620734464, guid: 31f228c1024f8da4581961e96457b4b4, type: 3}
+  - {fileID: 2692432772633423667, guid: 9af55394096b68c42b07d13f698ac0c0, type: 3}
+  - {fileID: 2369251498285015646, guid: ba36d2d797a6524448a103756e50ae5c, type: 3}
+  barricadePrefabs:
+  - {fileID: 1989318905738134537, guid: 23b3ee2b372b87943a6cbce286749574, type: 3}
+  - {fileID: 1969914521657366805, guid: 068c53bb3cbf50444a3c727dabf5dbbc, type: 3}
+  - {fileID: 5427522932507016689, guid: 88434706d6ff5e243868b378b33cd8b1, type: 3}
+  carChance: 60
+  edgeChance: 15
+  barricadeChance: 25
+  spawnInterval: 14.5
+  spawnDistanceForward: 160
+  laneDistance: 3
+  spawnYOffset: -0.5
+--- !u!114 &1650050938
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650050933}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c491176b6b7a489182319ec8ba1925b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldSpeedController
+  currentSpeed: 0
+  defaultCruiseSpeed: 12
+  topSpeed: 28
+  playerAccelerationRate: 10
+  naturalDecelerationRate: 6
+  playerBrakeDeceleration: 14
+  minSpeed: 5
+  brakeDeceleration: 20
 --- !u!1001 &1676399310
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13612,7 +13582,7 @@ GameObject:
   - component: {fileID: 1795841956}
   - component: {fileID: 1795841955}
   m_Layer: 0
-  m_Name: WeatherManager
+  m_Name: Weather
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -13714,12 +13684,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1795841954}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.68268, y: 0.91862, z: 0.54695}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 3.1941, y: 1.42862, z: -10.25328}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 697059235}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1828479571 stripped
 GameObject:
@@ -14162,7 +14132,7 @@ GameObject:
   - component: {fileID: 1953100162}
   - component: {fileID: 1953100161}
   m_Layer: 0
-  m_Name: NotificationManager
+  m_Name: Notification
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14292,12 +14262,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1953100160}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.61047, y: -0.00844, z: 1.72261}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 4.12189, y: 0.50156, z: -9.07762}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 697059235}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2017779397
 GameObject:
@@ -14374,6 +14344,76 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &2048812569
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2048812572}
+  - component: {fileID: 2048812571}
+  - component: {fileID: 2048812570}
+  m_Layer: 0
+  m_Name: Shift
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2048812570
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048812569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1b2c3d4e5f64789901234567890ab05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Core.DailyShiftBriefing
+--- !u!114 &2048812571
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048812569}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 387e9e592ad946c0a71ac9dd06198d6d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShiftManager
+  currentDay: 1
+  baseDailyQuota: 3
+  quotaIncrementPerDay: 1
+  maxDailyQuota: 8
+  dailyQuota: 3
+  deliveriesCompletedToday: 0
+  shiftEarnings: 0
+  careerTotalDeliveries: 0
+  allowOvertime: 1
+  autoAdvanceOnQuotaMet: 0
+  isShiftActive: 0
+  dailyBills: 25
+  overtimeBonusPercent: 25
+--- !u!4 &2048812572
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048812569}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 697059235}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2057425603
 GameObject:
   m_ObjectHideFlags: 0
@@ -14384,8 +14424,9 @@ GameObject:
   m_Component:
   - component: {fileID: 2057425606}
   - component: {fileID: 2057425604}
+  - component: {fileID: 2057425607}
   m_Layer: 0
-  m_Name: UIManagers
+  m_Name: UI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14418,13 +14459,30 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2057425603}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 2.51142, y: 0.51, z: -10.80023}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 697059235}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2057425607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2057425603}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62ceef4ee08f48d9b3773ca88205243e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Core.TutorialManager
+  enableTutorial: 1
+  alwaysShowInEditor: 1
+  drivingControlsDelay: 1
+  fomoTriggerThreshold: 60
+  phoneSystem: {fileID: 330585548}
 --- !u!1 &2063716502
 GameObject:
   m_ObjectHideFlags: 0
@@ -15255,6 +15313,116 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2127920820}
   m_CullTransparentMesh: 1
+--- !u!1 &2141447637
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2141447642}
+  - component: {fileID: 2141447641}
+  - component: {fileID: 2141447640}
+  - component: {fileID: 2141447639}
+  - component: {fileID: 2141447638}
+  - component: {fileID: 2141447643}
+  m_Layer: 0
+  m_Name: Economy
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2141447638
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141447637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ce98db510984a40b304021dba37fc03, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Economy.DeliveryPenaltyManager
+  crashTowFee: 7
+  crashRepairDeductible: 5
+  crashCancelledOrderFee: 3
+  timeoutUnfulfilledOrderFee: 3
+  timeoutCustomerDelayFee: 2
+  timeoutPlatformCancellationFee: 1
+--- !u!114 &2141447639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141447637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1fb1819cd39bac42958aa81ebd8e69d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Economy.OrderManager
+  easyProfile: {fileID: 11400000, guid: e53ac38eea424de40a656363e5c78835, type: 2}
+  mediumProfile: {fileID: 11400000, guid: e2c7f3aad28a47f4c8656287a34dd9e5, type: 2}
+  hardProfile: {fileID: 11400000, guid: 32b3e3f5317d7c74296303b8e856c337, type: 2}
+--- !u!114 &2141447640
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141447637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81cb3df6014e41a99f13612458b091f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WalletManager
+  initialBalance: 50
+  persistBalance: 1
+--- !u!114 &2141447641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141447637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86e06b07109e0dc4d961fe2ee91bf726, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Economy.UpgradeManager
+  catalog: []
+--- !u!4 &2141447642
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141447637}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 697059235}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2141447643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2141447637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eed709226cb6af499bc4feb621f0883, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Economy.DeliveryRewardCalculator
+  damagePenaltyPerHp: 0.05
+  vehicleHealth: {fileID: 432921404}
 --- !u!4 &543450653502753658 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7776414893027589554, guid: 5a96d676a8a8c624abcc70a5e125bca8, type: 3}
@@ -15607,13 +15775,8 @@ SceneRoots:
   - {fileID: 505675118}
   - {fileID: 1484622781}
   - {fileID: 432921396}
-  - {fileID: 194867909}
-  - {fileID: 2057425606}
   - {fileID: 1095287860}
-  - {fileID: 1650050935}
   - {fileID: 372252490}
-  - {fileID: 1953100163}
-  - {fileID: 1795841960}
-  - {fileID: 1211236822}
+  - {fileID: 697059235}
   - {fileID: 1025693454}
   - {fileID: 621160810}
