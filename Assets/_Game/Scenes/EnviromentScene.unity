@@ -6564,6 +6564,9 @@ GameObject:
   - component: {fileID: 432921393}
   - component: {fileID: 432921397}
   - component: {fileID: 432921405}
+  - component: {fileID: 432921408}
+  - component: {fileID: 432921407}
+  - component: {fileID: 432921406}
   - component: {fileID: 432921404}
   - component: {fileID: 432921403}
   - component: {fileID: 432921402}
@@ -7088,11 +7091,50 @@ MonoBehaviour:
   curbBounceForce: 3.5
   curbSpeedPenalty: 2.5
   curbBounceCooldown: 0.5
+  inputReader: {fileID: 432921408}
+  steeringWheelVisual: {fileID: 432921407}
+  bodyRoll: {fileID: 432921406}
+--- !u!114 &432921406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 432921390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d31e5944fa7bb8b43883c1ca9fa3472f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Player.VehicleBodyRoll
+  maxTiltAngle: 2
+  tiltSmoothing: 10
+--- !u!114 &432921407
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 432921390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3c85c999f240104eb5c3fa034414641, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Player.SteeringWheelVisual
   steeringWheel: {fileID: 1149177461}
   maxSteeringAngle: 90
   steeringRotationSpeed: 10
-  maxTiltAngle: 2
-  tiltSmoothing: 10
+--- !u!114 &432921408
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 432921390}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e2703efc84d55546ba15614f2a8ea4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DoomDriver.Player.VehicleInputReader
 --- !u!1 &453712235
 GameObject:
   m_ObjectHideFlags: 0
@@ -15571,7 +15613,7 @@ SceneRoots:
   - {fileID: 1650050935}
   - {fileID: 372252490}
   - {fileID: 1953100163}
+  - {fileID: 1795841960}
   - {fileID: 1211236822}
   - {fileID: 1025693454}
   - {fileID: 621160810}
-  - {fileID: 1795841960}

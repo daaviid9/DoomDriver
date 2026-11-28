@@ -1,4 +1,5 @@
 using UnityEngine;
+using DoomDriver.Player;
 
 /// <summary>
 /// Defines available vehicle steering mechanics.
@@ -6,82 +7,51 @@ using UnityEngine;
 /// </summary>
 public enum SteeringMode
 {
-    DiscreteLanes,     // Classic 3-lane stepping (Left, Center, Right)
-    AnalogContinuous   // Smooth analog steering with momentum, speed sensitivity, and curb bounce boundaries
+    DiscreteLanes,
+    AnalogContinuous
 }
 
 /// <summary>
-/// Handles player lateral movement, vehicle body roll (tilt), and steering wheel rotation.
-/// Supports both discrete lane shifting and continuous analog steering (switchable in Inspector).
-/// Incorporates speed-sensitive steering kinematics based on forward world movement speed.
-/// Strictly decoupled from audio, VFX, and health.
+/// Handles player lateral movement, curb bounce physics, and scripted turn maneuvers.
+/// Delegates input reading to VehicleInputReader, wheel rotation to SteeringWheelVisual,
+/// and body roll to VehicleBodyRoll.
 /// </summary>
 public class VehicleMovement : MonoBehaviour
 {
     public static VehicleMovement Instance { get; private set; }
 
     [Header("Steering Mode")]
-    [Tooltip("Switch between discrete 3-lane steps or smooth analog steering")]
     [SerializeField] private SteeringMode steeringMode = SteeringMode.AnalogContinuous;
 
     [Header("Discrete Lane Settings")]
     [SerializeField] private float laneDistance = 3f;
     [SerializeField] private float laneChangeSpeed = 10f;
-    [SerializeField] private int startingLane = 1; // 0=Left, 1=Middle, 2=Right
+    [SerializeField] private int startingLane = 1;
 
     [Header("Analog Steering Settings")]
-    [Tooltip("Maximum lateral steering speed in meters per second at base forward speed")]
     [SerializeField] private float maxSteerSpeed = 8f;
-
-    [Tooltip("Lateral acceleration rate when steering input is applied")]
     [SerializeField] private float steerAcceleration = 24f;
-
-    [Tooltip("Lateral deceleration rate when steering input returns to neutral")]
     [SerializeField] private float steerDeceleration = 28f;
-
-    [Tooltip("Left road curb boundary (minimum X)")]
     [SerializeField] private float minRoadX = -4.5f;
-
-    [Tooltip("Right road curb boundary (maximum X)")]
     [SerializeField] private float maxRoadX = 4.5f;
 
     [Header("Speed-Sensitive Steering")]
-    [Tooltip("Reference forward speed (m/s) where steering responsiveness is 1.0x (normal)")]
-    [SerializeField] private float referenceForwardSpeed = 12f;
-
-    [Tooltip("Minimum steering factor so vehicle remains controllable at low speeds")]
+    [SerializeField] private float referenceForwardSpeed = 12.1f;
     [SerializeField] private float minSpeedFactor = 0.35f;
-
-    [Tooltip("Maximum steering factor scaling at high forward speeds")]
     [SerializeField] private float maxSpeedFactor = 1.6f;
 
     [Header("Curb Interaction Settings")]
-    [Tooltip("Impulse speed bouncing the car back inward upon curb contact")]
     [SerializeField] private float curbBounceForce = 3.5f;
-
-    [Tooltip("Speed penalty applied to the world when contacting the curb")]
     [SerializeField] private float curbSpeedPenalty = 2.5f;
-
-    [Tooltip("Minimum time in seconds between consecutive curb contact penalties")]
     [SerializeField] private float curbBounceCooldown = 0.5f;
 
-    [Header("Steering Wheel Settings")]
-    [SerializeField] private Transform steeringWheel;
-    [SerializeField] private float maxSteeringAngle = 90f;
-    [SerializeField] private float steeringRotationSpeed = 12f;
+    [Header("Modular Sub-Components")]
+    [SerializeField] private VehicleInputReader inputReader;
+    [SerializeField] private SteeringWheelVisual steeringWheelVisual;
+    [SerializeField] private VehicleBodyRoll bodyRoll;
 
-    [Header("Body Tilt (Roll) Settings")]
-    [Tooltip("Maximum roll angle of car body during lateral turn")]
-    [SerializeField] private float maxTiltAngle = 2.5f;
-
-    [Tooltip("Smoothing speed for body roll recovery")]
-    [SerializeField] private float tiltSmoothing = 10f;
-
-    private InputSystem_Actions controls;
-    private Vector2 moveInput = Vector2.zero;
     private int targetLane = 1;
     private float lateralVelocity = 0f;
-    private float currentTilt = 0f;
     private float lastX = 0f;
     private bool isManeuvering = false;
     private float lastCurbBounceTime = -1f;
@@ -90,28 +60,16 @@ public class VehicleMovement : MonoBehaviour
     private Coroutine turnManeuverCoroutine;
 
     public bool IsTurnManeuverActive => isTurnManeuverActive;
-
     public SteeringMode CurrentMode => steeringMode;
     public int TargetLane => targetLane;
     public float LateralVelocity => lateralVelocity;
     public bool IsManeuvering => isManeuvering;
     public float MinRoadX => minRoadX;
     public float MaxRoadX => maxRoadX;
-    public Vector2 MoveInput => moveInput;
+    public Vector2 MoveInput => inputReader != null ? inputReader.MoveInput : Vector2.zero;
 
-    /// <summary>
-    /// Event fired when target lane changes in discrete mode.
-    /// </summary>
     public event System.Action<int> OnLaneChanged;
-
-    /// <summary>
-    /// Event fired when vehicle starts or stops lateral lane maneuvering.
-    /// </summary>
     public event System.Action<bool> OnManeuveringStateChanged;
-
-    /// <summary>
-    /// Event fired when vehicle contacts or bounces off the road curb/edge.
-    /// </summary>
     public event System.Action OnCurbContact;
 
     private void Awake()
@@ -120,34 +78,37 @@ public class VehicleMovement : MonoBehaviour
         {
             Instance = this;
         }
-
-        controls = new InputSystem_Actions();
-
-        // Event-driven input handling: capture input updates and neutral releases
-        controls.Player.Move.performed += ctx =>
+        else if (Instance != this)
         {
-            moveInput = ctx.ReadValue<Vector2>();
+            Destroy(gameObject);
+            return;
+        }
 
-            if (steeringMode == SteeringMode.DiscreteLanes)
-            {
-                OnDiscreteMove(moveInput);
-            }
-        };
+        ResolveSubComponents();
+    }
 
-        controls.Player.Move.canceled += ctx =>
-        {
-            moveInput = Vector2.zero;
-        };
+    private void ResolveSubComponents()
+    {
+        if (inputReader == null) inputReader = GetComponent<VehicleInputReader>();
+        if (steeringWheelVisual == null) steeringWheelVisual = GetComponent<SteeringWheelVisual>();
+        if (bodyRoll == null) bodyRoll = GetComponent<VehicleBodyRoll>();
     }
 
     private void OnEnable()
     {
-        controls?.Enable();
+        if (inputReader != null)
+        {
+            inputReader.OnMovePerformed -= HandleMovePerformed;
+            inputReader.OnMovePerformed += HandleMovePerformed;
+        }
     }
 
     private void OnDisable()
     {
-        controls?.Disable();
+        if (inputReader != null)
+        {
+            inputReader.OnMovePerformed -= HandleMovePerformed;
+        }
     }
 
     private void Start()
@@ -168,21 +129,14 @@ public class VehicleMovement : MonoBehaviour
             GameManager.Instance.OnDeliveryStarted -= ResetMovement;
             GameManager.Instance.OnOrderSelectionStarted -= ResetMovement;
         }
+
+        if (Instance == this) Instance = null;
     }
 
     private void Update()
     {
         if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.DeliveryFailed) return;
         if (PauseController.Instance != null && PauseController.Instance.IsPaused) return;
-
-        UpdateMovement();
-    }
-
-    /// <summary>
-    /// Dispatches movement execution to the selected steering model.
-    /// </summary>
-    private void UpdateMovement()
-    {
         if (isTurnManeuverActive) return;
 
         if (steeringMode == SteeringMode.DiscreteLanes)
@@ -195,7 +149,23 @@ public class VehicleMovement : MonoBehaviour
         }
     }
 
-    #region Discrete Lane Steering
+    private void HandleMovePerformed(Vector2 direction)
+    {
+        if (steeringMode != SteeringMode.DiscreteLanes) return;
+        if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive) return;
+        if (PauseController.Instance != null && PauseController.Instance.IsPaused) return;
+
+        if (direction.x < -0.5f && targetLane > 0)
+        {
+            targetLane--;
+            OnLaneChanged?.Invoke(targetLane);
+        }
+        else if (direction.x > 0.5f && targetLane < 2)
+        {
+            targetLane++;
+            OnLaneChanged?.Invoke(targetLane);
+        }
+    }
 
     private void UpdateDiscreteMovement()
     {
@@ -204,101 +174,33 @@ public class VehicleMovement : MonoBehaviour
         float movementDelta = newX - lastX;
 
         transform.position = new Vector3(newX, transform.position.y, transform.position.z);
-        ApplyDiscreteBodyTilt(movementDelta);
-        ApplyDiscreteSteeringWheel(targetX);
-        UpdateDiscreteManeuveringState(targetX);
-
-        lastX = newX;
-    }
-
-    private void ApplyDiscreteBodyTilt(float movementDelta)
-    {
-        float targetTilt = 0f;
-        if (Time.deltaTime > 0.0001f)
-        {
-            targetTilt = -(movementDelta / Time.deltaTime) * (maxTiltAngle / 2f);
-        }
-
-        targetTilt = Mathf.Clamp(targetTilt, -maxTiltAngle, maxTiltAngle);
-        currentTilt = Mathf.Lerp(currentTilt, targetTilt, Time.deltaTime * tiltSmoothing);
-        transform.localRotation = Quaternion.Euler(0f, 0f, currentTilt);
-    }
-
-    private void ApplyDiscreteSteeringWheel(float targetX)
-    {
-        if (steeringWheel == null) return;
+        bodyRoll?.UpdateDiscreteRoll(movementDelta);
 
         float distanceToTarget = targetX - transform.position.x;
-        float targetAngle = 0f;
+        float wheelTarget = Mathf.Abs(distanceToTarget) > 0.2f ? (distanceToTarget < 0f ? -1f : 1f) : 0f;
+        steeringWheelVisual?.UpdateNormalizedTarget(wheelTarget);
 
-        if (Mathf.Abs(distanceToTarget) > 0.2f)
-        {
-            targetAngle = (distanceToTarget < 0) ? -maxSteeringAngle : maxSteeringAngle;
-        }
-
-        Quaternion targetRot = Quaternion.Euler(0f, 0f, targetAngle);
-        steeringWheel.localRotation = Quaternion.Lerp(steeringWheel.localRotation, targetRot, Time.deltaTime * steeringRotationSpeed);
+        SetManeuveringState(Mathf.Abs(targetX - transform.position.x) > 0.05f);
+        lastX = newX;
     }
-
-    private void UpdateDiscreteManeuveringState(float targetX)
-    {
-        bool moving = Mathf.Abs(targetX - transform.position.x) > 0.05f;
-        if (moving != isManeuvering)
-        {
-            isManeuvering = moving;
-            OnManeuveringStateChanged?.Invoke(isManeuvering);
-        }
-    }
-
-    private void OnDiscreteMove(Vector2 direction)
-    {
-        if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.DeliveryActive) return;
-        if (PauseController.Instance != null && PauseController.Instance.IsPaused) return;
-
-        if (direction.x < -0.5f)
-        {
-            if (targetLane > 0)
-            {
-                targetLane--;
-                OnLaneChanged?.Invoke(targetLane);
-            }
-        }
-        else if (direction.x > 0.5f)
-        {
-            if (targetLane < 2)
-            {
-                targetLane++;
-                OnLaneChanged?.Invoke(targetLane);
-            }
-        }
-    }
-
-    #endregion
-
-    #region Analog Continuous Steering (Speed-Sensitive)
 
     private void UpdateAnalogMovement()
     {
         float forwardSpeed = WorldSpeedController.Instance != null ? WorldSpeedController.Instance.CurrentSpeed : 0f;
 
-        // If the vehicle is stationary (e.g. parked in lobby or emergency stopped), lateral motion is zero
         if (forwardSpeed <= 0.1f || GameManager.Instance == null || GameManager.Instance.CurrentState != GameState.DeliveryActive)
         {
             lateralVelocity = 0f;
-            currentTilt = Mathf.Lerp(currentTilt, 0f, Time.deltaTime * tiltSmoothing);
-            transform.localRotation = Quaternion.Euler(0f, 0f, currentTilt);
+            bodyRoll?.RecoverToNeutral();
             return;
         }
 
-        // Calculate dynamic speed factor: scales steering response proportionally to forward momentum
+        float inputX = MoveInput.x;
         float speedFactor = Mathf.Clamp(forwardSpeed / referenceForwardSpeed, minSpeedFactor, maxSpeedFactor);
-
-        // Effective lateral steering speed scaled by forward speed
         float effectiveSteerSpeed = maxSteerSpeed * speedFactor;
-        float targetVelocity = moveInput.x * effectiveSteerSpeed;
+        float targetVelocity = inputX * effectiveSteerSpeed;
 
-        // Accelerate or decelerate lateral velocity based on cached moveInput
-        if (Mathf.Abs(moveInput.x) > 0.05f)
+        if (Mathf.Abs(inputX) > 0.05f)
         {
             lateralVelocity = Mathf.MoveTowards(lateralVelocity, targetVelocity, steerAcceleration * speedFactor * Time.deltaTime);
         }
@@ -307,10 +209,8 @@ public class VehicleMovement : MonoBehaviour
             lateralVelocity = Mathf.MoveTowards(lateralVelocity, 0f, steerDeceleration * Time.deltaTime);
         }
 
-        // Calculate prospective X position
         float newX = transform.position.x + lateralVelocity * Time.deltaTime;
 
-        // Soft curb bounce interaction at road boundaries
         if (newX <= minRoadX)
         {
             newX = minRoadX;
@@ -331,43 +231,18 @@ public class VehicleMovement : MonoBehaviour
         }
 
         transform.position = new Vector3(newX, transform.position.y, transform.position.z);
-        ApplyAnalogBodyTilt(speedFactor);
-        ApplyAnalogSteeringWheel(moveInput.x);
-        UpdateAnalogManeuveringState(effectiveSteerSpeed);
+        bodyRoll?.UpdateAnalogRoll(lateralVelocity, maxSteerSpeed, speedFactor);
+        steeringWheelVisual?.UpdateNormalizedTarget(inputX);
+        SetManeuveringState(Mathf.Abs(lateralVelocity) > (effectiveSteerSpeed * 0.35f));
 
         lastX = newX;
     }
 
-    private void ApplyAnalogBodyTilt(float speedFactor)
+    private void SetManeuveringState(bool moving)
     {
-        // Body roll tilts opposite to the lateral turn direction, amplified by speed factor
-        float speedRatio = maxSteerSpeed > 0.01f ? (lateralVelocity / maxSteerSpeed) : 0f;
-        float targetTilt = -speedRatio * maxTiltAngle * speedFactor;
-        targetTilt = Mathf.Clamp(targetTilt, -maxTiltAngle * 1.5f, maxTiltAngle * 1.5f);
-
-        currentTilt = Mathf.Lerp(currentTilt, targetTilt, Time.deltaTime * tiltSmoothing);
-        transform.localRotation = Quaternion.Euler(0f, 0f, currentTilt);
-    }
-
-    private void ApplyAnalogSteeringWheel(float inputX)
-    {
-        if (steeringWheel == null) return;
-
-        // Rotate wheel proportionally to steering input intensity (-1 to 1) -> (-maxSteeringAngle to +maxSteeringAngle)
-        float targetAngle = inputX * maxSteeringAngle;
-        Quaternion targetRot = Quaternion.Euler(0f, 0f, targetAngle);
-        steeringWheel.localRotation = Quaternion.Lerp(steeringWheel.localRotation, targetRot, Time.deltaTime * steeringRotationSpeed);
-    }
-
-    private void UpdateAnalogManeuveringState(float effectiveSteerSpeed)
-    {
-        // Sharp turn threshold triggers tire screech audio
-        bool moving = Mathf.Abs(lateralVelocity) > (effectiveSteerSpeed * 0.35f);
-        if (moving != isManeuvering)
-        {
-            isManeuvering = moving;
-            OnManeuveringStateChanged?.Invoke(isManeuvering);
-        }
+        if (moving == isManeuvering) return;
+        isManeuvering = moving;
+        OnManeuveringStateChanged?.Invoke(isManeuvering);
     }
 
     private void TriggerCurbBounce()
@@ -384,10 +259,6 @@ public class VehicleMovement : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Initiates a dynamic cornering drift maneuver during a 90-degree world turn.
-    /// Smoothly animates vehicle body yaw, roll, steering wheel rotation, and centers position.
-    /// </summary>
     public void StartTurnManeuver(DashboardNavigationSource.Maneuver direction, float duration, bool isFork = false)
     {
         if (turnManeuverCoroutine != null)
@@ -408,7 +279,6 @@ public class VehicleMovement : MonoBehaviour
         isTurnManeuverActive = true;
         isManeuvering = true;
 
-        // Do not trigger screeching tire drift audio for smooth highway fork transitions
         if (!isFork)
         {
             OnManeuveringStateChanged?.Invoke(true);
@@ -417,15 +287,13 @@ public class VehicleMovement : MonoBehaviour
         float elapsed = 0f;
         float startX = transform.position.x;
 
-        // Smooth turning parameters: zero drift yaw for forks, gentle wheel turn, no fishtailing
-        bool isLeft = (direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft);
+        bool isLeft = direction == DashboardNavigationSource.Maneuver.Left || direction == DashboardNavigationSource.Maneuver.ForkLeft;
         float targetYaw = isFork ? 0f : (isLeft ? -10f : 10f);
-        float targetRoll = isFork
-            ? (isLeft ? 0.5f : -0.5f)
-            : (isLeft ? 2.0f : -2.0f);
+        float targetRoll = isFork ? (isLeft ? 0.5f : -0.5f) : (isLeft ? 2.0f : -2.0f);
+        float maxWheelAngle = steeringWheelVisual != null ? steeringWheelVisual.MaxSteeringAngle : 90f;
         float targetWheel = isFork
-            ? (isLeft ? -maxSteeringAngle * 0.35f : maxSteeringAngle * 0.35f)
-            : (isLeft ? -maxSteeringAngle * 0.65f : maxSteeringAngle * 0.65f);
+            ? (isLeft ? -maxWheelAngle * 0.35f : maxWheelAngle * 0.35f)
+            : (isLeft ? -maxWheelAngle * 0.65f : maxWheelAngle * 0.65f);
 
         while (elapsed < duration)
         {
@@ -433,21 +301,12 @@ public class VehicleMovement : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / duration);
             float smoothT = Mathf.SmoothStep(0f, 1f, t);
 
-            // Interpolate lateral X smoothly to center lane (0)
             float currentX = Mathf.Lerp(startX, 0f, smoothT);
             transform.position = new Vector3(currentX, transform.position.y, transform.position.z);
 
-            // Smooth sine curve for gentle steering wheel motion and natural weight transfer
             float apexWeight = Mathf.Sin(t * Mathf.PI);
-            float yaw = targetYaw * apexWeight;
-            float roll = targetRoll * apexWeight;
-            transform.localRotation = Quaternion.Euler(0f, yaw, roll);
-
-            // Rotate steering wheel smoothly into the curve and back to center
-            if (steeringWheel != null)
-            {
-                steeringWheel.localRotation = Quaternion.Euler(0f, 0f, targetWheel * apexWeight);
-            }
+            transform.localRotation = Quaternion.Euler(0f, targetYaw * apexWeight, targetRoll * apexWeight);
+            steeringWheelVisual?.SetDirectAngle(targetWheel * apexWeight);
 
             yield return null;
         }
@@ -466,22 +325,14 @@ public class VehicleMovement : MonoBehaviour
         isTurnManeuverActive = false;
         isManeuvering = false;
         lateralVelocity = 0f;
-        currentTilt = 0f;
         transform.position = new Vector3(0f, transform.position.y, transform.position.z);
+        bodyRoll?.ResetRoll();
         transform.localRotation = Quaternion.identity;
-
-        if (steeringWheel != null)
-        {
-            steeringWheel.localRotation = Quaternion.identity;
-        }
+        steeringWheelVisual?.ResetRotation();
 
         OnManeuveringStateChanged?.Invoke(false);
     }
 
-    /// <summary>
-    /// Smoothly guides vehicle laterally toward the center lane (X=0) after completing a turn maneuver.
-    /// User steering input smoothly overrides this recovery.
-    /// </summary>
     public void EaseToCenter(float duration = 1.0f)
     {
         if (easeToCenterCoroutine != null)
@@ -498,8 +349,7 @@ public class VehicleMovement : MonoBehaviour
 
         while (elapsed < duration)
         {
-            // If user applies active steering input, hand back control immediately
-            if (Mathf.Abs(moveInput.x) > 0.1f)
+            if (Mathf.Abs(MoveInput.x) > 0.1f)
             {
                 yield break;
             }
@@ -514,11 +364,6 @@ public class VehicleMovement : MonoBehaviour
         easeToCenterCoroutine = null;
     }
 
-    #endregion
-
-    /// <summary>
-    /// Resets the vehicle lateral position, velocity, tilt, and steering wheel to neutral center.
-    /// </summary>
     public void ResetMovement()
     {
         EndTurnManeuver();
@@ -530,48 +375,37 @@ public class VehicleMovement : MonoBehaviour
         }
 
         targetLane = startingLane;
-        moveInput = Vector2.zero;
+        inputReader?.ResetInput();
         lateralVelocity = 0f;
-        currentTilt = 0f;
         lastX = 0f;
         isManeuvering = false;
 
         transform.position = new Vector3(0f, transform.position.y, transform.position.z);
+        bodyRoll?.ResetRoll();
         transform.localRotation = Quaternion.identity;
-
-        if (steeringWheel != null)
-        {
-            steeringWheel.localRotation = Quaternion.identity;
-        }
+        steeringWheelVisual?.ResetRotation();
 
         OnManeuveringStateChanged?.Invoke(false);
     }
 
-    /// <summary>
-    /// Visualizes road boundaries, lane positions, and center line in the Unity Scene View.
-    /// </summary>
     private void OnDrawGizmosSelected()
     {
         float y = transform.position.y;
         float z = transform.position.z;
 
-        // Draw Left & Right Road Curbs (Yellow)
         Gizmos.color = Color.yellow;
         Gizmos.DrawLine(new Vector3(minRoadX, y, z - 20f), new Vector3(minRoadX, y, z + 60f));
         Gizmos.DrawLine(new Vector3(maxRoadX, y, z - 20f), new Vector3(maxRoadX, y, z + 60f));
 
-        // Draw vertical curb tick markers along boundaries
         for (float offsetZ = -20f; offsetZ <= 60f; offsetZ += 10f)
         {
             Gizmos.DrawLine(new Vector3(minRoadX, y, z + offsetZ), new Vector3(minRoadX, y + 0.6f, z + offsetZ));
             Gizmos.DrawLine(new Vector3(maxRoadX, y, z + offsetZ), new Vector3(maxRoadX, y + 0.6f, z + offsetZ));
         }
 
-        // Draw Road Center Line (Cyan)
         Gizmos.color = Color.cyan;
         Gizmos.DrawLine(new Vector3(0f, y, z - 20f), new Vector3(0f, y, z + 60f));
 
-        // If discrete mode is selected, also draw discrete lane guide markers
         if (steeringMode == SteeringMode.DiscreteLanes)
         {
             Gizmos.color = new Color(0f, 1f, 1f, 0.35f);
